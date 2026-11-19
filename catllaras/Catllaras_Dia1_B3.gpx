@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gpx creator="CompeGPS" version="1.1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/WaypointExtension/v1 http://www8.garmin.com/xmlschemas/WaypointExtensionv1.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www8.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/ActivityExtension/v1 http://www8.garmin.com/xmlschemas/ActivityExtensionv1.xsd http://www.garmin.com/xmlschemas/AdventuresExtensions/v1 http://www8.garmin.com/xmlschemas/AdventuresExtensionv1.xsd http://www.garmin.com/xmlschemas/PressureExtension/v1 http://www.garmin.com/xmlschemas/PressureExtensionv1.xsd http://www.garmin.com/xmlschemas/TripExtensions/v1 http://www.garmin.com/xmlschemas/TripExtensionsv1.xsd http://www.garmin.com/xmlschemas/TripMetaDataExtensions/v1 http://www.garmin.com/xmlschemas/TripMetaDataExtensionsv1.xsd http://www.garmin.com/xmlschemas/ViaPointTransportationModeExtensions/v1 http://www.garmin.com/xmlschemas/ViaPointTransportationModeExtensionsv1.xsd http://www.garmin.com/xmlschemas/CreationTimeExtension/v1 http://www.garmin.com/xmlschemas/CreationTimeExtensionsv1.xsd http://www.garmin.com/xmlschemas/AccelerationExtension/v1 http://www.garmin.com/xmlschemas/AccelerationExtensionv1.xsd http://www.garmin.com/xmlschemas/PowerExtension/v1 http://www.garmin.com/xmlschemas/PowerExtensionv1.xsd http://www.garmin.com/xmlschemas/VideoExtension/v1 http://www.garmin.com/xmlschemas/VideoExtensionv1.xsd" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wptx1="http://www.garmin.com/xmlschemas/WaypointExtension/v1" xmlns:gpxtrx="http://www.garmin.com/xmlschemas/GpxExtensions/v3" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3" xmlns:trp="http://www.garmin.com/xmlschemas/TripExtensions/v1" xmlns:adv="http://www.garmin.com/xmlschemas/AdventuresExtensions/v1" xmlns:prs="http://www.garmin.com/xmlschemas/PressureExtension/v1" xmlns:tmd="http://www.garmin.com/xmlschemas/TripMetaDataExtensions/v1" xmlns:vptm="http://www.garmin.com/xmlschemas/ViaPointTransportationModeExtensions/v1" xmlns:ctx="http://www.garmin.com/xmlschemas/CreationTimeExtension/v1" xmlns:gpxacc="http://www.garmin.com/xmlschemas/AccelerationExtension/v1" xmlns:gpxpx="http://www.garmin.com/xmlschemas/PowerExtension/v1" xmlns:vidx1="http://www.garmin.com/xmlschemas/VideoExtension/v1" xmlns:twonav="http://twonav.com/twonav">
+  <metadata>
+    <author>
+      <email id="" domain=""/>
+    </author>
+    <copyright author="">
+      <license></license>
+    </copyright>
+    <link href="http://www.compegps.com">
+      <text>CompeGPS TEAM, SL</text>
+    </link>
+    <time>2026-11-17T20:13:08.939Z</time>
+    <bounds maxlat="42.219306" maxlon="1.967808" minlat="42.218490" minlon="1.964097"/>
+  </metadata>
+  <trk>
+    <name>Catllaras_Dia1_B3</name>
+    <extensions>
+      <line xmlns="http://www.topografix.com/GPX/gpx_style/0/2">
+        <width>4</width>
+      </line>
+      <gpxx:TrackExtension>
+        <gpxx:DisplayColor>DarkYellow</gpxx:DisplayColor>
+      </gpxx:TrackExtension>
+      <twonav:TwoNavExtension>
+        <twonav:activity>4</twonav:activity>
+        <twonav:terrain>0</twonav:terrain>
+      </twonav:TwoNavExtension>
+    </extensions>
+    <trkseg>
+      <trkpt lat="42.219000" lon="1.964097">
+        <ele>1458.3</ele>
+        <time>2026-11-17T20:08:54.509Z</time>
+      </trkpt>
+      <trkpt lat="42.219000" lon="1.964097">
+        <ele>1462.7</ele>
+        <time>2026-11-17T20:08:54.508Z</time>
+      </trkpt>
+      <trkpt lat="42.219063" lon="1.964426">
+        <ele>1465.6</ele>
+        <time>2026-11-17T20:09:14.654Z</time>
+      </trkpt>
+      <trkpt lat="42.219140" lon="1.965054">
+        <ele>1473.5</ele>
+        <time>2026-11-17T20:09:52.411Z</time>
+      </trkpt>
+      <trkpt lat="42.219095" lon="1.965410">
+        <ele>1479.7</ele>
+        <time>2026-11-17T20:10:13.832Z</time>
+      </trkpt>
+      <trkpt lat="42.219187" lon="1.965710">
+        <ele>1481.0</ele>
+        <time>2026-11-17T20:10:33.026Z</time>
+      </trkpt>
+      <trkpt lat="42.219286" lon="1.965888">
+        <ele>1481.1</ele>
+        <time>2026-11-17T20:10:46.237Z</time>
+      </trkpt>
+      <trkpt lat="42.219306" lon="1.966118">
+        <ele>1483.6</ele>
+        <time>2026-11-17T20:10:59.970Z</time>
+      </trkpt>
+      <trkpt lat="42.219282" lon="1.966215">
+        <ele>1486.4</ele>
+        <time>2026-11-17T20:11:06.015Z</time>
+      </trkpt>
+      <trkpt lat="42.219156" lon="1.966420">
+        <ele>1492.5</ele>
+        <time>2026-11-17T20:11:21.796Z</time>
+      </trkpt>
+      <trkpt lat="42.218956" lon="1.966516">
+        <ele>1501.6</ele>
+        <time>2026-11-17T20:11:38.834Z</time>
+      </trkpt>
+      <trkpt lat="42.218826" lon="1.966578">
+        <ele>1507.7</ele>
+        <time>2026-11-17T20:11:49.837Z</time>
+      </trkpt>
+      <trkpt lat="42.218721" lon="1.966818">
+        <ele>1510.7</ele>
+        <time>2026-11-17T20:12:06.378Z</time>
+      </trkpt>
+      <trkpt lat="42.218597" lon="1.967182">
+        <ele>1514.7</ele>
+        <time>2026-11-17T20:12:30.097Z</time>
+      </trkpt>
+      <trkpt lat="42.218557" lon="1.967464">
+        <ele>1512.3</ele>
+        <time>2026-11-17T20:12:47.125Z</time>
+      </trkpt>
+      <trkpt lat="42.218557" lon="1.967649">
+        <ele>1510.8</ele>
+        <time>2026-11-17T20:12:58.126Z</time>
+      </trkpt>
+      <trkpt lat="42.218490" lon="1.967808">
+        <ele>1511.9</ele>
+        <time>2026-11-17T20:13:08.939Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
