@@ -1,4 +1,4 @@
-const CACHE='catllaras-v5';
+const CACHE='catllaras-v6';
 const TILES='catllaras-mapes-v1';
 const FILES=['./','index.html','rutes.js','info.js','vessants.js','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
@@ -13,7 +13,13 @@ self.addEventListener('fetch',e=>{
       return res;}).catch(()=>new Response('',{status:504})))));
     return;
   }
-  e.respondWith(caches.match(e.request,{ignoreSearch:true}).then(r=>r||fetch(e.request).then(res=>{
-    if(res.ok&&url.origin===location.origin){const cp=res.clone();caches.open(CACHE).then(c=>c.put(e.request,cp));}
-    return res;}).catch(()=>caches.match('index.html'))));
+  // fitxers de l'app: primer la xarxa (així s'actualitza sola); sense cobertura, la còpia desada
+  if(url.origin===location.origin){
+    e.respondWith(ambTemps(e.request,4000).then(res=>{
+      if(res.ok){const cp=res.clone();caches.open(CACHE).then(c=>c.put(e.request,cp));}
+      return res;
+    }).catch(()=>caches.match(e.request,{ignoreSearch:true}).then(r=>r||caches.match('index.html'))));
+  }
 });
+// xarxa amb temps màxim: si no respon, s'usa la còpia desada
+function ambTemps(req,ms){return new Promise((ok,ko)=>{const t=setTimeout(()=>ko(new Error('temps')),ms);fetch(req).then(r=>{clearTimeout(t);ok(r)},e=>{clearTimeout(t);ko(e)})});}

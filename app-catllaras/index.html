@@ -501,7 +501,7 @@ function zoomMapa(dz,fx,fy){
 })();
 
 // ---------- Camins d'OpenStreetMap (dades vectorials, desades per anar sense cobertura) ----------
-const OSM_KEY='https://petjada.local/osm-camins-catllaras.json';  // clau interna a la memòria cau
+const OSM_KEY='https://petjada.local/osm-camins-catllaras-v2.json';  // clau interna a la memòria cau
 const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
 const OSM={ways:null,on:true};
 // estils: 0 carretera, 1 camí asfaltat/secundari, 2 pista, 3 corriol, 4 escales
@@ -524,16 +524,93 @@ function bboxRutes(){
   for(const k in RUTES) for(const p of RUTES[k].pts){s=Math.min(s,p[0]);n=Math.max(n,p[0]);w=Math.min(w,p[1]);e=Math.max(e,p[1]);}
   return [s-0.0135,w-0.018,n+0.0135,e+0.018].map(v=>+v.toFixed(5));
 }
-function preparaOSM(j){
-  const ways=[];
-  for(const el of j.elements||[]){
-    if(el.type!=='way'||!el.geometry||!el.tags) continue;
-    const t=tipusOSM(el.tags.highway||''); if(t<0) continue;
-    const xy=[]; let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
-    for(const g of el.geometry){const [x,y]=wpx(g.lat,g.lon,0); xy.push(x,y); x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
-    ways.push({t,xy,bb:[x0,y0,x1,y1]});
+// Lector mínim de teselles vectorials (Mapbox Vector Tile / protobuf)
+function llegeixMVT(buf){
+  const u=new Uint8Array(buf); let p=0;
+  const vint=()=>{let r=0,m=1,b; do{b=u[p++]; r+=(b&127)*m; m*=128;}while(b&128); return r;};
+  const salta=t=>{ if(t===0) vint(); else if(t===1) p+=8; else if(t===2){const l=vint(); p+=l;} else if(t===5) p+=4; };
+  const str=(a,b)=>new TextDecoder().decode(u.subarray(a,b));
+  const packed=()=>{const l=vint(),e=p+l,o=[]; while(p<e) o.push(vint()); return o;};
+  const layers=[];
+  while(p<u.length){ const k=vint(), f=k>>3, t=k&7;
+    if(f===3&&t===2){ const l=vint(), e=p+l, L={name:'',keys:[],vals:[],feats:[],extent:4096};
+      while(p<e){ const k2=vint(), f2=k2>>3, t2=k2&7;
+        if(f2===1){const l2=vint(); L.name=str(p,p+l2); p+=l2;}
+        else if(f2===3){const l2=vint(); L.keys.push(str(p,p+l2)); p+=l2;}
+        else if(f2===5) L.extent=vint();
+        else if(f2===4){ const l2=vint(), e2=p+l2; let v=null;
+          while(p<e2){ const k3=vint(), f3=k3>>3, t3=k3&7;
+            if(f3===1){const l3=vint(); v=str(p,p+l3); p+=l3;} else if(t3===0){v=vint();} else salta(t3); }
+          L.vals.push(v); }
+        else if(f2===2){ const l2=vint(), e2=p+l2, F={tags:[],type:0,geom:[]};
+          while(p<e2){ const k3=vint(), f3=k3>>3, t3=k3&7;
+            if(f3===2) F.tags=packed(); else if(f3===3) F.type=vint(); else if(f3===4) F.geom=packed(); else salta(t3); }
+          L.feats.push(F); }
+        else salta(t2);
+      }
+      layers.push(L);
+    } else salta(t);
   }
-  ways.sort((a,b)=>a.t-b.t); // carreteres a sota, corriols a sobre
+  return layers;
+}
+function liniesMVT(g){ // ordres de geometria → llistes de punts (coordenades de la tesella)
+  const out=[]; let x=0,y=0,i=0,cur=null;
+  const zz=n=>(n>>>1)^-(n&1);
+  while(i<g.length){ const c=g[i++], cmd=c&7, n=c>>3;
+    for(let j=0;j<n;j++){
+      if(cmd===7){ continue; }
+      x+=zz(g[i++]); y+=zz(g[i++]);
+      if(cmd===1){ cur=[x,y]; out.push(cur); } else cur.push(x,y);
+    } }
+  return out;
+}
+function tipusOFM(cl,sub){
+  if(/^(motorway|trunk|primary|secondary|tertiary)$/.test(cl)) return 0;
+  if(cl==='minor'||cl==='service') return 1;
+  if(cl==='track') return 2;
+  if(cl==='path') return sub==='steps'?4:3;
+  return -1;
+}
+async function fetchT(u,ms){ const c=new AbortController(), t=setTimeout(()=>c.abort(),ms); try{ return await fetch(u,{signal:c.signal}); } finally{ clearTimeout(t); } }
+async function descarregaOFM(){
+  const tj=await (await fetchT('https://tiles.openfreemap.org/planet',20000)).json();
+  const tpl=tj.tiles[0], Z=14, [S,W,N,E]=bboxRutes();
+  const [xa,ya]=wpx(N,W,Z), [xb,yb]=wpx(S,E,Z), tls=[];
+  for(let x=Math.floor(xa/256);x<=Math.floor(xb/256);x++) for(let y=Math.floor(ya/256);y<=Math.floor(yb/256);y++) tls.push([x,y]);
+  const ways=[]; let fet=0, i=0;
+  const worker=async()=>{ while(i<tls.length){ const [tx,ty]=tls[i++];
+    const r=await fetchT(tpl.replace('{z}',Z).replace('{x}',tx).replace('{y}',ty),20000); if(!r.ok) throw new Error('tesella '+r.status);
+    for(const L of llegeixMVT(await r.arrayBuffer())){ if(L.name!=='transportation') continue;
+      const ki=L.keys.indexOf('class'), si=L.keys.indexOf('subclass');
+      for(const F of L.feats){ if(F.type!==2) continue; let cl='',sub='';
+        for(let j=0;j<F.tags.length;j+=2){ if(F.tags[j]===ki) cl=L.vals[F.tags[j+1]]; else if(F.tags[j]===si) sub=L.vals[F.tags[j+1]]; }
+        const t=tipusOFM(cl,sub); if(t<0) continue;
+        for(const ln of liniesMVT(F.geom)){ const xy=[];
+          for(let k=0;k<ln.length;k+=2) xy.push(+((tx+ln[k]/L.extent)/2**Z*256).toFixed(7), +((ty+ln[k+1]/L.extent)/2**Z*256).toFixed(7));
+          if(xy.length>=4) ways.push({t,xy}); } } }
+    fet++; $('osm-estat').textContent=`Descarregant camins d'OpenStreetMap… ${fet}/${tls.length}`; } };
+  await Promise.all([worker(),worker(),worker()]);
+  return {font:'OpenFreeMap',ways};
+}
+async function descarregaOverpass(){
+  const [S,W,N,E]=bboxRutes();
+  const q=`[out:json][timeout:50];way["highway"](${S},${W},${N},${E});out geom;`;
+  for(const u of OVERPASS){
+    try{ const res=await fetchT(u+'?data='+encodeURIComponent(q),45000); if(!res.ok) throw 0;
+      const j=await res.json(), ways=[];
+      for(const el of j.elements||[]){ if(el.type!=='way'||!el.geometry||!el.tags) continue;
+        const t=tipusOSM(el.tags.highway||''); if(t<0) continue;
+        const xy=[]; for(const g of el.geometry){const [x,y]=wpx(g.lat,g.lon,0); xy.push(x,y);} ways.push({t,xy}); }
+      return {font:'Overpass',ways};
+    }catch(e){}
+  }
+  throw new Error('overpass');
+}
+function preparaWays(d){
+  const ways=d.ways.map(w=>{ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    for(let i=0;i<w.xy.length;i+=2){x0=Math.min(x0,w.xy[i]);x1=Math.max(x1,w.xy[i]);y0=Math.min(y0,w.xy[i+1]);y1=Math.max(y1,w.xy[i+1]);}
+    return {t:w.t,xy:w.xy,bb:[x0,y0,x1,y1]}; });
+  ways.sort((a,b)=>a.t-b.t);
   return ways;
 }
 async function carregaOSM(forcar){
@@ -542,22 +619,21 @@ async function carregaOSM(forcar){
   let r=forcar?null:await c.match(OSM_KEY);
   if(!r){
     if(!navigator.onLine){ $('osm-estat').textContent='Camins OSM: cal connexió per descarregar-los.'; return; }
-    const [S,W,N,E]=bboxRutes();
-    const q=`[out:json][timeout:60];way["highway"](${S},${W},${N},${E});out geom;`;
     $('osm-estat').textContent='Descarregant camins d\'OpenStreetMap…';
-    for(const u of OVERPASS){
-      try{ const res=await fetch(u+'?data='+encodeURIComponent(q)); if(!res.ok) throw 0;
-        const txt=await res.text(); JSON.parse(txt);
-        await c.put(OSM_KEY,new Response(txt,{headers:{'Content-Type':'application/json','X-Desat':new Date().toISOString()}}));
-        r=await c.match(OSM_KEY); break;
-      }catch(e){}
-    }
-    if(!r){ $('osm-estat').textContent='No s\'han pogut descarregar els camins OSM (torna-ho a provar amb connexió).'; return; }
+    let d=null;
+    try{ d=await descarregaOFM(); }catch(e){ try{ $('osm-estat').textContent='Provant un altre servidor d\'OSM…'; d=await descarregaOverpass(); }catch(e2){} }
+    if(!d||!d.ways.length){ $('osm-estat').innerHTML='No s\'han pogut descarregar els camins OSM. <a href="#" id="osm-retry">Torna-ho a provar</a>';
+      const a=$('osm-retry'); if(a) a.onclick=ev=>{ev.preventDefault();carregaOSM(true)}; return; }
+    d.desat=new Date().toISOString();
+    await c.put(OSM_KEY,new Response(JSON.stringify(d),{headers:{'Content-Type':'application/json'}}));
+    r=await c.match(OSM_KEY);
   }
   try{
-    const j=await r.json(); OSM.ways=preparaOSM(j);
-    const quan=r.headers.get('X-Desat');
-    $('osm-estat').textContent=`Camins OSM: ${OSM.ways.length} trams desats`+(quan?` (dades del ${new Date(quan).toLocaleDateString('ca-ES')})`:'')+'.';
+    const d=await r.json();
+    if(!d.ways){ await c.delete(OSM_KEY); return carregaOSM(true); } // format antic
+    OSM.ways=preparaWays(d);
+    const n={}; OSM.ways.forEach(w=>n[w.t]=(n[w.t]||0)+1);
+    $('osm-estat').textContent=`Camins OSM desats: ${n[3]||0} corriols, ${n[2]||0} pistes, ${(n[0]||0)+(n[1]||0)} carreteres i camins asfaltats`+(d.desat?` (${new Date(d.desat).toLocaleDateString('ca-ES')}, ${d.font})`:'')+'.';
     dibuixaMapa();
   }catch(e){ $('osm-estat').textContent='Error llegint els camins OSM.'; }
 }
