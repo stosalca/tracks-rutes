@@ -1,7 +1,7 @@
-const CACHE='catllaras-v6';
+const CACHE='catllaras-v7';
 const TILES='catllaras-mapes-v1';
 const FILES=['./','index.html','rutes.js','info.js','vessants.js','manifest.webmanifest','icon-192.png','icon-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE&&x!==TILES).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
@@ -22,4 +22,4 @@ self.addEventListener('fetch',e=>{
   }
 });
 // xarxa amb temps màxim: si no respon, s'usa la còpia desada
-function ambTemps(req,ms){return new Promise((ok,ko)=>{const t=setTimeout(()=>ko(new Error('temps')),ms);fetch(req).then(r=>{clearTimeout(t);ok(r)},e=>{clearTimeout(t);ko(e)})});}
+function ambTemps(req,ms){return new Promise((ok,ko)=>{const t=setTimeout(()=>ko(new Error('temps')),ms);fetch(req.url,{cache:'no-cache'}).then(r=>{clearTimeout(t);ok(r)},e=>{clearTimeout(t);ko(e)})});}
