@@ -78,6 +78,13 @@ details.det.act summary{color:var(--ter)}
 .mbtn button{width:42px;height:42px;border-radius:10px;border:0;background:#fff;color:var(--pis);font:700 22px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.25)}
 .mbtn button.on{background:var(--ter);color:#fff}
 .attr{position:absolute;left:0;bottom:0;font-size:10px;background:rgba(255,255,255,.75);padding:1px 5px;border-top-right-radius:6px}
+.capes{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:14px;font-weight:600}
+.capes label{display:flex;align-items:center;gap:8px}
+.capes input[type=range]{flex:1}
+.capes input[type=checkbox]{width:20px;height:20px;accent-color:var(--ter)}
+.lleg{font-weight:500;color:var(--gris);font-size:12px;display:inline-flex;align-items:center;gap:4px}
+.lleg i{display:inline-block;width:18px;border-top:3px dashed;margin-left:6px}
+#tosm{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .vess{border-left:6px solid var(--vc,#3d6c86)}
 .vtxt{font-size:15px;line-height:1.45}
 .vrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:3px 0}
@@ -150,9 +157,15 @@ details.det.act summary{color:var(--ter)}
     <h2>Mapa topogràfic <b id="mapa-estat">ICGC</b></h2>
     <div class="tmap" id="tmap">
       <div id="tiles"></div>
+      <svg id="tosm"></svg>
       <svg id="tover"></svg>
       <div class="mbtn"><button id="m-in" aria-label="Apropar">+</button><button id="m-out" aria-label="Allunyar">−</button><button id="m-seg" class="on" aria-label="Seguir la posició">⦿</button></div>
-      <div class="attr">© Institut Cartogràfic i Geològic de Catalunya · CC BY 4.0</div>
+      <div class="attr">© ICGC CC BY 4.0 · © OpenStreetMap ODbL</div>
+    </div>
+    <div class="capes">
+      <label><input type="checkbox" id="c-osm" checked> Camins OSM <span class="lleg"><i style="border-color:#d0342c"></i>corriol <i style="border-color:#8b5a2b"></i>pista</span></label>
+      <label>Mapa ICGC <input type="range" id="c-op" min="0" max="100" step="10" value="100"> <span id="c-opv">100 %</span></label>
+      <span class="nota" id="osm-estat"></span>
     </div>
     <div class="botons" style="margin-top:8px"><button class="btn s" id="b-desc">Descarregar mapes per anar sense cobertura</button></div>
     <div class="barra" id="desc-barra" hidden><i id="desc-i"></i></div>
@@ -439,6 +452,7 @@ function dibuixaMapa(E){
     img.style.left=(tx*ts-x0)+'px'; img.style.top=(ty*ts-y0)+'px'; img.style.width=img.style.height=ts+'px';
   }
   for(const [k,img] of M.imgs) if(!keep.has(k)){ img.remove(); M.imgs.delete(k); }
+  dibuixaOSM(x0,y0,W,H);
   // capa del track
   const P=(lat,lon)=>{const [x,y]=wpx(lat,lon,M.z);return [x-x0,y-y0]};
   let all='',done='';
@@ -456,7 +470,7 @@ function dibuixaMapa(E){
   if(lastFix&&!prova){const [a,b]=P(lastFix.lat,lastFix.lon); g+=`<circle cx="${a}" cy="${b}" r="${Math.max(8,Math.min(150,lastFix.acc/mpp))}" fill="#3d6c86" opacity=".18"/><circle cx="${a}" cy="${b}" r="6" fill="#3d6c86" stroke="#fff" stroke-width="2.5"/>`;}
   g+=`<circle cx="${cx}" cy="${cy}" r="9" fill="#C8553D" stroke="#fff" stroke-width="3"/>`;
   const bar=[50,100,200,500,1000,2000].find(m=>m/mpp>=70)||2000;
-  g+=`<line x1="10" x2="${10+bar/mpp}" y1="${H-22}" y2="${H-22}" stroke="#1E2A2E" stroke-width="3"/><text x="10" y="${H-27}" font-size="12" font-weight="700" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="3">${bar>=1000?bar/1000+' km':bar+' m'}</text>`;
+  g+=`<line x1="10" x2="${10+bar/mpp}" y1="${H-24}" y2="${H-24}" stroke="#1E2A2E" stroke-width="3"/><text x="10" y="${H-29}" font-size="12" font-weight="700" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="3">${bar>=1000?bar/1000+' km':bar+' m'}</text>`;
   const sv=$('tover'); sv.setAttribute('viewBox',`0 0 ${W} ${H}`); sv.innerHTML=g;
   $('m-seg').classList.toggle('on',M.follow);
 }
@@ -484,6 +498,95 @@ function zoomMapa(dz,fx,fy){
   $('m-seg').onclick=e=>{e.stopPropagation();M.follow=true;dibuixaMapa();};
   ['m-in','m-out','m-seg'].forEach(id=>$(id).addEventListener('pointerdown',e=>e.stopPropagation()));
   window.addEventListener('resize',()=>dibuixaMapa());
+})();
+
+// ---------- Camins d'OpenStreetMap (dades vectorials, desades per anar sense cobertura) ----------
+const OSM_KEY='https://petjada.local/osm-camins-catllaras.json';  // clau interna a la memòria cau
+const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+const OSM={ways:null,on:true};
+// estils: 0 carretera, 1 camí asfaltat/secundari, 2 pista, 3 corriol, 4 escales
+const OSTY=[
+  {c:'#555',w:6,cw:'#fff',iw:4},
+  {c:'#777',w:4.5,cw:'#fff',iw:2.5},
+  {c:'#8b5a2b',w:2.6,d:'7 4'},
+  {c:'#d0342c',w:2.4,d:'4 3'},
+  {c:'#d0342c',w:3,d:'1.5 2.5'}];
+function tipusOSM(h){
+  if(/^(motorway|trunk|primary|secondary|tertiary)/.test(h)) return 0;
+  if(/^(unclassified|residential|service|living_street|road)$/.test(h)) return 1;
+  if(h==='track') return 2;
+  if(h==='steps') return 4;
+  if(/^(path|footway|bridleway|cycleway|pedestrian)$/.test(h)) return 3;
+  return -1;
+}
+function bboxRutes(){
+  let s=90,w=180,n=-90,e=-180;
+  for(const k in RUTES) for(const p of RUTES[k].pts){s=Math.min(s,p[0]);n=Math.max(n,p[0]);w=Math.min(w,p[1]);e=Math.max(e,p[1]);}
+  return [s-0.0135,w-0.018,n+0.0135,e+0.018].map(v=>+v.toFixed(5));
+}
+function preparaOSM(j){
+  const ways=[];
+  for(const el of j.elements||[]){
+    if(el.type!=='way'||!el.geometry||!el.tags) continue;
+    const t=tipusOSM(el.tags.highway||''); if(t<0) continue;
+    const xy=[]; let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    for(const g of el.geometry){const [x,y]=wpx(g.lat,g.lon,0); xy.push(x,y); x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+    ways.push({t,xy,bb:[x0,y0,x1,y1]});
+  }
+  ways.sort((a,b)=>a.t-b.t); // carreteres a sota, corriols a sobre
+  return ways;
+}
+async function carregaOSM(forcar){
+  if(!('caches' in window)) return;
+  const c=await caches.open(TILE_CACHE);
+  let r=forcar?null:await c.match(OSM_KEY);
+  if(!r){
+    if(!navigator.onLine){ $('osm-estat').textContent='Camins OSM: cal connexió per descarregar-los.'; return; }
+    const [S,W,N,E]=bboxRutes();
+    const q=`[out:json][timeout:60];way["highway"](${S},${W},${N},${E});out geom;`;
+    $('osm-estat').textContent='Descarregant camins d\'OpenStreetMap…';
+    for(const u of OVERPASS){
+      try{ const res=await fetch(u+'?data='+encodeURIComponent(q)); if(!res.ok) throw 0;
+        const txt=await res.text(); JSON.parse(txt);
+        await c.put(OSM_KEY,new Response(txt,{headers:{'Content-Type':'application/json','X-Desat':new Date().toISOString()}}));
+        r=await c.match(OSM_KEY); break;
+      }catch(e){}
+    }
+    if(!r){ $('osm-estat').textContent='No s\'han pogut descarregar els camins OSM (torna-ho a provar amb connexió).'; return; }
+  }
+  try{
+    const j=await r.json(); OSM.ways=preparaOSM(j);
+    const quan=r.headers.get('X-Desat');
+    $('osm-estat').textContent=`Camins OSM: ${OSM.ways.length} trams desats`+(quan?` (dades del ${new Date(quan).toLocaleDateString('ca-ES')})`:'')+'.';
+    dibuixaMapa();
+  }catch(e){ $('osm-estat').textContent='Error llegint els camins OSM.'; }
+}
+function dibuixaOSM(x0,y0,W,H){
+  const sv=$('tosm'); sv.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  if(!OSM.on||!OSM.ways){ sv.innerHTML=''; return; }
+  const f=2**M.z, m=20, ds=['','','','',''];
+  const bx0=(x0-m)/f, by0=(y0-m)/f, bx1=(x0+W+m)/f, by1=(y0+H+m)/f;
+  for(const w of OSM.ways){
+    const b=w.bb; if(b[2]<bx0||b[0]>bx1||b[3]<by0||b[1]>by1) continue;
+    let d='M';
+    for(let i=0;i<w.xy.length;i+=2) d+=(i?'L':'')+(w.xy[i]*f-x0).toFixed(1)+','+(w.xy[i+1]*f-y0).toFixed(1);
+    ds[w.t]+=d;
+  }
+  const amp=M.z>=16?1.25:M.z<=13?0.7:1;
+  let g='';
+  OSTY.forEach((s,t)=>{ if(!ds[t]) return;
+    if(s.cw){ g+=`<path d="${ds[t]}" fill="none" stroke="${s.c}" stroke-width="${s.w*amp}" stroke-linecap="round" stroke-linejoin="round"/><path d="${ds[t]}" fill="none" stroke="${s.cw}" stroke-width="${s.iw*amp}" stroke-linecap="round" stroke-linejoin="round"/>`; }
+    else g+=`<path d="${ds[t]}" fill="none" stroke="#fff" stroke-width="${(s.w+2)*amp}" stroke-opacity=".7" stroke-linejoin="round"/><path d="${ds[t]}" fill="none" stroke="${s.c}" stroke-width="${s.w*amp}" stroke-dasharray="${s.d}" stroke-linejoin="round"/>`;
+  });
+  sv.innerHTML=g;
+}
+(function(){
+  try{ const c=JSON.parse(localStorage.getItem('petjada-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
+  const desa=()=>{try{localStorage.setItem('petjada-capes',JSON.stringify({osm:OSM.on,op:+$('c-op').value}))}catch(e){}};
+  const op=()=>{ $('tiles').style.opacity=$('c-op').value/100; $('c-opv').textContent=$('c-op').value+' %'; };
+  $('c-osm').checked=OSM.on; op();
+  $('c-osm').onchange=()=>{OSM.on=$('c-osm').checked; desa(); dibuixaMapa();};
+  $('c-op').oninput=()=>{op(); desa();};
 })();
 
 // ---------- Descàrrega de mapes per anar sense cobertura ----------
@@ -522,6 +625,7 @@ $('b-desc').onclick=async()=>{
     }catch(e){ err++; }
     fet++; pinta(); } };
   await Promise.all([worker(),worker(),worker(),worker()]);
+  await carregaOSM(true);
   delete b.dataset.on;
   $('desc-txt').textContent= err?`Fet, però ${err} teselles han fallat: torna-ho a provar amb bona connexió.`:'Mapes desats: ja pots fer servir el mapa sense cobertura.';
   estatMapes();
@@ -594,7 +698,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 setInterval(()=>{$('rellotge').textContent=rel(new Date()); if(R) render();},20000);
 $('rellotge').textContent=rel(new Date());
 
-R=prepara(dia); pintaGuioTots(); pintaFlora(); render(); estatMapes();
+R=prepara(dia); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false);
 if(st.gps) gpsOn();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
