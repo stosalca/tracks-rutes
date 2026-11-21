@@ -71,6 +71,13 @@ details.det[open] summary::before{content:'▾ '}
 details.det.act summary{color:var(--ter)}
 #flora h3{font-size:15px;margin:10px 0 4px}
 #flora p{font-size:15px;line-height:1.45}
+.tmap{position:relative;height:400px;overflow:hidden;border-radius:10px;background:#eef2e8;touch-action:none;user-select:none;-webkit-user-select:none}
+#tiles img{position:absolute;pointer-events:none;max-width:none}
+#tover{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mbtn{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.mbtn button{width:42px;height:42px;border-radius:10px;border:0;background:#fff;color:var(--pis);font:700 22px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.mbtn button.on{background:var(--ter);color:#fff}
+.attr{position:absolute;left:0;bottom:0;font-size:10px;background:rgba(255,255,255,.75);padding:1px 5px;border-top-right-radius:6px}
 .vess{border-left:6px solid var(--vc,#3d6c86)}
 .vtxt{font-size:15px;line-height:1.45}
 .vrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:3px 0}
@@ -140,8 +147,16 @@ details.det.act summary{color:var(--ter)}
   </section>
 
   <section class="card">
-    <h2>Mapa del track <b>nord a dalt</b></h2>
-    <svg id="mapa" viewBox="0 0 600 420"></svg>
+    <h2>Mapa topogràfic <b id="mapa-estat">ICGC</b></h2>
+    <div class="tmap" id="tmap">
+      <div id="tiles"></div>
+      <svg id="tover"></svg>
+      <div class="mbtn"><button id="m-in" aria-label="Apropar">+</button><button id="m-out" aria-label="Allunyar">−</button><button id="m-seg" class="on" aria-label="Seguir la posició">⦿</button></div>
+      <div class="attr">© Institut Cartogràfic i Geològic de Catalunya · CC BY 4.0</div>
+    </div>
+    <div class="botons" style="margin-top:8px"><button class="btn s" id="b-desc">Descarregar mapes per anar sense cobertura</button></div>
+    <div class="barra" id="desc-barra" hidden><i id="desc-i"></i></div>
+    <p class="nota" id="desc-txt" style="margin-top:6px">Descarrega'ls amb wifi abans de la sortida (unes 190 teselles, totes dues rutes). Arrossega el mapa per moure'l; ⦿ el torna a centrar on ets.</p>
   </section>
 
   <section class="card">
@@ -404,24 +419,113 @@ function dibuixaPerfil(E){
   for(let k=0;k<=tot/1000;k+=2) g+=`<text x="${X(k*1000)}" y="${H-6}" font-size="11" text-anchor="middle" fill="#6b7478">${k} km</text>`;
   $('perfil').innerHTML=g;
 }
+// ---------- Mapa topogràfic ICGC (teselles) ----------
+const TILE_URL='https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png';
+const TZMAX=16, ZMIN=12, ZMAX=18;
+const M={z:15,cx:null,cy:null,follow:true,imgs:new Map(),E:null,ptrs:new Map(),pinch:null};
+function wpx(lat,lon,z){const s=256*2**z, la=rad(lat); return [(lon+180)/360*s,(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*s];}
+function tileUrl(z,x,y){return TILE_URL.replace('{z}',z).replace('{x}',x).replace('{y}',y);}
 function dibuixaMapa(E){
-  const W=600,H=420,m=26;
-  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; R.xy.forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)});
-  const sc=Math.min((W-2*m)/(x1-x0),(H-2*m)/(y1-y0)), ox=(W-(x1-x0)*sc)/2, oy=(H-(y1-y0)*sc)/2;
-  const P=([x,y])=>[ox+(x-x0)*sc, H-(oy+(y-y0)*sc)];
+  if(E) M.E=E; E=M.E; if(!E) return;
+  const el=$('tmap'), W=el.clientWidth, H=el.clientHeight; if(!W) return;
+  if(M.follow||M.cx==null) [M.cx,M.cy]=wpx(E.lat,E.lon,M.z);
+  const tz=Math.min(M.z,TZMAX), ts=256*2**(M.z-tz), x0=M.cx-W/2, y0=M.cy-H/2;
+  const keep=new Set(), cont=$('tiles'), n=2**tz;
+  for(let tx=Math.floor(x0/ts);tx<=Math.floor((x0+W)/ts);tx++) for(let ty=Math.floor(y0/ts);ty<=Math.floor((y0+H)/ts);ty++){
+    if(ty<0||ty>=n) continue;
+    const key=tz+'/'+tx+'/'+ty; keep.add(key);
+    let img=M.imgs.get(key);
+    if(!img){ img=new Image(); img.alt=''; img.decoding='async'; img.onerror=()=>{img.style.visibility='hidden'}; img.src=tileUrl(tz,tx,ty); cont.appendChild(img); M.imgs.set(key,img); }
+    img.style.left=(tx*ts-x0)+'px'; img.style.top=(ty*ts-y0)+'px'; img.style.width=img.style.height=ts+'px';
+  }
+  for(const [k,img] of M.imgs) if(!keep.has(k)){ img.remove(); M.imgs.delete(k); }
+  // capa del track
+  const P=(lat,lon)=>{const [x,y]=wpx(lat,lon,M.z);return [x-x0,y-y0]};
   let all='',done='';
-  R.xy.forEach((q,i)=>{const [a,b]=P(q);const s=`${a.toFixed(1)},${b.toFixed(1)} `;all+=s;if(R.cd[i]<=E.d)done+=s;});
-  const [cx,cy]=P(toXY(E.lat,E.lon)); done+=`${cx.toFixed(1)},${cy.toFixed(1)}`;
-  let g=`<polyline points="${all}" fill="none" stroke="#1E2A2E" stroke-width="3" stroke-linejoin="round" opacity=".55"/><polyline points="${done}" fill="none" stroke="#C8553D" stroke-width="4.5" stroke-linejoin="round"/>`;
-  const vist={};
-  R.wp.forEach(w=>{const [a,b]=P(R.xy[w.i]); const k=Math.round(a/12)+'_'+Math.round(b/12); const lab=w.n.split(' ·')[0].replace('Xalet del Catllaràs','Xalet');
-    const off=vist[k]?14:0; vist[k]=1;
-    g+=`<circle cx="${a}" cy="${b}" r="5" fill="#fff" stroke="#1E2A2E" stroke-width="2"/><text x="${a+8}" y="${b-6+off}" font-size="13" font-weight="700" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="3">${lab}</text>`;});
-  if(lastFix&&!prova){const [a,b]=P(toXY(lastFix.lat,lastFix.lon)); g+=`<circle cx="${a}" cy="${b}" r="${Math.max(6,Math.min(60,lastFix.acc*sc))}" fill="#3d6c86" opacity=".15"/><circle cx="${a}" cy="${b}" r="5" fill="#3d6c86" stroke="#fff" stroke-width="2"/>`;}
-  g+=`<circle cx="${cx}" cy="${cy}" r="8" fill="#C8553D" stroke="#fff" stroke-width="3"/>`;
-  const bar=500/sc>200?1000:500; g+=`<line x1="${m}" x2="${m+bar*sc}" y1="${H-10}" y2="${H-10}" stroke="#1E2A2E" stroke-width="3"/><text x="${m}" y="${H-15}" font-size="11" fill="#6b7478">${bar} m</text>`;
-  $('mapa').innerHTML=g;
+  for(let i=0;i<R.n;i++){const [a,b]=P(R.p[i][0],R.p[i][1]); const s=a.toFixed(1)+','+b.toFixed(1)+' '; all+=s; if(R.cd[i]<=E.d) done+=s;}
+  const [cx,cy]=P(E.lat,E.lon); done+=cx.toFixed(1)+','+cy.toFixed(1);
+  let g=`<polyline points="${all}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" opacity=".8"/>`+
+        `<polyline points="${all}" fill="none" stroke="#7a3cc8" stroke-width="4" stroke-linejoin="round"/>`+
+        `<polyline points="${done}" fill="none" stroke="#C8553D" stroke-width="5" stroke-linejoin="round"/>`;
+  const etq=[];
+  R.wp.forEach(w=>{const [a,b]=P(R.p[w.i][0],R.p[w.i][1]); if(a<-50||a>W+50||b<-50||b>H+50) return;
+    const lab=w.k==='X'?'Xalet':w.k, ja=etq.find(e=>Math.hypot(e.a-a,e.b-b)<18);
+    if(ja){ if(!ja.l.includes(lab)) ja.l.push(lab); } else etq.push({a,b,l:[lab]}); });
+  etq.forEach(e=>{ g+=`<circle cx="${e.a}" cy="${e.b}" r="6" fill="#fff" stroke="#1E2A2E" stroke-width="2.5"/><text x="${e.a+9}" y="${e.b-7}" font-size="14" font-weight="800" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="4">${e.l.join(' / ')}</text>`; });
+  const mpp=156543.03*Math.cos(rad(E.lat))/2**M.z;
+  if(lastFix&&!prova){const [a,b]=P(lastFix.lat,lastFix.lon); g+=`<circle cx="${a}" cy="${b}" r="${Math.max(8,Math.min(150,lastFix.acc/mpp))}" fill="#3d6c86" opacity=".18"/><circle cx="${a}" cy="${b}" r="6" fill="#3d6c86" stroke="#fff" stroke-width="2.5"/>`;}
+  g+=`<circle cx="${cx}" cy="${cy}" r="9" fill="#C8553D" stroke="#fff" stroke-width="3"/>`;
+  const bar=[50,100,200,500,1000,2000].find(m=>m/mpp>=70)||2000;
+  g+=`<line x1="10" x2="${10+bar/mpp}" y1="${H-22}" y2="${H-22}" stroke="#1E2A2E" stroke-width="3"/><text x="10" y="${H-27}" font-size="12" font-weight="700" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="3">${bar>=1000?bar/1000+' km':bar+' m'}</text>`;
+  const sv=$('tover'); sv.setAttribute('viewBox',`0 0 ${W} ${H}`); sv.innerHTML=g;
+  $('m-seg').classList.toggle('on',M.follow);
 }
+function zoomMapa(dz,fx,fy){
+  const z=Math.max(ZMIN,Math.min(ZMAX,M.z+dz)); if(z===M.z||M.cx==null) return;
+  const el=$('tmap'), W=el.clientWidth, H=el.clientHeight, f=2**(z-M.z);
+  // manté fix el punt sota el dit (fx,fy) o el centre
+  const px=(fx??W/2)-W/2, py=(fy??H/2)-H/2;
+  M.cx=(M.cx+px)*f-px; M.cy=(M.cy+py)*f-py; M.z=z; dibuixaMapa();
+}
+(function(){
+  const el=$('tmap');
+  el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId); M.ptrs.set(e.pointerId,[e.clientX,e.clientY]); if(M.ptrs.size===2){const [a,b]=[...M.ptrs.values()]; M.pinch=Math.hypot(a[0]-b[0],a[1]-b[1]);}});
+  el.addEventListener('pointermove',e=>{ if(!M.ptrs.has(e.pointerId)) return;
+    const prev=M.ptrs.get(e.pointerId); M.ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    if(M.ptrs.size===1){ M.cx-=e.clientX-prev[0]; M.cy-=e.clientY-prev[1]; M.follow=false; dibuixaMapa(); }
+    else if(M.ptrs.size===2&&M.pinch){ const [a,b]=[...M.ptrs.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1]), r=el.getBoundingClientRect();
+      const fx=(a[0]+b[0])/2-r.left, fy=(a[1]+b[1])/2-r.top;
+      if(d/M.pinch>1.45){zoomMapa(1,fx,fy);M.pinch=d;} else if(d/M.pinch<0.69){zoomMapa(-1,fx,fy);M.pinch=d;} }});
+  const up=e=>{M.ptrs.delete(e.pointerId); if(M.ptrs.size<2) M.pinch=null;};
+  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+  el.addEventListener('dblclick',e=>{const r=el.getBoundingClientRect(); zoomMapa(1,e.clientX-r.left,e.clientY-r.top);});
+  el.addEventListener('wheel',e=>{e.preventDefault(); const r=el.getBoundingClientRect(); zoomMapa(e.deltaY<0?1:-1,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  $('m-in').onclick=e=>{e.stopPropagation();zoomMapa(1)}; $('m-out').onclick=e=>{e.stopPropagation();zoomMapa(-1)};
+  $('m-seg').onclick=e=>{e.stopPropagation();M.follow=true;dibuixaMapa();};
+  ['m-in','m-out','m-seg'].forEach(id=>$(id).addEventListener('pointerdown',e=>e.stopPropagation()));
+  window.addEventListener('resize',()=>dibuixaMapa());
+})();
+
+// ---------- Descàrrega de mapes per anar sense cobertura ----------
+const TILE_CACHE='catllaras-mapes-v1';
+function llistaTeselles(){
+  const BUF={12:1500,13:1500,14:1200,15:800,16:500}, set=new Set();
+  for(const k in RUTES){ const p=RUTES[k].pts;
+    for(let i=0;i<p.length;i+=2){ const [lat,lon]=p[i];
+      for(let z=ZMIN;z<=TZMAX;z++){ const b=BUF[z], dl=b/110540, dn=b/(111320*Math.cos(rad(lat))), s=256*2**z;
+        const [xa,ya]=wpx(lat+dl,lon-dn,z), [xb,yb]=wpx(lat-dl,lon+dn,z);
+        for(let x=Math.floor(xa/256);x<=Math.floor(xb/256);x++) for(let y=Math.floor(ya/256);y<=Math.floor(yb/256);y++) set.add(z+'/'+x+'/'+y);
+      }}}
+  return [...set].map(k=>{const [z,x,y]=k.split('/');return tileUrl(z,x,y)});
+}
+async function estatMapes(){
+  try{ if(!('caches' in window)) return; const c=await caches.open(TILE_CACHE), ks=await c.keys(), tot=llistaTeselles().length;
+    const n=Math.min(ks.length,tot);
+    $('mapa-estat').textContent= n>=tot?'✓ disponible sense cobertura':(n?`${n}/${tot} teselles desades`:'ICGC · cal cobertura');
+    if(n>=tot) $('b-desc').textContent='Mapes descarregats ✓ (tornar a descarregar)';
+  }catch(e){}
+}
+$('b-desc').onclick=async()=>{
+  if(!('caches' in window)){ $('desc-txt').textContent='Aquest navegador no permet desar mapes.'; return; }
+  const b=$('b-desc'); if(b.dataset.on) return; b.dataset.on=1;
+  try{ if(navigator.storage&&navigator.storage.persist) await navigator.storage.persist(); }catch(e){}
+  const urls=llistaTeselles(), c=await caches.open(TILE_CACHE);
+  let fet=0, err=0, bytes=0; $('desc-barra').hidden=false;
+  const pinta=()=>{ $('desc-i').style.width=(fet/urls.length*100).toFixed(0)+'%';
+    $('desc-txt').textContent=`Descarregant mapes: ${fet}/${urls.length}`+(bytes?` · ${(bytes/1048576).toFixed(1)} MB`:'')+(err?` · ${err} errors`:''); };
+  let i=0;
+  const worker=async()=>{ while(i<urls.length){ const u=urls[i++];
+    try{ if(!(await c.match(u))){ let r;
+        try{ r=await fetch(u,{mode:'cors'}); if(!r.ok) throw 0; const bl=await r.clone().blob(); bytes+=bl.size; }
+        catch(e){ r=await fetch(u,{mode:'no-cors'}); }
+        await c.put(u,r); }
+    }catch(e){ err++; }
+    fet++; pinta(); } };
+  await Promise.all([worker(),worker(),worker(),worker()]);
+  delete b.dataset.on;
+  $('desc-txt').textContent= err?`Fet, però ${err} teselles han fallat: torna-ho a provar amb bona connexió.`:'Mapes desats: ja pots fer servir el mapa sense cobertura.';
+  estatMapes();
+};
 
 // ---------- GPS ----------
 function onFix(p){
@@ -490,7 +594,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 setInterval(()=>{$('rellotge').textContent=rel(new Date()); if(R) render();},20000);
 $('rellotge').textContent=rel(new Date());
 
-R=prepara(dia); pintaGuioTots(); pintaFlora(); render();
+R=prepara(dia); pintaGuioTots(); pintaFlora(); render(); estatMapes();
 if(st.gps) gpsOn();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
