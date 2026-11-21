@@ -596,7 +596,7 @@ async function descarregaOverpass(){
   const [S,W,N,E]=bboxRutes();
   const q=`[out:json][timeout:50];way["highway"](${S},${W},${N},${E});out geom;`;
   for(const u of OVERPASS){
-    try{ const res=await fetchT(u+'?data='+encodeURIComponent(q),45000); if(!res.ok) throw 0;
+    try{ const res=await fetchT(u+'?data='+encodeURIComponent(q),180000); if(!res.ok) throw 0;
       const j=await res.json(), ways=[];
       for(const el of j.elements||[]){ if(el.type!=='way'||!el.geometry||!el.tags) continue;
         const t=tipusOSM(el.tags.highway||''); if(t<0) continue;
@@ -621,7 +621,8 @@ async function carregaOSM(forcar){
     if(!navigator.onLine){ $('osm-estat').textContent='Camins OSM: cal connexió per descarregar-los.'; return; }
     $('osm-estat').textContent='Descarregant camins d\'OpenStreetMap…';
     let d=null;
-    try{ d=await descarregaOFM(); }catch(e){ try{ $('osm-estat').textContent='Provant un altre servidor d\'OSM…'; d=await descarregaOverpass(); }catch(e2){} }
+    try{ d=await descarregaOFM(); }catch(e){ d=null; }
+    if(!d||!d.ways.length){ try{ $('osm-estat').textContent='Provant un altre servidor d\'OSM (pot trigar un parell de minuts)…'; d=await descarregaOverpass(); }catch(e2){ d=null; } }
     if(!d||!d.ways.length){ $('osm-estat').innerHTML='No s\'han pogut descarregar els camins OSM. <a href="#" id="osm-retry">Torna-ho a provar</a>';
       const a=$('osm-retry'); if(a) a.onclick=ev=>{ev.preventDefault();carregaOSM(true)}; return; }
     d.desat=new Date().toISOString();
