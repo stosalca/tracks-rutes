@@ -184,6 +184,11 @@ details.det.act summary{color:var(--ter)}
   </section>
 
   <section class="card">
+    <h2>Perfil <b><span style="color:#3d6c86">■</span> obaga <span style="color:#C8553D">■</span> solell <span style="color:#b7791f">■</span> llevant <span style="color:#8a6d3b">■</span> ponent</b></h2>
+    <svg id="perfil" viewBox="0 0 600 170"></svg>
+  </section>
+
+  <section class="card">
     <h2>Trams <b id="sortida"></b></h2>
     <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
     <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a la posta el dia 1 / les 15:00 el dia 2); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
@@ -212,11 +217,6 @@ details.det.act summary{color:var(--ter)}
     <div class="botons" style="margin-top:8px"><button class="btn s" id="b-met">Actualitzar previsió</button></div>
     <div class="enllacos" id="met-links"></div>
     <p class="nota" id="met-nota"></p>
-  </section>
-
-  <section class="card">
-    <h2>Perfil <b><span style="color:#3d6c86">■</span> obaga <span style="color:#C8553D">■</span> solell <span style="color:#b7791f">■</span> llevant <span style="color:#8a6d3b">■</span> ponent</b></h2>
-    <svg id="perfil" viewBox="0 0 600 170"></svg>
   </section>
 
   <section class="card guio" id="guio-ara">
