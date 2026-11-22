@@ -55,6 +55,16 @@ tr.act td{background:#fbe9e4;font-weight:700}
 .prova{display:none;margin-top:10px}
 .prova.on{display:block}
 input[type=range]{width:100%;accent-color:var(--ter)}
+.pb{border-left:5px solid #C55A11;padding:8px 0 8px 10px;margin:8px 0;border-top:1px solid #f0ebe1}
+.pb:first-child{border-top:0}
+.pb.passat{opacity:.45}
+.pb.alerta{background:#fbe5e0}.pb.avis{background:#fdf1dc}
+.pb-h{font-size:15px;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pb-h .id{color:#C55A11;font-weight:800}
+.pb-h .st{margin-left:auto;font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;background:#f3efe6}
+.pb.alerta .st{background:var(--ter);color:#fff}.pb.avis .st{background:var(--av);color:#fff}.pb.ok .st{background:#e3f1e8;color:var(--ok)}
+.pb table{font-size:12px;margin-top:6px}
+.pb .viu{font-size:13px;margin-top:6px}
 .nota{font-size:12px;color:var(--gris);line-height:1.45}
 .avis{background:#fbe5e0;color:#8f2f1c;border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px;margin-bottom:10px;display:none}
 .avis.on{display:block}
@@ -169,6 +179,12 @@ details.det.act summary{color:var(--ter)}
     <div class="sub" id="r-hora"></div>
   </section>
 
+  <section class="card pbs" id="plansb">
+    <h2>Plans B <b id="pb-obj"></b></h2>
+    <div id="pb-llista"></div>
+    <p class="nota" style="margin-top:6px">Hora límit a la cruïlla = hora de pas prevista (des de la sortida prevista, sense parades) + 1 h 30, o el marge que quedi fins a l'hora objectiu. Distàncies, desnivells i temps fins al final del dia, comptant el tros de pla A que queda després del pla B. Tracks: Catllaras_Dia1_B1…B5 i Catllaras_Dia2_B1…B3 al TwoNav. Al mapa, en taronja discontinu.</p>
+  </section>
+
   <section class="card" id="meteo">
     <h2>Meteo de la zona <b id="met-act"></b></h2>
     <div class="dies" id="met-dies"></div>
@@ -206,8 +222,8 @@ details.det.act summary{color:var(--ter)}
 
   <section class="card">
     <h2>Trams <b id="sortida"></b></h2>
-    <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th><th title="Temps del reconeixement del 21/11 (sol, sense grup)">21/11</th></tr></thead><tbody id="trams"></tbody></table>
-    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «21/11»: temps del reconeixement (sol, sense grup). Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
+    <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
+    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a la posta el dia 1 / les 15:00 el dia 2); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
   </section>
 
   <section class="card">
@@ -237,6 +253,7 @@ details.det.act summary{color:var(--ter)}
 <script src="rutes.js"></script>
 <script src="info.js"></script>
 <script src="vessants.js"></script>
+<script src="plansb.js"></script>
 <script>
 "use strict";
 const LIMIT={dia1:{h:'17:23',txt:'posta de sol'},dia2:{h:'15:00',txt:'hora objectiu'}};
@@ -377,12 +394,74 @@ function render(){
   const base=s.inici?new Date(s.inici):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows='';
   R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k];
-    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td>${real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${(R.r.reco||{})[R.wp[k+1].k]!=null?hm(R.r.reco[R.wp[k+1].k]/60):''}</td></tr>`;});
+    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
   let H=R.trams.reduce((a,x)=>a+x.h,0);
   rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td></td><td></td><td></td></tr>`;
   set('trams',rows);
   dibuixaPerfil(E); dibuixaMapa(E);
-  pintaGuio(E,w); pintaVessant(E);
+  pintaGuio(E,w); pintaVessant(E); pintaPlansB(E,seg,now);
+}
+
+
+// ---------- Plans B i hores límit ----------
+function plansB(){ return (typeof PLANSB!=='undefined'&&PLANSB[dia])||[]; }
+function sortidaPrevista(ref){ const d=new Date(ref); const [h,m]=R.r.sortida.split(':'); d.setHours(+h,+m,0,0); return d; }
+function objectiu(ref){ const d=new Date(ref); const [h,m]=LIMIT[dia].h.split(':'); d.setHours(+h,+m,0,0); return d; }
+// marge de l'hora límit: 1 h 30, o menys si amb aquest retard no s'arriba a l'hora objectiu
+function margeLimit(ref){ const arr=+sortidaPrevista(ref)+horesEntre(0,R.n-1)*3600e3; return Math.max(0,Math.min(1.5*3600e3,+objectiu(ref)-arr)); }
+function limitEn(i,ref){ return +sortidaPrevista(ref)+horesEntre(0,i)*3600e3+margeLimit(ref); }
+// temps de marxa des de la posició actual (E) fins a l'índex i1 del track, per trams
+function horesDesE(E,i1){ let h=0;
+  for(const x of R.trams){ const b=Math.min(i1,x.ib); if(R.cd[b]<=E.d) continue;
+    const a=E.d>R.cd[x.ia]?E:{d:R.cd[x.ia],u:R.cu[x.ia],n:R.cn[x.ia]};
+    h+=hores((R.cd[b]-a.d)/1000,Math.max(0,R.cu[b]-a.u),Math.max(0,R.cn[b]-a.n)); }
+  return h; }
+const nomPunt=k=>k==='X'?'Xalet':k==='P3'||k==='P6'?'Xalet ('+k+')':k==='P0'?'Monestir (P0)':k;
+function nomCruilla(i){ if(i>=R.n-1) return nomPunt(R.wp[R.wp.length-1].k);
+  const w=[...R.wp].reverse().find(x=>x.i<=i), d=R.cd[i]-R.cd[w.i], nm=nomPunt(w.k);
+  return d<60?nm:`${nm} + ${km(d)} km`; }
+function pintaPlansB(E,seg,now){
+  const L=plansB(); const el=$('pb-llista'); if(!el) return;
+  if(!L.length){ el.innerHTML='<p class="nota">Sense plans B per a aquest dia.</p>'; return; }
+  set('pb-obj',(dia==='dia1'?'objectiu: arribar abans de la posta ':'objectiu: acabar abans de les ')+LIMIT[dia].h);
+  const fiA=R.n-1, fiNom=nomPunt(R.wp[R.wp.length-1].k);
+  const obj=+objectiu(now), enRuta=!!(pos||prova||ds().inici);
+  el.innerHTML=L.map(b=>{
+    const hB=hores(b.km,b.up,b.dn), ib=b.ib;
+    const kA=ib!=null?(R.cd[fiA]-R.cd[ib])/1000:0, uA=ib!=null?R.cu[fiA]-R.cu[ib]:0, nA=ib!=null?R.cn[fiA]-R.cn[ib]:0, hA=ib!=null?horesEntre(ib,fiA):0;
+    const fi=b.fi||fiNom;
+    // des de la cruïlla
+    const tB={km:b.km+kA,up:b.up+uA,dn:b.dn+nA,h:hB+hA};
+    const tA={km:(R.cd[fiA]-R.cd[b.ia])/1000,up:R.cu[fiA]-R.cu[b.ia],dn:R.cn[fiA]-R.cn[b.ia],h:horesEntre(b.ia,fiA)};
+    const pas=+sortidaPrevista(now)+horesEntre(0,b.ia)*3600e3;
+    let lim=null, limTxt;
+    if(b.senseLimit){ limTxt='es decideix a la sortida'; }
+    else if(b.limitPropi){ lim=obj-hB*3600e3; limTxt=`sortir del Xalet abans de les <b>${rel(new Date(lim))}</b> (arribar-hi amb llum)`; }
+    else { lim=limitEn(b.ia,now); limTxt=`pas previst ${rel(new Date(pas))} · <b>límit ${rel(new Date(lim))}</b>`; }
+    const passat=seg>=b.ia&&b.ia<fiA&&!(b.ia===0&&E.d<100);
+    // des d'on ets
+    let cls='', st='', viu='';
+    if(!passat&&enRuta){
+      const hX=horesDesE(E,b.ia), dX=Math.max(0,R.cd[b.ia]-E.d)/1000, uX=Math.max(0,R.cu[b.ia]-E.u), nX=Math.max(0,R.cn[b.ia]-E.n);
+      const etaX=now+hX*3600e3, arrB=etaX+tB.h*3600e3, arrA=now+horesDesE(E,fiA)*3600e3;
+      if(lim!=null){
+        const P=b.limitPropi;
+        if(etaX>lim){cls='alerta'; st=P?'no hi arribeu amb llum':'toca pla B';}
+        else if(etaX>lim-15*60e3){cls='avis'; st='just al límit';}
+        else {cls='ok'; st=P?'hi arribaríeu amb llum':'a temps per al pla A';}
+      }
+      viu=`<div class="viu">Des d'on ets amb ${b.id}: <b>${km((dX+tB.km)*1000)} km</b> · <span class="up">+${mts(uX+tB.up)}</span> · <span class="dn">−${mts(nX+tB.dn)}</span> · ${hm(hX+tB.h)} → arribada <b>${rel(new Date(arrB))}</b>`+
+        (b.fi?'':` <span class="nota">(pla A: ${rel(new Date(arrA))})</span>`)+
+        (dX>0.05?`<br><span class="nota">Arribareu a la cruïlla (${nomCruilla(b.ia)}) cap a les ${rel(new Date(etaX))}${lim!=null?' · límit '+rel(new Date(lim)):''}.</span>`:'')+`</div>`;
+    } else if(passat){ cls='passat'; st='cruïlla passada'; }
+    const fila=(n,t)=>`<tr><td>${n}</td><td>${km(t.km*1000)}</td><td>${Math.round(t.up)}</td><td>${Math.round(t.dn)}</td><td>${hm(t.h)}</td></tr>`;
+    const siLim=lim!=null&&!b.limitPropi?`<div class="nota" style="margin-top:4px">Si hi arribeu just a l'hora límit i agafeu ${b.id}: a ${fi} a les <b>${rel(new Date(lim+tB.h*3600e3))}</b>.</div>`:'';
+    return `<div class="pb ${cls}"><div class="pb-h"><span class="id">${b.id}</span>${esc(b.nom)}${st?`<span class="st">${st}</span>`:''}</div>
+      <div class="nota">${esc(b.desc)}</div>
+      <div class="sub" style="margin-top:4px">Cruïlla: <b>${nomCruilla(b.ia)}</b> · ${limTxt}</div>
+      <table><thead><tr><th>Des de la cruïlla fins a ${esc(fi)}</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th></tr></thead><tbody>
+      ${fila('Amb '+b.id,tB)}${b.fi?'':fila('Amb el pla A',tA)}</tbody></table>${siLim}${viu}</div>`;
+  }).join('');
 }
 
 // ---------- Obaga / solell, sol i confort del grup ----------
@@ -633,6 +712,10 @@ function dibuixaMapa(E){
   let g=`<polyline points="${all}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" opacity=".8"/>`+
         `<polyline points="${all}" fill="none" stroke="#7a3cc8" stroke-width="4" stroke-linejoin="round"/>`+
         `<polyline points="${done}" fill="none" stroke="#C8553D" stroke-width="5" stroke-linejoin="round"/>`;
+  plansB().forEach(b=>{ if(b.pts.length<2) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
+    g+=`<polyline points="${ps}" fill="none" stroke="#fff" stroke-width="6" opacity=".7"/><polyline points="${ps}" fill="none" stroke="#C55A11" stroke-width="3.5" stroke-dasharray="8 6"/>`;
+    const m=b.pts[Math.floor(b.pts.length/2)], [a,c]=P(m[0],m[1]);
+    g+=`<text x="${a+6}" y="${c+14}" font-size="13" font-weight="800" fill="#C55A11" paint-order="stroke" stroke="#fff" stroke-width="4">${b.id}</text>`; });
   const etq=[];
   R.wp.forEach(w=>{const [a,b]=P(R.p[w.i][0],R.p[w.i][1]); if(a<-50||a>W+50||b<-50||b>H+50) return;
     const lab=w.k==='X'?'Xalet':w.k, ja=etq.find(e=>Math.hypot(e.a-a,e.b-b)<18);

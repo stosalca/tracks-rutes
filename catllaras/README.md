@@ -15,4 +15,4 @@ Tracks de la sortida avaluativa MOME204 (Petjada · guia Sergi Tossal).
 | Catllaras_Dia1_guiat.gpx · Catllaras_Dia2_guiat.gpx | Track ajustat + waypoints amb el guió per als clients i els canvis d'obaga/solell (per obrir al TwoNav) |
 | Catllaras_Dia1_punts.gpx · Catllaras_Dia2_punts.gpx | Només els waypoints del guió (per afegir-los al track que ja tens al TwoNav o importar-los com a roadbook al Land) |
 
-**App de ruta (mòbil):** [stosalca.github.io/tracks-rutes/app-catllaras](https://stosalca.github.io/tracks-rutes/app-catllaras/) · codi a [../app-catllaras](../app-catllaras)
+**App de ruta (mòbil):** inclou els plans B (cruïlla, hora límit, i distància, desnivell i temps fins al final aplicant cada pla, també des d'on ets).  [stosalca.github.io/tracks-rutes/app-catllaras](https://stosalca.github.io/tracks-rutes/app-catllaras/) · codi a [../app-catllaras](../app-catllaras)
