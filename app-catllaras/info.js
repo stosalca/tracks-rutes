@@ -53,9 +53,9 @@ const INFO = {
       ]
     },
     'P5': {
-      titol: 'Entre el Roc de la Devesa Jussana i la Moreneta (≈) · punt més alt del dia',
+      titol: 'Roca del Joc de Pilota · punt més alt del dia',
       punts: [
-        "Aquí arribem al punt més alt de la jornada (1.511 m). Al nord, la gran barrera del Cadí, el Moixeró i el Mogrony. El Catllaràs és una serra prepirinenca que s'aixeca just al sud d'aquesta alineació.",
+        "Som al cim de la Roca del Joc de Pilota (1.615 m), on hi ha una Moreneta: el punt més alt de la jornada. Al nord, la gran barrera del Cadí, el Moixeró i el Mogrony. El Catllaràs és una serra prepirinenca que s'aixeca just al sud d'aquesta alineació.",
         "Tota la serra és de roca calcària: sediments que es van dipositar al fons del mar durant el Cretaci superior i l'Eocè, i que després es van plegar i desplaçar amb la formació dels Pirineus.",
         "Espai protegit: és un PEIN des de 1992 i forma part de la Xarxa Natura 2000. Ocupa 5.605 ha entre el Berguedà i el Ripollès.",
         "Fauna: hi és molt abundant el senglar, hi viuen la marta i el cérvol, i algunes espècies pirinenques, com el gall fer, hi són al límit de la seva àrea."
