@@ -161,19 +161,17 @@ const INFO = {
 };
 
 const FLORA = {
-  titol: 'Per què fagedes aquí i pinedes allà?',
-  intro: "Al Catllaràs domina el pi roig, però a les obagues i a les fondalades hi ha fagedes amb boix. La diferència entre una banda i l'altra de la vall s'explica per quatre factors que actuen alhora:",
+  titol: 'Fageda o pineda? (resum)',
+  intro: "Al Catllaràs domina el pi roig; a les obagues i fondalades hi ha fageda amb boix.",
   factors: [
-    ['1 · Orientació (obaga i solell)', "El faig vol humitat constant: plujes abundants, boires i, sobretot, cap sequera a l'estiu. A les obagues (cara nord) toca menys el sol, s'evapora menys aigua i el sòl es manté humit, i allà el faig hi guanya. Als solells (cara sud) fa més calor i més sequera: hi va millor el pi roig, que aguanta més l'eixut, juntament amb el roure martinenc i el boix. Per això d'una vessant a l'altra de la mateixa vall el bosc canvia tant."],
-    ['2 · Llum i ombra (la successió)', "El pi roig és un arbre de llum: per germinar i créixer necessita espais oberts. El faig, en canvi, tolera l'ombra quan és jove. Per això sota molts pins hi veiem faigs petits. Quan els pins vells moren, si el clima ho permet, el faig ocupa el seu lloc. Una pineda amb faigs a sota és un bosc en transició; una fageda pura és el bosc «final» de les obagues."],
-    ['3 · Una fageda no deixa créixer res a sota', "El faig fa una ombra tan densa que el sotabosc és molt pobre: troncs grisos i llisos, terra cobert de fulles i poca cosa més. És un «bosc-sala». La pineda deixa passar més llum, i a sota hi creix boix, ginebre i herbes."],
-    ['4 · La mà de l\'home', "Durant segles aquests boscos s'han tallat per obtenir fusta, carbó vegetal i fusta per a les mines, i s'hi han obert camps i pastures. Sovint s'ha afavorit el pi, que creix de pressa i és productiu. Des dels anys 1950 la serra s'ha despoblat i el pi roig ha colonitzat les pastures abandonades. A més, hi havia avets (l'antiga avetosa de l'Ardericó) que han desaparegut. Una vall amb fageda neta pot ser una obaga que s'ha tallat menys o que ha tingut temps de refer-se, i la de davant, una antiga zona de pastures."]
+    ['Orientació', "El faig vol humitat tot l'any i guanya a les obagues; als solells, més secs, hi va millor el pi roig."],
+    ['Llum', "El pi roig colonitza llocs oberts; el faig creix a l'ombra sota els pins i, amb el temps, els substitueix."],
+    ['Història', "Tala, carbó, mines i pastures, i després el despoblament, han afavorit el pi a moltes vessants."]
   ],
   reconeixer: [
-    "Faig: escorça llisa i grisa, fulla ovalada de vora ondulada, fruit (fages) amb closca punxeguda. Al novembre fa una catifa de fulla marró, i els faigs joves conserven la fulla seca a les branques.",
-    "Pi roig: escorça grisa i esquerdada a baix i de color taronja a la part alta del tronc; agulles curtes de dues en dues, sovint lleugerament torçades.",
-    "Boix: arbust de fulla petita, perenne i lluent, típic dels sòls calcaris; acompanya tant la fageda com la pineda.",
-    "Pi negre: només per sobre dels 1.700 m, en clapes (no el veurem en aquesta ruta)."
+    "Faig: escorça llisa i grisa; al novembre, catifa de fulla marró.",
+    "Pi roig: escorça taronja a la part alta del tronc.",
+    "Boix: arbust de fulla petita i lluent, típic de sòl calcari."
   ],
-  fonts: "Fonts: Història Natural dels Països Catalans (Enciclopèdia Catalana); Inventari del Patrimoni Cultural Local de la Diputació de Barcelona (fitxes de la Pobla de Lillet); Generalitat de Catalunya / UPC (atribució del Xalet a Gaudí, 2026)."
+  fonts: "Fonts: Història Natural dels Països Catalans; Inventari del Patrimoni Cultural Local (Diputació de Barcelona); Generalitat / UPC (Xalet, 2026)."
 };

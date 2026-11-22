@@ -87,6 +87,25 @@ details.det.act summary{color:var(--ter)}
 #tosm{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .vess{border-left:6px solid var(--vc,#3d6c86)}
 .vtxt{font-size:15px;line-height:1.45}
+.met-ara{font-size:14px;margin:2px 0 6px;color:var(--pis)}
+.met-ara:empty{display:none}
+.cons{padding-left:18px;font-size:15px;line-height:1.45}
+.cons li{margin-bottom:5px}
+.parada{background:#eef3f6;border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.4;margin-top:6px}
+.parada:empty{display:none}
+.dies{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.dies button{border:1px solid #d9d3c6;background:#fff;border-radius:99px;padding:6px 12px;font:600 13px inherit;font-family:inherit;color:var(--pis)}
+.dies button.on{background:var(--pis);color:var(--sor);border-color:var(--pis)}
+.mres{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:2px 8px;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:8px}
+.mres b{font-size:12px;color:var(--gris)}
+.mav{border-radius:10px;padding:7px 10px;font-size:14px;margin-bottom:6px;background:#fbf0d9;color:#7a5410}
+.mav.r{background:#fbe5e0;color:#8f2f1c}
+.mav.ok{background:#e3f1e8;color:var(--ok)}
+.taula-h{overflow-x:auto}
+.taula-h table{font-size:12px;min-width:100%}
+.taula-h td,.taula-h th{padding:4px 4px;white-space:nowrap}
+.enllacos{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.enllacos a{font-size:13px;font-weight:600;color:var(--pis);background:#e7e1d4;border-radius:99px;padding:6px 10px;text-decoration:none}
 .vrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:3px 0}
 .vrow i{width:14px;height:14px;border-radius:4px;display:inline-block;flex:none}
 </style>
@@ -113,9 +132,11 @@ details.det.act summary{color:var(--ter)}
   </section>
 
   <section class="card vess" id="vess">
-    <h2>Ara camines per <b id="vess-seg"></b></h2>
+    <h2>Sol, ombra i abric <b id="vess-seg"></b></h2>
     <div class="nom2" id="vess-nom"></div>
-    <p class="vtxt" id="vess-txt"></p>
+    <div class="met-ara" id="conf-met"></div>
+    <ul class="cons" id="conf-cons"></ul>
+    <div class="parada" id="conf-parada"></div>
   </section>
 
   <section class="card guio" id="guio-ara">
@@ -148,6 +169,17 @@ details.det.act summary{color:var(--ter)}
     <div class="sub" id="r-hora"></div>
   </section>
 
+  <section class="card" id="meteo">
+    <h2>Meteo de la zona <b id="met-act"></b></h2>
+    <div class="dies" id="met-dies"></div>
+    <div id="met-resum"></div>
+    <div id="met-avisos"></div>
+    <div class="taula-h" id="met-hores"></div>
+    <div class="botons" style="margin-top:8px"><button class="btn s" id="b-met">Actualitzar previsió</button></div>
+    <div class="enllacos" id="met-links"></div>
+    <p class="nota" id="met-nota"></p>
+  </section>
+
   <section class="card">
     <h2>Perfil <b><span style="color:#3d6c86">■</span> obaga <span style="color:#C8553D">■</span> solell <span style="color:#b7791f">■</span> llevant <span style="color:#8a6d3b">■</span> ponent</b></h2>
     <svg id="perfil" viewBox="0 0 600 170"></svg>
@@ -174,17 +206,13 @@ details.det.act summary{color:var(--ter)}
 
   <section class="card">
     <h2>Trams <b id="sortida"></b></h2>
-    <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th></tr></thead><tbody id="trams"></tbody></table>
-    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada).</p>
+    <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th><th title="Temps del reconeixement del 21/11 (sol, sense grup)">21/11</th></tr></thead><tbody id="trams"></tbody></table>
+    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «21/11»: temps del reconeixement (sol, sense grup). Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
   </section>
 
   <section class="card">
     <h2>Guió de tots els punts <b>toca per obrir</b></h2>
     <div id="guio-tots"></div>
-  </section>
-
-  <section class="card">
-    <h2>Flora del Catllaràs</h2>
     <div id="flora"></div>
   </section>
 
@@ -215,6 +243,7 @@ const LIMIT={dia1:{h:'17:23',txt:'posta de sol'},dia2:{h:'15:00',txt:'hora objec
 const ST_KEY='petjada-catllaras-v1';
 let st=load();
 let dia=st.dia||'dia1';
+let provaHora=null;
 let R=null, pos=null, gpsWatch=null, lastFix=null, wake=null, prova=false;
 
 function load(){try{return JSON.parse(localStorage.getItem(ST_KEY))||{}}catch(e){return {}}}
@@ -304,7 +333,7 @@ function set(id,html){$(id).innerHTML=html}
 
 // ---------- Pintar ----------
 function render(){
-  const s=ds(), now=Date.now();
+  const s=ds(), now=prova&&provaHora?+provaHora:Date.now();
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.d===dia));
   $('b-inici').textContent=s.inici?'Inici: '+rel(new Date(s.inici))+' (tocar per canviar)':'Iniciar ruta';
   $('sortida').textContent='sortida prevista '+R.r.sortida;
@@ -348,42 +377,187 @@ function render(){
   const base=s.inici?new Date(s.inici):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows='';
   R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k];
-    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td>${real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td></tr>`;});
+    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td>${real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${(R.r.reco||{})[R.wp[k+1].k]!=null?hm(R.r.reco[R.wp[k+1].k]/60):''}</td></tr>`;});
   let H=R.trams.reduce((a,x)=>a+x.h,0);
-  rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td></td><td></td></tr>`;
+  rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td></td><td></td><td></td></tr>`;
   set('trams',rows);
   dibuixaPerfil(E); dibuixaMapa(E);
   pintaGuio(E,w); pintaVessant(E);
 }
 
-// ---------- Obaga / solell ----------
+// ---------- Obaga / solell, sol i confort del grup ----------
 const DIRNOM={N:'nord',NE:'nord-est',E:'est',SE:'sud-est',S:'sud',SO:'sud-oest',O:'oest',NO:'nord-oest'};
 const VTIPUS={
-  obaga:{nom:'Obaga',col:'#3d6c86',txt:"Vessant que mira al nord: hi toca poc el sol, sobretot a l'hivern. És més fresc i humit, i el gebre i la neu hi duren més. És l'ambient del faig: busqueu la fageda o faigs joves sota els pins."},
-  solell:{nom:'Solell',col:'#C8553D',txt:"Vessant que mira al sud: hi toca el sol bona part del dia. És més calent i sec. Hi domina el pi roig, amb roure martinenc i boix; al faig li costa viure-hi."},
-  llevant:{nom:'Vessant de llevant',col:'#b7791f',txt:"Vessant que mira a l'est: sol al matí i ombra a la tarda. És un ambient intermedi: pi i faig es barregen segons si és fondalada o llom."},
-  ponent:{nom:'Vessant de ponent',col:'#8a6d3b',txt:"Vessant que mira a l'oest: ombra al matí i sol a la tarda, que és quan fa més calor. És un ambient intermedi, més sec que el de llevant."},
-  pla:{nom:'Pla o carena',col:'#6b7478',txt:"Terreny pla o carena: no hi ha una orientació clara. Aquí hi influeixen més el vent i el sòl."}
+  obaga:{nom:'Obaga',col:'#3d6c86'}, solell:{nom:'Solell',col:'#C8553D'},
+  llevant:{nom:'Vessant de llevant',col:'#b7791f'}, ponent:{nom:'Vessant de ponent',col:'#8a6d3b'},
+  pla:{nom:'Pla o carena',col:'#6b7478'}
 };
 function vessants(){ return (typeof VESSANTS!=='undefined'&&VESSANTS[dia])||[]; }
 function vessantA(d){ const v=vessants(); return v.find(s=>d>=s.d0&&d<s.d1)||v[v.length-1]; }
+// Posició del sol (fórmula astronòmica simplificada, precisió d'1°)
+function solPos(date,lat,lon){const r=Math.PI/180,d=(date-Date.UTC(2000,0,1,12))/864e5;const g=(357.529+0.98560028*d)*r,q=280.459+0.98564736*d,L=(q+1.915*Math.sin(g)+0.020*Math.sin(2*g))*r,e=(23.439-0.00000036*d)*r;
+  const RA=Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L)),dec=Math.asin(Math.sin(e)*Math.sin(L));const GMST=((18.697374558+24.06570982441908*d)%24+24)%24;const H=(GMST*15+lon)*r-RA;const f=lat*r;
+  const el=Math.asin(Math.sin(f)*Math.sin(dec)+Math.cos(f)*Math.cos(dec)*Math.cos(H));const az=Math.atan2(-Math.sin(H),Math.tan(dec)*Math.cos(f)-Math.sin(f)*Math.cos(H));return {el:el/r,az:((az/r)+360)%360};}
+// Llum directa que rep el vessant (sense comptar l'ombra de muntanyes veïnes ni del bosc)
+function solVessant(sg,date,lat,lon){
+  const p=solPos(date,lat,lon); if(p.el<=0) return {k:'nit',el:p.el};
+  const s=Math.atan((sg.sl||0)/100), r=Math.PI/180;
+  const ci=Math.cos(s)*Math.sin(p.el*r)+Math.sin(s)*Math.cos(p.el*r)*Math.cos((p.az-(sg.asp||0))*r);
+  return {k: ci<0.12?'ombra':ci<0.3?'feble':'sol', ci, el:p.el};
+}
+const SOLTXT={sol:'☀ al sol',feble:'⛅ sol feble (de biaix)',ombra:"🌑 a l'ombra",nit:'🌙 sense sol'};
+function idxA(d){ let lo=0,hi=R.n-1; while(lo<hi){const m=(lo+hi)>>1; if(R.cd[m]<d) lo=m+1; else hi=m;} return lo; }
 function pintaVessant(E){
   const v=vessants(); if(!v.length){$('vess').hidden=true;return}
-  const s=vessantA(E.d), t=VTIPUS[s.c];
+  const now=prova&&provaHora?provaHora:new Date();
+  const sg=vessantA(E.d), t=VTIPUS[sg.c], sol=solVessant(sg,now,E.lat,E.lon);
+  const met=meteoEn(now,E.e);
+  const tapat=met&&met.cc>=75;
   $('vess').style.setProperty('--vc',t.col);
-  set('vess-nom',`${t.nom} · cara ${DIRNOM[s.dir]}`);
-  const nx=v[v.indexOf(s)+1];
-  set('vess-seg', nx?`en ${km(Math.max(0,nx.d0-E.d))} km → ${VTIPUS[nx.c].nom.toLowerCase()}`:'fins al final');
-  set('vess-txt',esc(t.txt));
+  set('vess-nom',`${t.nom} · cara ${DIRNOM[sg.dir]} · ${tapat&&sol.k!=='nit'?'☁ cel tapat':SOLTXT[sol.k]}`);
+  const nx=v[v.indexOf(sg)+1];
+  set('vess-seg', nx?`en ${km(Math.max(0,nx.d0-E.d))} km → ${VTIPUS[nx.c].nom.toLowerCase()}`:'');
+  set('conf-met', met?`Ara aquí (≈${mts(E.e)}): <b>${tC(met.t)} °C</b>, sensació <b>${tC(met.at)} °C</b> · vent ${met.ws.toFixed(0)} km/h (ratxes ${met.wg.toFixed(0)}) · núvols ${met.cc.toFixed(0)} %`
+    :'<span class="nota">Sense previsió desada: actualitza la meteo amb cobertura per tenir temperatura i vent.</span>');
+  const c=[];
+  const fred=met?met.at<3:null, vent=met?met.wg>=35:false;
+  // on som
+  if(sol.k==='sol'&&!tapat) c.push(met&&met.wg>=30?'Al sol però amb vent: per parar, busca recer (bosc o fondalada).':'Al sol: <b>bon lloc per parar</b> i reagrupar.');
+  else if(sol.k==='feble'&&!tapat) c.push('Sol de biaix: parada curta, s\'hi està bé si no fa vent.');
+  else if(sol.k==='ombra'||tapat) c.push(fred?'<b>Ombra i fred</b> ('+tC(met.at)+' °C de sensació): evita parades llargues; si cal parar, capa d\'abric posada <i>abans</i> de refredar-se.':'A l\'ombra: aquí es refreda ràpid en parar; millor seguir fins a un lloc assolellat.');
+  // què ve: pujades i baixades del proper km
+  const i0=idxA(E.d), i1=idxA(Math.min(E.d+1000,R.cd[R.n-1]));
+  const up=R.cu[i1]-R.cu[i0], dn=R.cn[i1]-R.cn[i0];
+  const sgN=vessantA(Math.min(E.d+500,R.cd[R.n-1]));
+  const solN=solVessant(sgN,new Date(+now+horesEntre(i0,idxA(Math.min(E.d+500,R.cd[R.n-1])))*3600e3),E.lat,E.lon);
+  if(up>=70) c.push(`Ve una pujada (+${Math.round(up)} m el proper km)${solN.k==='sol'&&!tapat?' al sol':''}: <b>treure una capa abans de començar</b> per no suar.`);
+  else if(dn>=70) c.push(`Ve una baixada (−${Math.round(dn)} m el proper km)${solN.k!=='sol'||tapat?" per l'ombra":''}: <b>posar-se una capa abans de baixar</b>.`);
+  // vent als colls i carenes propers
+  const wpN=R.wp.find(x=>R.cd[x.i]>E.d && R.cd[x.i]-E.d<800 && /coll|collada|carena|cim|moreneta|devesa/i.test(x.n));
+  if(wpN&&met&&met.wg>=25) c.push(`A ${wpN.n.split(' ·')[0]} (${km(R.cd[wpN.i]-E.d)} km) serà més exposat al vent (ratxes ≈${met.wg.toFixed(0)} km/h): <b>tallavent a mà</b>.`);
+  if(met&&met.pp>=40) c.push(`Probabilitat de precipitació ${met.pp.toFixed(0)} %: impermeable a punt.`);
+  set('conf-cons',c.map(x=>`<li>${x}</li>`).join(''));
+  // propera parada idònia (al sol i sense gaire vent), en els propers 4 km
+  let par='';
+  if(!(sol.k==='sol'&&!tapat)){
+    let ventos=null;
+    for(let d=E.d+200; d<=Math.min(E.d+4000,R.cd[R.n-1]); d+=100){
+      const i=idxA(d), eta=new Date(+now+horesEntre(i0,i)*3600e3), sgx=vessantA(d), q=R.p[i];
+      const sx=solVessant(sgx,eta,q[0],q[1]), mx=meteoEn(eta,q[2]);
+      if(sx.k!=='sol' || (mx&&mx.cc>=60)) continue;
+      const txt=`en ${km(d-E.d)} km (≈${rel(eta)}), ${VTIPUS[sgx.c].nom.toLowerCase()} cara ${DIRNOM[sgx.dir]}`;
+      if(!mx||mx.wg<40){ par=`<b>Propera parada al sol:</b> ${txt}.`; break; }
+      if(!ventos) ventos=`<b>Propera zona al sol:</b> ${txt}, però amb ratxes d'uns ${Math.round(mx.wg)} km/h: parada curta o a recer.`;
+    }
+    if(!par) par=ventos||'En els propers 4 km no hi ha cap tram al sol: per parar, busca recer del vent (bosc dens o fondalada).';
+  }
+  set('conf-parada',par);
 }
 function pintaResumVessants(){
   const v=vessants(); if(!v.length) return '';
-  const tot={}; v.forEach(s=>tot[s.c]=(tot[s.c]||0)+(Math.min(s.d1,R.cd[R.n-1])-s.d0));
   const T=R.cd[R.n-1];
-  return `<details class="det"><summary>Obaga i solell al llarg de la ruta d'avui</summary>`+
-    Object.entries(tot).sort((a,b)=>b[1]-a[1]).map(([c,m])=>`<div class="vrow"><i style="background:${VTIPUS[c].col}"></i>${VTIPUS[c].nom}: ${Math.round(m/T*100)} % (${km(m)} km)</div>`).join('')+
-    `<ul style="margin-top:6px">`+v.filter(s=>s.d1-s.d0>=300).map(s=>`<li>km ${km(s.d0)}–${km(Math.min(s.d1,T))}: ${VTIPUS[s.c].nom.toLowerCase()} (cara ${DIRNOM[s.dir]})</li>`).join('')+`</ul>`+
-    `<p class="nota">Calculat amb el model digital del terreny (Copernicus, 90 m), amb una mostra cada 200 m. Indica la tendència del vessant; als torrents i fondalades l'ombra pot ser més gran del que diu.</p></details>`;
+  return `<details class="det"><summary>Obaga i solell al llarg de la ruta</summary><ul>`+v.filter(s=>s.d1-s.d0>=300).map(s=>`<li>km ${km(s.d0)}–${km(Math.min(s.d1,T))}: ${VTIPUS[s.c].nom.toLowerCase()} (cara ${DIRNOM[s.dir]})</li>`).join('')+`</ul>`+
+    `<p class="nota">Orientació i pendent: model del terreny (Copernicus 90 m). El sol es calcula per a l'hora i el pendent, però no compta l'ombra de muntanyes veïnes ni del bosc.</p></details>`;
+}
+
+// ---------- Meteo (Open-Meteo), desada per anar sense cobertura ----------
+const tC=x=>String(Math.round(x)||0);
+const MET_KEY='petjada-meteo-v1';
+const MET_PTS=[{n:'Monestir',lat:42.2422,lon:1.9931,e:920},{n:'Xalet',lat:42.2240,lon:1.9713,e:1366},{n:'Moreneta',lat:42.2151,lon:1.9636,e:1615}];
+let MET=null; try{ MET=JSON.parse(localStorage.getItem(MET_KEY)); }catch(e){}
+let metDia=null;
+const WMO={0:'serè',1:'poc núvol',2:'mig núvol',3:'tapat',45:'boira',48:'boira gebradora',51:'plugim',53:'plugim',55:'plugim fort',56:'plugim gelant',57:'plugim gelant',61:'pluja feble',63:'pluja',65:'pluja forta',66:'pluja gelant',67:'pluja gelant',71:'neu feble',73:'neu',75:'neu forta',77:'neu granulada',80:'ruixats',81:'ruixats',82:'ruixats forts',85:'ruixats de neu',86:'ruixats de neu',95:'tempesta',96:'tempesta i calamarsa',99:'tempesta i calamarsa'};
+function diaSortida(){ const d=new Date(), k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return k==='2026-11-28'||k==='2026-11-29'; }
+function maxEdat(){ return (diaSortida()?1:3)*3600e3; }
+setInterval(()=>{ if(navigator.onLine) carregaMeteo(false); }, 10*60e3);
+window.addEventListener('online',()=>carregaMeteo(false));
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') carregaMeteo(false); });
+async function carregaMeteo(manual){
+  const vell=!MET||Date.now()-MET.ts>maxEdat();
+  if(!manual&&!vell) return pintaMeteo();
+  if(!navigator.onLine){ pintaMeteo(); return; }
+  const v='temperature_2m,apparent_temperature,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,weather_code,freezing_level_height';
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+MET_PTS.map(p=>p.lat).join(',')+'&longitude='+MET_PTS.map(p=>p.lon).join(',')+'&elevation='+MET_PTS.map(p=>p.e).join(',')+
+    '&hourly='+v+'&daily=sunrise,sunset&timezone=Europe%2FMadrid&forecast_days=16&wind_speed_unit=kmh';
+  $('met-act').textContent='actualitzant…';
+  try{ const r=await fetchT(u,25000); if(!r.ok) throw 0; const j=await r.json(); const arr=Array.isArray(j)?j:[j];
+    MET={ts:Date.now(),pts:arr.map(x=>({h:x.hourly,d:x.daily}))};
+    try{ localStorage.setItem(MET_KEY,JSON.stringify(MET)); }catch(e){}
+  }catch(e){ $('met-act').textContent='no s\'ha pogut actualitzar'; }
+  pintaMeteo(); render();
+}
+function hIdx(date){ if(!MET) return -1; const h=MET.pts[0].h.time; const k=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0')+'T'+String(date.getHours()).padStart(2,'0')+':00'; return h.indexOf(k); }
+// condicions a una hora i alçada (interpolades entre els tres punts de previsió)
+function meteoEn(date,alt){
+  const i=hIdx(date); if(i<0) return null;
+  const P=MET.pts, E=MET_PTS.map(p=>p.e);
+  let a=0,b=1; if(alt>E[1]){a=1;b=2;}
+  const f=Math.max(0,Math.min(1,(alt-E[a])/(E[b]-E[a])));
+  const g=k=>{const x=P[a].h[k][i], y=P[b].h[k][i]; return (x==null||y==null)?(x??y??0):x+(y-x)*f;};
+  return {t:g('temperature_2m'),at:g('apparent_temperature'),ws:g('wind_speed_10m'),wg:g('wind_gusts_10m'),cc:g('cloud_cover'),pp:g('precipitation_probability'),pr:g('precipitation'),code:P[b].h.weather_code[i]};
+}
+function diesMeteo(){
+  if(!MET) return [];
+  const d0=MET.pts[0].d.time, avui=new Date(), kd=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+  const DS=['dg','dl','dt','dc','dj','dv','ds'];
+  return d0.filter(k=>k>=kd(avui)&&k<='2026-11-30').map(k=>{const x=new Date(k+'T12:00:00');
+    return {k,n:(k===kd(avui)?'Avui':DS[x.getDay()]+' '+x.getDate())+(k==='2026-11-28'?' · dia 1':k==='2026-11-29'?' · dia 2':'')};});
+}
+function pintaMeteo(){
+  set('met-links',[
+    ['Meteocat · la Pobla de Lillet','https://www.meteo.cat/prediccio/municipal/081666'],
+    ['Meteocat · Pirineu','https://www.meteo.cat/prediccio/pirineu'],
+    ['MeteoMuntanya','https://meteomuntanya.cat/'],
+    ['Meteoblue · Xalet (1.366 m)','https://www.meteoblue.com/en/weather/week/42.224N1.971E1366'],
+    ['Meteoblue · multimodel','https://www.meteoblue.com/en/weather/forecast/multimodel/42.224N1.971E1366_Europe%2FMadrid'],
+    ['AEMET · muntanya Pirineu català','https://www.aemet.es/ca/eltiempo/prediccion/montana?p=cat1'],
+    ['AEMET · la Pobla de Lillet','https://www.aemet.es/ca/eltiempo/prediccion/municipios/pobla-de-lillet-la-id08166'],
+    ['Avisos Meteocat','https://www.meteo.cat/prediccio/general']
+  ].map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`).join(''));
+  set('met-nota','Previsió per hores d\'Open-Meteo a tres alçades de la ruta (monestir 920 m, Xalet 1.366 m, Moreneta 1.615 m), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada hora els dies de la sortida i cada 3 hores la resta. Contrasta-la amb Meteocat i AEMET; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.');
+  if(!MET){ set('met-act','sense dades'); set('met-dies',''); set('met-resum','<p class="nota">Toca «Actualitzar previsió» amb connexió.</p>'); set('met-hores',''); set('met-avisos',''); return; }
+  const fa=Math.round((Date.now()-MET.ts)/60000);
+  set('met-act', 'actualitzada '+(fa<60?`fa ${fa} min`:fa<1440?`fa ${Math.round(fa/60)} h`:new Date(MET.ts).toLocaleDateString('ca-ES')));
+  const dies=diesMeteo(); if(!dies.length){ set('met-resum','<p class="nota">La previsió desada ja no cobreix els propers dies: actualitza-la.</p>'); return; }
+  if(!metDia||!dies.find(x=>x.k===metDia)) metDia=(dies.find(x=>x.k===(dia==='dia1'?'2026-11-28':'2026-11-29'))||dies[0]).k;
+  set('met-dies',dies.map(x=>`<button data-k="${x.k}" class="${x.k===metDia?'on':''}">${x.n}</button>`).join(''));
+  document.querySelectorAll('#met-dies button').forEach(b=>b.onclick=()=>{metDia=b.dataset.k;pintaMeteo();});
+  const H=MET.pts.map(p=>p.h), T=H[0].time;
+  const ix=T.map((t,i)=>t.startsWith(metDia)?i:-1).filter(i=>i>=0);
+  const finestra=metDia==='2026-11-28'?[9,19]:metDia==='2026-11-29'?[6,16]:[7,19];
+  const hores=ix.filter(i=>{const h=+T[i].slice(11,13);return h>=finestra[0]&&h<=finestra[1];});
+  // resum per alçades (en hores de marxa)
+  const mn=(a)=>Math.min(...a), mx=(a)=>Math.max(...a);
+  let res='<div class="mres"><span></span><b>Monestir</b><b>Xalet</b><b>Moreneta</b>';
+  const fila=(nom,f)=>{res+=`<span>${nom}</span>`+H.map(h=>`<span>${f(h)}</span>`).join('');};
+  fila('Temp.',h=>`${tC(mn(hores.map(i=>h.temperature_2m[i])))} / ${tC(mx(hores.map(i=>h.temperature_2m[i])))} °C`);
+  fila('Sensació mín.',h=>`${tC(mn(hores.map(i=>h.apparent_temperature[i])))} °C`);
+  fila('Ratxa màx.',h=>`${mx(hores.map(i=>h.wind_gusts_10m[i])).toFixed(0)} km/h`);
+  fila('Prob. precip.',h=>`${mx(hores.map(i=>h.precipitation_probability[i]??0)).toFixed(0)} %`);
+  res+='</div>';
+  const iso=mn(hores.map(i=>H[1].freezing_level_height[i]));
+  const dd=MET.pts[1].d, di=dd.time.indexOf(metDia);
+  res+=`<p class="nota">Hores de marxa ${finestra[0]}–${finestra[1]} h · cota de neu ≈ ${Math.max(0,Math.round((iso-300)/100)*100)} m · sol: ${dd.sunrise[di].slice(11)}–${dd.sunset[di].slice(11)}</p>`;
+  set('met-resum',res);
+  // avisos orientatius
+  const av=[];
+  const gmax=mx(hores.map(i=>H[2].wind_gusts_10m[i])), atmin=mn(hores.map(i=>H[2].apparent_temperature[i])), pmax=mx(hores.map(i=>H[1].precipitation_probability[i]??0));
+  if(gmax>=60) av.push(['r',`Ratxes fins a ${gmax.toFixed(0)} km/h a les parts altes: valora evitar carenes i cims.`]); else if(gmax>=40) av.push(['',`Ratxes de ${gmax.toFixed(0)} km/h a les parts altes: tallavent i parades a recer.`]);
+  if(atmin<=-5) av.push(['r',`Sensació tèrmica de ${tC(atmin)} °C a les parts altes: guants, gorra i capa d'abric a la motxilla de tothom.`]); else if(atmin<=0) av.push(['',`Sensació tèrmica sota zero a les parts altes (${tC(atmin)} °C).`]);
+  if(pmax>=50) av.push(['r',`Probabilitat de precipitació fins al ${pmax.toFixed(0)} %.`]); else if(pmax>=25) av.push(['',`Probabilitat de precipitació fins al ${pmax.toFixed(0)} %.`]);
+  if(iso-300<1700) av.push(['',`Cota de neu prop de ${Math.max(0,Math.round((iso-300)/100)*100)} m: possible neu o gebre a les parts altes.`]);
+  if(metDia==='2026-11-28'){ // nit de bivac al Xalet
+    const nit=T.map((t,i)=>i).filter(i=>(T[i].startsWith('2026-11-28')&&+T[i].slice(11,13)>=18)||(T[i].startsWith('2026-11-29')&&+T[i].slice(11,13)<=8));
+    if(nit.length) av.push(['',`Nit de bivac al Xalet: mínima ${tC(mn(nit.map(i=>H[1].temperature_2m[i])))} °C (sensació ${tC(mn(nit.map(i=>H[1].apparent_temperature[i])))} °C).`]);
+  }
+  if(!av.length) av.push(['ok','Sense avisos destacables en les hores de marxa.']);
+  set('met-avisos',av.map(([c,t])=>`<div class="mav ${c}">${t}</div>`).join(''));
+  // taula per hores: temperatura a dues alçades, vent i precipitació
+  let tb='<table><thead><tr><th>Hora</th><th>Cel</th><th>Xalet<br>T (sens.)</th><th>Moreneta<br>T (sens.)</th><th>Vent / ratxa<br>km/h</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>';
+  hores.forEach(i=>{ const x=H[1], m=H[2], pr=x.precipitation[i]||0, sn=x.snowfall?x.snowfall[i]||0:0;
+    tb+=`<tr><td>${T[i].slice(11,16)}</td><td>${WMO[x.weather_code[i]]||''}</td><td>${tC(x.temperature_2m[i])} (${tC(x.apparent_temperature[i])})</td><td>${tC(m.temperature_2m[i])} (${tC(m.apparent_temperature[i])})</td><td>${Math.round(x.wind_speed_10m[i])} / ${Math.round(m.wind_gusts_10m[i])}</td><td>${pr?pr.toFixed(1):'0'}${sn?' ❄':''} (${x.precipitation_probability[i]??0} %)</td></tr>`; });
+  tb+='</tbody></table><p class="nota">Temperatures en °C. Vent mitjà al Xalet / ratxa màxima a la Moreneta (la més exposada). ❄ = previsió de neu.</p>';
+  set('met-hores',tb);
 }
 
 // ---------- Guió per als clients ----------
@@ -407,11 +581,9 @@ function pintaGuioTots(){
 }
 function pintaFlora(){
   if(typeof FLORA==='undefined') return;
-  set('flora', `<details class="det" open><summary>${esc(FLORA.titol)}</summary><p>${esc(FLORA.intro)}</p>`+
-    FLORA.factors.map(([t,x])=>`<h3>${esc(t)}</h3><p>${esc(x)}</p>`).join('')+`</details>`+
-    `<details class="det"><summary>Com reconèixer-los</summary><ul>${FLORA.reconeixer.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`+
-    `<div id="resum-vess">${pintaResumVessants()}</div>`+
-    `<p class="nota" style="margin-top:8px">${esc(FLORA.fonts)}</p>`);
+  set('flora', `<details class="det"><summary>${esc(FLORA.titol)}</summary><p>${esc(FLORA.intro)}</p><ul>`+
+    FLORA.factors.map(([t,x])=>`<li><b>${esc(t)}:</b> ${esc(x)}</li>`).join('')+`</ul><p><b>Com reconèixer-los</b></p><ul>${FLORA.reconeixer.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p class="nota">${esc(FLORA.fonts)}</p></details>`+
+    `<div id="resum-vess">${pintaResumVessants()}</div>`);
 }
 
 function dibuixaPerfil(E){
@@ -521,7 +693,7 @@ function tipusOSM(h){
 }
 function bboxRutes(){
   let s=90,w=180,n=-90,e=-180;
-  for(const k in RUTES) for(const p of RUTES[k].pts){s=Math.min(s,p[0]);n=Math.max(n,p[0]);w=Math.min(w,p[1]);e=Math.max(e,p[1]);}
+  for(const k of ['dia1','dia2']) for(const p of RUTES[k].pts){s=Math.min(s,p[0]);n=Math.max(n,p[0]);w=Math.min(w,p[1]);e=Math.max(e,p[1]);}
   return [s-0.0135,w-0.018,n+0.0135,e+0.018].map(v=>+v.toFixed(5));
 }
 // Lector mínim de teselles vectorials (Mapbox Vector Tile / protobuf)
@@ -670,7 +842,7 @@ function dibuixaOSM(x0,y0,W,H){
 const TILE_CACHE='catllaras-mapes-v1';
 function llistaTeselles(){
   const BUF={12:1500,13:1500,14:1200,15:800,16:500}, set=new Set();
-  for(const k in RUTES){ const p=RUTES[k].pts;
+  for(const k of ['dia1','dia2']){ const p=RUTES[k].pts;
     for(let i=0;i<p.length;i+=2){ const [lat,lon]=p[i];
       for(let z=ZMIN;z<=TZMAX;z++){ const b=BUF[z], dl=b/110540, dn=b/(111320*Math.cos(rad(lat))), s=256*2**z;
         const [xa,ya]=wpx(lat+dl,lon-dn,z), [xb,yb]=wpx(lat-dl,lon+dn,z);
@@ -747,7 +919,7 @@ function gpsOn(){
 }
 
 // ---------- Controls ----------
-function canviaDia(d){dia=d; st.dia=d; save(); R=prepara(d); pos=null; pintaGuioTots(); if($('resum-vess')) set('resum-vess',pintaResumVessants()); if(lastFix&&!prova) aplica(locate(lastFix.lat,lastFix.lon)); else render(); if(prova) mouProva(); }
+function canviaDia(d){dia=d; st.dia=d; save(); R=prepara(d); pos=null; pintaGuioTots(); metDia=null; if(MET) pintaMeteo(); if($('resum-vess')) set('resum-vess',pintaResumVessants()); if(lastFix&&!prova) aplica(locate(lastFix.lat,lastFix.lon)); else render(); if(prova) mouProva(); }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>canviaDia(b.dataset.d));
 $('b-gps').onclick=gpsOn;
 $('b-inici').onclick=()=>{const s=ds();
@@ -766,7 +938,9 @@ $('b-prova').onclick=()=>{prova=!prova;$('prova').classList.toggle('on',prova);$
   if(prova)mouProva(); else{pos=null; if(lastFix)aplica(locate(lastFix.lat,lastFix.lon)); else render();}};
 function mouProva(){const f=$('slider').value/1000, d=f*R.cd[R.n-1]; let i=0; while(i<R.n-2&&R.cd[i+1]<d)i++;
   const L=R.cd[i+1]-R.cd[i], t=L?(d-R.cd[i])/L:0; pos={seg:i,t,d:0};
-  $('track').className='pill av'; $('track').textContent='Mode prova'; $('avis').classList.remove('on'); render();}
+  const [hh,mm]=R.r.sortida.split(':').map(Number); const dt=new Date(dia==='dia1'?'2026-11-28T00:00:00':'2026-11-29T00:00:00'); dt.setHours(hh,mm,0,0);
+  provaHora=new Date(+dt+horesEntre(0,i)*3600e3);
+  $('track').className='pill av'; $('track').textContent='Mode prova · '+(dia==='dia1'?'ds 28':'dg 29')+' a les '+rel(provaHora)+' (hora prevista)'; $('avis').classList.remove('on'); render();}
 $('slider').oninput=mouProva;
 async function llum(){try{wake=await navigator.wakeLock.request('screen');$('b-llum').textContent='Pantalla encesa ✓';st.llum=true;save();
   wake.addEventListener('release',()=>{$('b-llum').textContent='Pantalla sempre encesa'});}catch(e){$('b-llum').textContent='No disponible'}}
@@ -775,7 +949,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 setInterval(()=>{$('rellotge').textContent=rel(new Date()); if(R) render();},20000);
 $('rellotge').textContent=rel(new Date());
 
-R=prepara(dia); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false);
+R=prepara(dia); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false); carregaMeteo(false);
+$('b-met').onclick=()=>carregaMeteo(true);
 if(st.gps) gpsOn();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
