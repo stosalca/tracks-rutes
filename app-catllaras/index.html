@@ -294,7 +294,12 @@ function prepara(key){
   const trams=[]; for(let w=0;w<wp.length-1;w++){const a=wp[w].i,b=wp[w+1].i;
     trams.push({de:wp[w].n,a:wp[w+1].n,ia:a,ib:b,km:(cd[b]-cd[a])/1000,up:cu[b]-cu[a],dn:cn[b]-cn[a]});}
   trams.forEach(t=>t.h=hores(t.km,t.up,t.dn));
-  return {key,r,p,n,cd,cu,cn,xy,wp,trams,lat0,lon0:p[0][1],lat00:p[0][0]};
+  const pb=((typeof PLANSB!=='undefined'&&PLANSB[key])||[]).filter(b=>b.pts.length>1).map(b=>{
+    const q=b.pts, m=q.length, bd=new Float64Array(m), bu=new Float64Array(m), bn=new Float64Array(m); let ref=q[0][2];
+    for(let i=1;i<m;i++){ bd[i]=bd[i-1]+hav(q[i-1],q[i]); const e=q[i][2]; bu[i]=bu[i-1]; bn[i]=bn[i-1];
+      if(e-ref>=5){bu[i]+=e-ref;ref=e}else if(ref-e>=5){bn[i]+=ref-e;ref=e} }
+    return {...b,m,bd,bu,bn,xy:q.map(z=>[(z[1]-p[0][1])*111320*Math.cos(lat0),(z[0]-p[0][0])*110540])}; });
+  return {key,r,p,n,cd,cu,cn,xy,wp,trams,lat0,lon0:p[0][1],lat00:p[0][0],pb};
 }
 function hores(km,up,dn){ if(km<=0) return 0; return Math.max(km/3.5, up/300+dn/400)*1.2; }
 
@@ -321,6 +326,8 @@ function locate(lat,lon){
   // com el Xalet: P3 i P6). Agrupem per trossos i ens quedem el millor de cada tros.
   const cands=[]; let cur=null;
   segs.forEach(g=>{ if(g.d<50){ if(cur&&g.i-cur.last<=3){ cur.last=g.i; if(g.d<cur.b.d) cur.b=g; } else { cur={last:g.i,b:g}; cands.push(cur); } } });
+  // venim d'un pla B: ens quedem amb el lloc on el pla B torna al pla A
+  if(s.b){ const pb=R.pb.find(x=>x.id===s.b.id); if(pb&&pb.ib!=null){ const c=cands.map(c=>c.b).find(c=>Math.abs(c.i-pb.ib)<60); if(c) return c; } }
   const fwd=cands.map(c=>c.b).filter(c=>c.i>=last-40);
   if(fwd.length){
     // el més llunyà que s'hagi pogut caminar en el temps passat (marge 1,3×); si cap, el més proper endavant
@@ -332,6 +339,18 @@ function locate(lat,lon){
   segs.forEach(g=>{ const sc=g.d+(g.i<last-40?250:0); if(!best||sc<best.sc) best={...g,sc}; });
   return best;
 }
+// posició sobre algun track de pla B (el més proper)
+function locateB(lat,lon){
+  const P=toXY(lat,lon); let best=null;
+  for(const b of R.pb) for(let i=0;i<b.m-1;i++){
+    const A=b.xy[i],B=b.xy[i+1],dx=B[0]-A[0],dy=B[1]-A[1],L=dx*dx+dy*dy;
+    let t=L?((P[0]-A[0])*dx+(P[1]-A[1])*dy)/L:0; t=Math.max(0,Math.min(1,t));
+    const d=Math.hypot(P[0]-A[0]-t*dx,P[1]-A[1]-t*dy); if(!best||d<best.d) best={b,i,t,d};
+  }
+  return best;
+}
+function estatB(b,i,t){ const j=Math.min(i+1,b.m-1), L=a=>a[i]+(a[j]-a[i])*t;
+  return {d:L(b.bd),u:L(b.bu),n:L(b.bn),lat:b.pts[i][0]+(b.pts[j][0]-b.pts[i][0])*t,lon:b.pts[i][1]+(b.pts[j][1]-b.pts[i][1])*t}; }
 function estatEn(seg,t){ // valors acumulats a la posició (segment seg, fracció t)
   const i=seg, j=Math.min(seg+1,R.n-1);
   const lerp=(a)=>a[i]+(a[j]-a[i])*t;
@@ -355,8 +374,11 @@ function render(){
   $('b-inici').textContent=s.inici?'Inici: '+rel(new Date(s.inici))+' (tocar per canviar)':'Iniciar ruta';
   $('sortida').textContent='sortida prevista '+R.r.sortida;
   set('final-nom',R.wp[R.wp.length-1].n.split(' · ')[0]);
-  const seg=pos?pos.seg:(s.seg||0), t=pos?pos.t:(s.t||0);
+  const BB=pos?pos.b:s.b, PB=BB?R.pb.find(x=>x.id===BB.id):null;
+  const seg=PB?Math.min(PB.ia,R.n-2):pos?pos.seg:(s.seg||0), t=PB?(PB.ia>=R.n-1?1:0):pos?pos.t:(s.t||0);
   const E=estatEn(seg,t), tot=R.cd[R.n-1];
+  let EB=null; if(PB){ EB=estatB(PB,BB.i,BB.t); E.lat=EB.lat; E.lon=EB.lon; }
+  const DV=(!PB&&s.desv)||null; // pla B ja fet: correcció del que s'ha caminat
   // punt següent
   let w=R.wp.findIndex(x=>x.i>seg);
   if(w<0) w=R.wp.length-1;
@@ -390,11 +412,19 @@ function render(){
     set('ritme',`Segons la fitxa hauries trigat ${hm(hFet)} (sense parades): `+
       (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`));
   } else set('ritme', s.inici?'':'Toca «Iniciar ruta» per comptar el temps.');
+  if(PB) pintaModeB(PB,EB,E,now);
+  else if(DV){ // després d'un pla B: el fet inclou el pla B i no el tros de pla A saltat
+    const fk=E.d+DV.km, tt=tot+DV.km; set('f-km',km(fk)+'<small>km</small>'); set('f-up','+'+mts(E.u+DV.u)); set('f-dn','−'+mts(E.n+DV.n));
+    $('barra').style.width=(fk/tt*100).toFixed(1)+'%'; set('pct',Math.round(fk/tt*100)+' %');
+    if(s.inici&&E.d>300){ const real=(now-s.inici)/3600e3, hf=hFet+DV.h, dif=real-hf;
+      set('ritme',`Segons la fitxa (amb el pla ${DV.id}) hauries trigat ${hm(hf)} (sense parades): `+
+        (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
+  }
   // trams
   const base=s.inici?new Date(s.inici):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows='';
-  R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k];
-    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
+  R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k], salt=(s.salt||{})[k];
+    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
   let H=R.trams.reduce((a,x)=>a+x.h,0);
   rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td></td><td></td><td></td></tr>`;
   set('trams',rows);
@@ -404,6 +434,31 @@ function render(){
 
 
 // ---------- Plans B i hores límit ----------
+// quan caminem per un pla B: següent punt = enllaç amb el pla A (o final), fet i fins al final pel pla B
+function nomEnllac(i){ const w=R.wp.find(x=>x.i>=i)||R.wp[R.wp.length-1], d=R.cd[w.i]-R.cd[i];
+  return d<60?nomPunt(w.k):`${km(d)} km abans de ${nomPunt(w.k)}`; }
+function pintaModeB(b,EB,E,now){
+  const s=ds(), fi=b.ib!=null?'Enllaç amb el pla A · '+nomEnllac(b.ib):(b.fi||'final');
+  const dB=b.bd[b.m-1]-EB.d, uB=Math.max(0,b.bu[b.m-1]-EB.u), nB=Math.max(0,b.bn[b.m-1]-EB.n), hB=hores(dB/1000,uB,nB);
+  set('seg-nom',fi); set('tram',`pla ${b.id} · ${esc(b.nom)}`);
+  set('seg-km',km(dB)+'<small>km</small>'); set('seg-t',hm(hB)); set('seg-up','+'+mts(uB)); set('seg-dn','−'+mts(nB));
+  const zf=b.pts[b.m-1][2];
+  set('seg-hora',`Arribada prevista: <b>${rel(new Date(now+hB*3600e3))}</b> · ${b.ib!=null?'enllaç':esc(b.fi||'')} a ${mts(zf)}`);
+  const fk=E.d+EB.d, fu=E.u+EB.u, fn=E.n+EB.n;
+  const kA=b.ib!=null?R.cd[R.n-1]-R.cd[b.ib]:0, uA=b.ib!=null?R.cu[R.n-1]-R.cu[b.ib]:0, nA=b.ib!=null?R.cn[R.n-1]-R.cn[b.ib]:0, hA=b.ib!=null?horesEntre(b.ib,R.n-1):0;
+  const tt=fk+dB+kA;
+  set('f-km',km(fk)+'<small>km</small>'); set('f-up','+'+mts(fu)); set('f-dn','−'+mts(fn));
+  $('barra').style.width=(fk/tt*100).toFixed(1)+'%'; set('pct',Math.round(fk/tt*100)+' %');
+  set('final-nom',b.fi||R.wp[R.wp.length-1].n.split(' · ')[0]);
+  set('r-km',km(dB+kA)+'<small>km</small>'); set('r-t',hm(hB+hA)); set('r-up','+'+mts(uB+uA)); set('r-dn','−'+mts(nB+nA));
+  const arr=new Date(now+(hB+hA)*3600e3), lim=LIMIT[dia], limD=new Date(now); limD.setHours(...lim.h.split(':').map(Number),0,0);
+  const marge=(limD-arr)/3600e3;
+  set('r-hora',`Pla ${b.id} · arribada prevista <b>${rel(arr)}</b> · ${lim.txt} ${lim.h} → `+
+    (marge>=0?`<b style="color:var(--ok)">marge ${hm(marge)}</b>`:`<b style="color:var(--ter)">vas ${hm(-marge)} tard</b>`));
+  if(s.inici){ const hf=horesEntre(0,b.ia)+hores(EB.d/1000,EB.u,EB.n), dif=(now-s.inici)/3600e3-hf;
+    set('ritme',`Segons la fitxa (amb el pla ${b.id}) hauries trigat ${hm(hf)} (sense parades): `+
+      (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
+}
 function plansB(){ return (typeof PLANSB!=='undefined'&&PLANSB[dia])||[]; }
 function sortidaPrevista(ref){ const d=new Date(ref); const [h,m]=R.r.sortida.split(':'); d.setHours(+h,+m,0,0); return d; }
 function objectiu(ref){ const d=new Date(ref); const [h,m]=LIMIT[dia].h.split(':'); d.setHours(+h,+m,0,0); return d; }
@@ -438,10 +493,13 @@ function pintaPlansB(E,seg,now){
     if(b.senseLimit){ limTxt='es decideix a la sortida'; }
     else if(b.limitPropi){ lim=obj-hB*3600e3; limTxt=`sortir del Xalet abans de les <b>${rel(new Date(lim))}</b> (arribar-hi amb llum)`; }
     else { lim=limitEn(b.ia,now); limTxt=`pas previst ${rel(new Date(pas))} · <b>límit ${rel(new Date(lim))}</b>`; }
-    const passat=seg>=b.ia&&b.ia<fiA&&!(b.ia===0&&E.d<100);
+    const S=ds(), enCurs=S.b&&S.b.id===b.id, fet=S.desv&&S.desv.id===b.id;
+    const passat=!enCurs&&seg>=b.ia&&b.ia<fiA&&!(b.ia===0&&E.d<100);
     // des d'on ets
     let cls='', st='', viu='';
-    if(!passat&&enRuta){
+    if(enCurs){ cls='ok'; st='en curs'; }
+    else if(fet){ cls='passat'; st='fet'; }
+    else if(!passat&&enRuta){
       const hX=horesDesE(E,b.ia), dX=Math.max(0,R.cd[b.ia]-E.d)/1000, uX=Math.max(0,R.cu[b.ia]-E.u), nX=Math.max(0,R.cn[b.ia]-E.n);
       const etaX=now+hX*3600e3, arrB=etaX+tB.h*3600e3, arrA=now+horesDesE(E,fiA)*3600e3;
       if(lim!=null){
@@ -974,22 +1032,49 @@ function onFix(p){
 }
 function aplica(b){
   const s=ds();
+  if(lastFix&&!prova&&R.pb.length){
+    const q=(b.d>40||s.b)?locateB(lastFix.lat,lastFix.lon):null;
+    if(q&&q.d<=50&&(b.d>60||(s.b&&q.d+5<b.d))) return aplicaB(q);
+  }
   pos={seg:b.i,t:b.t,d:b.d};
   const fora=b.d>60;
   $('track').className='pill '+(fora?'ko':'ok'); $('track').textContent=fora?`Fora del track ${Math.round(b.d)} m`:'Sobre el track';
   const av=$('avis'); av.classList.toggle('on',b.d>120); av.textContent=`Atenció: ets a ${Math.round(b.d)} m del track. Les dades es calculen des del punt del track més proper.`;
   if(!fora){
-    const now=Date.now(), prevSeg=s.seg||0, prevTs=s.lastTs||now;
-    s.pas=s.pas||{}; s.est=s.est||{};
-    R.trams.forEach((x,k)=>{ if(b.i>=x.ib && s.pas[k]==null){
+    const now=Date.now(); let prevSeg=s.seg||0; const prevTs=s.lastTs||now;
+    s.pas=s.pas||{}; s.est=s.est||{}; s.salt=s.salt||{};
+    if(s.b){ // tornem al pla A
+      const pb=R.pb.find(x=>x.id===s.b.id);
+      if(pb&&pb.ib!=null&&Math.abs(b.i-pb.ib)<60){
+        R.trams.forEach((x,k)=>{ if(x.ib>pb.ia&&x.ib<=pb.ib&&s.pas[k]==null) s.salt[k]=pb.id; });
+        s.desv={id:pb.id,km:pb.bd[pb.m-1]-(R.cd[pb.ib]-R.cd[pb.ia]),u:pb.bu[pb.m-1]-(R.cu[pb.ib]-R.cu[pb.ia]),n:pb.bn[pb.m-1]-(R.cn[pb.ib]-R.cn[pb.ia]),
+          h:hores(pb.bd[pb.m-1]/1000,pb.bu[pb.m-1],pb.bn[pb.m-1])-horesEntre(pb.ia,pb.ib)};
+        prevSeg=pb.ib;
+      }
+      delete s.b;
+    }
+    const bi=b.i+(b.t>0.5?1:0);
+    R.trams.forEach((x,k)=>{ if(bi>=x.ib && s.pas[k]==null && s.salt[k]==null){
       // si hi has passat amb el mòbil bloquejat, estimem l'hora repartint el temps segons la fitxa
-      const tot=horesEntre(prevSeg,b.i), fins=horesEntre(prevSeg,x.ib);
+      const tot=horesEntre(prevSeg,bi), fins=horesEntre(prevSeg,x.ib);
       if(now-prevTs>5*60e3 && tot>0){ s.pas[k]=Math.round(prevTs+(now-prevTs)*fins/tot); s.est[k]=1; }
       else s.pas[k]=now;
     }});
     s.seg=b.i; s.t=b.t; s.lastTs=now;
     save();
   }
+  render();
+}
+function aplicaB(q){
+  const s=ds(), b=q.b, now=Date.now();
+  if(!s.b||s.b.id!==b.id){ // entrem al pla B: el pla A queda fet fins a la cruïlla
+    s.pas=s.pas||{}; s.salt=s.salt||{};
+    R.trams.forEach((x,k)=>{ if(b.ia>=x.ib&&s.pas[k]==null&&s.salt[k]==null) s.pas[k]=now; });
+    delete s.desv; }
+  s.b={id:b.id,i:q.i,t:q.t}; s.seg=Math.min(b.ia,R.n-2); s.t=b.ia>=R.n-1?1:0; s.lastTs=now; save();
+  pos={seg:s.seg,t:s.t,d:0,b:s.b};
+  $('track').className='pill ok'; $('track').textContent='Sobre el pla '+b.id+(q.d>25?` (${Math.round(q.d)} m)`:'');
+  $('avis').classList.remove('on');
   render();
 }
 function onErr(e){ $('gps').className='pill ko'; $('gps').textContent=e.code===1?'Permís de GPS denegat':'Sense senyal GPS'; }
