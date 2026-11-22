@@ -260,7 +260,7 @@ const LIMIT={dia1:{h:'17:23',txt:'posta de sol'},dia2:{h:'15:30',txt:'arribada a
 const ST_KEY='petjada-catllaras-v1';
 let st=load();
 let dia=st.dia||'dia1';
-let provaHora=null;
+let provaHora=null, INI=null;
 let R=null, pos=null, gpsWatch=null, lastFix=null, wake=null, prova=false;
 
 function load(){try{return JSON.parse(localStorage.getItem(ST_KEY))||{}}catch(e){return {}}}
@@ -370,6 +370,7 @@ function set(id,html){$(id).innerHTML=html}
 // ---------- Pintar ----------
 function render(){
   const s=ds(), now=prova&&provaHora?+provaHora:Date.now();
+  INI=prova&&provaHora?+sortidaPrevista(provaHora):s.inici; // en mode prova, sortida a l'hora prevista del dia
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.d===dia));
   $('b-inici').textContent=s.inici?'Inici: '+rel(new Date(s.inici))+' (tocar per canviar)':'Iniciar ruta';
   $('sortida').textContent='sortida prevista '+R.r.sortida;
@@ -391,7 +392,7 @@ function render(){
   set('seg-hora',`Arribada prevista: <b>${rel(new Date(now+hSeg*3600e3))}</b> · ${nx.n.split(' · ')[0]} a ${mts(R.p[nx.i][2])}`);
   // fet
   set('f-km',km(E.d)+'<small>km</small>');
-  set('f-t',s.inici?hm((now-s.inici)/3600e3):'–');
+  set('f-t',INI?hm((now-INI)/3600e3):'–');
   set('f-up','+'+mts(E.u)); set('f-dn','−'+mts(E.n));
   const pct=E.d/tot*100; $('barra').style.width=pct.toFixed(1)+'%'; set('pct',Math.round(pct)+' %');
   // fins al final
@@ -407,21 +408,21 @@ function render(){
   // ritme respecte a la fitxa
   let hFet=0; for(let k=0;k<trIdx;k++) hFet+=R.trams[k].h;
   hFet+=Math.max(0,tr.h-hSeg);
-  if(s.inici && E.d>300){
-    const real=(now-s.inici)/3600e3, dif=real-hFet;
+  if(INI && E.d>300){
+    const real=(now-INI)/3600e3, dif=real-hFet;
     set('ritme',`Segons la fitxa hauries trigat ${hm(hFet)} (sense parades): `+
       (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`));
-  } else set('ritme', s.inici?'':'Toca «Iniciar ruta» per comptar el temps.');
+  } else set('ritme', INI?'':'Toca «Iniciar ruta» per comptar el temps.');
   if(PB) pintaModeB(PB,EB,E,now);
   else if(DV){ // després d'un pla B: el fet inclou el pla B i no el tros de pla A saltat
     const fk=E.d+DV.km, tt=tot+DV.km; set('f-km',km(fk)+'<small>km</small>'); set('f-up','+'+mts(E.u+DV.u)); set('f-dn','−'+mts(E.n+DV.n));
     $('barra').style.width=(fk/tt*100).toFixed(1)+'%'; set('pct',Math.round(fk/tt*100)+' %');
-    if(s.inici&&E.d>300){ const real=(now-s.inici)/3600e3, hf=hFet+DV.h, dif=real-hf;
+    if(INI&&E.d>300){ const real=(now-INI)/3600e3, hf=hFet+DV.h, dif=real-hf;
       set('ritme',`Segons la fitxa (amb el pla ${DV.id}) hauries trigat ${hm(hf)} (sense parades): `+
         (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
   }
   // trams
-  const base=s.inici?new Date(s.inici):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
+  const base=INI?new Date(INI):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows='';
   R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k], salt=(s.salt||{})[k];
     rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
@@ -455,7 +456,7 @@ function pintaModeB(b,EB,E,now){
   const marge=(limD-arr)/3600e3;
   set('r-hora',`Pla ${b.id} · arribada prevista <b>${rel(arr)}</b> · ${lim.txt} ${lim.h} → `+
     (marge>=0?`<b style="color:var(--ok)">marge ${hm(marge)}</b>`:`<b style="color:var(--ter)">vas ${hm(-marge)} tard</b>`));
-  if(s.inici){ const hf=horesEntre(0,b.ia)+hores(EB.d/1000,EB.u,EB.n), dif=(now-s.inici)/3600e3-hf;
+  if(INI){ const hf=horesEntre(0,b.ia)+hores(EB.d/1000,EB.u,EB.n), dif=(now-INI)/3600e3-hf;
     set('ritme',`Segons la fitxa (amb el pla ${b.id}) hauries trigat ${hm(hf)} (sense parades): `+
       (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
 }
