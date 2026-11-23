@@ -85,6 +85,17 @@ input[type=range]{width:100%;accent-color:var(--ter)}
 .pb.alerta .st{background:var(--ter);color:#fff}.pb.avis .st{background:var(--av);color:#fff}.pb.ok .st{background:#e3f1e8;color:var(--ok)}
 .pb table{font-size:12px;margin-top:6px}
 .pb .viu{font-size:13px;margin-top:6px}
+.bri .card h2 i{font-style:normal;background:var(--pis);color:var(--sor);border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-right:8px}
+.bri .card h2 label{font-size:12px;text-transform:none;letter-spacing:0;font-weight:600;display:flex;align-items:center;gap:4px}
+.bri .card.fet{opacity:.55}
+.bri ul{padding-left:18px;font-size:15px;line-height:1.5}
+.bri li{margin-bottom:3px}
+.bri .rosa{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:15px;line-height:1.45}
+.bri .rosa b{color:var(--ter)}
+.bri .xif{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:6px 0}
+.bri .xif div{background:#f4efe5;border-radius:10px;padding:8px}
+.bri .xif strong{display:block;font-size:13px;margin-bottom:4px}
+.bri .xif span{display:block;font-size:13px;line-height:1.5}
 .nota{font-size:12px;color:var(--gris);line-height:1.45}
 .avis{background:#fbe5e0;color:#8f2f1c;border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px;margin-bottom:10px;display:none}
 .avis.on{display:block}
@@ -150,6 +161,7 @@ details.det.act summary{color:var(--ter)}
   <div class="marca"><h1>Petjada <span>·</span> Catllaràs</h1><small id="rellotge">--:--</small></div>
   <nav class="vistes">
     <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
+    <button data-v="vbri"><b>📣</b>Briefing</button>
     <button data-v="vmet"><b>⛅</b>Meteo</button>
     <button data-v="v112" class="e112"><b>✚</b>112</button>
   </nav>
@@ -270,6 +282,8 @@ details.det.act summary{color:var(--ter)}
     <p class="nota" style="margin-top:10px">Funciona sense cobertura un cop oberta una vegada amb connexió. Pots dur el mòbil bloquejat: en desbloquejar-lo, l'app et torna a situar sobre el track i els km i desnivells fets inclouen tot el que has caminat mentrestant (el temps compta des de l'inici). El que no queda gravat és el traç real que has fet amb la pantalla apagada: si surts del track, grava amb el TwoNav. Els km i desnivells es calculen sobre el track (filtre de 5 m), no amb l'altímetre del mòbil.</p>
   </section>
 </main>
+
+<main id="vbri" class="bri" hidden><div id="bri"></div></main>
 
 <main id="vmet" hidden>
   <section class="card" id="meteo">
@@ -650,9 +664,9 @@ function pinta112(){
 document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   const v=b.dataset.v;
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
-  for(const id of ['vruta','vmet','v112']) $(id).hidden=id!==v;
+  for(const id of ['vruta','vbri','vmet','v112']) $(id).hidden=id!==v;
   document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
-  window.scrollTo(0,0); if(v==='v112') pinta112(); if(v==='vmet') try{pintaMeteo()}catch(e){} });
+  window.scrollTo(0,0); if(v==='v112') pinta112(); if(v==='vbri') pintaBriefing(); if(v==='vmet') try{pintaMeteo()}catch(e){} });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }
   try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
@@ -661,6 +675,79 @@ $('e-sms').onclick=e=>{ if(!lastFix){ e.preventDefault(); gpsOn(); } };
 const desaExt=()=>{ try{localStorage.setItem('petjada-ext',JSON.stringify({nom:$('e-ext-nom').value.trim(),tel:$('e-ext').value.trim()}))}catch(e){} pintaTels(); };
 $('e-ext').onchange=desaExt; $('e-ext-nom').onchange=desaExt;
 pintaTels();
+
+// ---------- Briefing inicial ----------
+const PARADES={dia1:{min:45,txt:'dinar ≈ 25 min + parades curtes i explicacions'},dia2:{min:60,txt:'mos ≈ 15 min, dinar ≈ 25 min + parades curtes'}};
+const BRI_KEY='catllaras-bri', BRI_NOTES='catllaras-bri-notes';
+function briEstat(){ try{return JSON.parse(localStorage.getItem(BRI_KEY))||{}}catch(e){return {}} }
+function sumaHora(hhmm,h){ const [H,M]=hhmm.split(':').map(Number); const t=Math.round(H*60+M+h*60); return String(Math.floor(t/60)%24).padStart(2,'0')+':'+String(t%60).padStart(2,'0'); }
+function resumDia(k){
+  const r=prepara(k); let km=0,up=0,dn=0,h=0; r.trams.forEach(t=>{km+=t.km;up+=t.up;dn+=t.dn;h+=t.h;});
+  const zmax=Math.max(...RUTES[k].pts.map(p=>p[2])), par=PARADES[k].min/60;
+  return {km,up,dn,h,hp:h+par,zmax,sort:RUTES[k].sortida||r.r.sortida};
+}
+function pintaBriefing(){
+  const E=briEstat(), d1=resumDia('dia1'), d2=resumDia('dia2');
+  const xif=(t,d,k)=>`<div><strong>${t}</strong><span>${d.km.toFixed(1).replace('.',',')} km · +${Math.round(d.up)} / −${Math.round(d.dn)} m</span>
+    <span>Sense parades: <b>${hm(d.h)}</b></span><span>Amb parades: <b>${hm(d.hp)}</b></span>
+    <span>Sortida ${d.sort} → arribada ≈ ${sumaHora(d.sort,d.hp)}</span><span class="nota">Límit: ${LIMIT[k].h} · ${LIMIT[k].txt}</span></div>`;
+  const sec=(n,id,tit,cos)=>`<section class="card${E[id]?' fet':''}" data-s="${id}"><h2><span><i>${n}</i>${tit}</span><label><input type="checkbox" ${E[id]?'checked':''}>fet</label></h2>${cos}</section>`;
+  let notes=''; try{notes=localStorage.getItem(BRI_NOTES)||''}catch(e){}
+  set('bri',
+  `<p class="nota" style="margin:2px 2px 10px">Guió per al briefing al Monestir, abans de començar a caminar (≈ 10–15 min). Són punts per dir amb les teves paraules, no per llegir. Marca «fet» a mesura que avances.</p>`+
+  sec(1,'jo','Em presento',`<ul>
+    <li>Sóc en <b>Sergi Tossal</b>, guia de mitja muntanya. Aquests dos dies sóc el vostre guia.</li>
+    <li>El meu telèfon: <a href="tel:667999040"><b>667 999 040</b></a>. Guardeu-lo ara al mòbil.</li>
+    <li>Som un grup de 6 + guia. Dormirem en bivac al costat del Xalet del Catllaràs i demà tornarem aquí, als cotxes.</li></ul>`)+
+  sec(2,'grup','Es presenta el grup',`<p style="font-size:15px;margin-bottom:6px">Una ronda ràpida, cadascú:</p><ul>
+    <li><b>Nom</b></li><li><b>Experiència prèvia</b> en rutes: travessies de més d'un dia, bivac, desnivells semblants</li>
+    <li><b>Professió</b></li><li>Alguna <b>molèstia, lesió</b>, al·lèrgia o medicació que hagi de saber? <span class="nota">(Qui ho prefereixi, m'ho pot dir a part.)</span></li></ul>
+    <textarea id="bri-notes" rows="4" placeholder="Notes del grup (només es desen en aquest mòbil)" style="width:100%;margin-top:8px;font:14px/1.4 inherit;font-family:inherit;border:1px solid #d9d1c2;border-radius:8px;padding:8px">${esc(notes)}</textarea>`)+
+  sec(3,'on','On som, què ens envolta i on anem',`<p style="font-size:13px;font-weight:700;margin-bottom:4px">On som (de més general a més concret)</p><ul>
+    <li><b>Catalunya</b>, al <b>Prepirineu</b>.</li>
+    <li>Comarca del <b>Berguedà</b>, a l'Alt Berguedà, a la capçalera del <b>Llobregat</b>.</li>
+    <li>Municipi de <b>la Pobla de Lillet</b>, a la vall de Lillet, on s'ajunten el Llobregat i l'Arija.</li>
+    <li><b>Monestir de Santa Maria de Lillet</b>, a ${Math.round(RUTES.dia1.pts[0][2])} m, al peu del turó del castell.</li>
+    <li>Tenim davant la <b>serra del Catllaràs</b>: un altiplà calcari orientat d'est a oest, protegit com a espai natural (PEIN) des del 1992.</li></ul>
+    <p style="font-size:13px;font-weight:700;margin:8px 0 4px">Què ens envolta</p>
+    <div class="rosa"><b>N</b><span>Castellar de n'Hug i les Fonts del Llobregat; més amunt, la serra de Montgrony i el Pirineu.</span>
+    <b>E</b><span>La vall de l'Arija cap a Gombrèn i el Ripollès, amb el santuari de Montgrony.</span>
+    <b>S</b><span>El Catllaràs, on anem; a l'altra banda, Falgars i Sant Jaume de Frontanyà.</span>
+    <b>O</b><span>El Llobregat baixa cap a Guardiola de Berguedà; més enllà, el Cadí i el Pedraforca.</span></div>
+    <p class="nota" style="margin-top:4px">Assenyala-ho amb la mà; si hi ha visibilitat, ensenya el Catllaràs i, si es veu, el Cadí.</p>
+    <p style="font-size:13px;font-weight:700;margin:8px 0 4px">On anem</p><ul>
+    <li><b>Avui:</b> pugem cap al sud-oest pel Castell de la Vila, el Collet Cerdanà i sota la Roca de la Lluna fins a la <b>Roca del Joc de Pilota</b> (1.615 m, punt més alt, hi ha una Moreneta). Després baixem al <b>Xalet del Catllaràs</b> (1.366 m), el refugi que va encarregar Eusebi Güell a principis del s. XX, atribuït a Gaudí. Allà fem bivac.</li>
+    <li><b>Demà:</b> del Xalet al Coll i el Refugi d'Ardericó, pugem a la carena entre el Berguedà i el Ripollès (${Math.round(d2.zmax).toLocaleString('ca')} m, punt més alt del dia), passem per la collada de Montclús i la Roca del Corb i baixem pel torrent de Junyent fins aquí, al Monestir.</li></ul>`)+
+  sec(4,'det','Detalls de la ruta',`<div class="xif">${xif('Dia 1 · dissabte',d1,'dia1')}${xif('Dia 2 · diumenge',d2,'dia2')}</div><ul>
+    <li>Parades previstes: dia 1, ${PARADES.dia1.txt}; dia 2, ${PARADES.dia2.txt}.</li>
+    <li>Sol: surt a les 7:57 i es pon a les 17:23. Cap a les 17:54 ja és fosc: el frontal, a mà.</li>
+    <li>Aigua: font del Catllaràs al costat del Xalet (cabal per confirmar). Sortiu amb les ampolles plenes.</li>
+    <li>Els horaris són orientatius: si anem tard o el temps canvia, tenim alternatives (plans B) i les decideixo jo.</li></ul>`)+
+  sec(5,'mat','Repàs del material',`<p style="font-size:15px;margin-bottom:6px">Encara som als cotxes: si falta alguna cosa, ara és el moment.</p><ul>
+    <li><b>Dormir:</b> sac (confort de −5 °C o menys), màrfega o aïllant, funda de bivac.</li>
+    <li><b>Roba per capes:</b> samarreta tècnica, folre, plomes, jaqueta i pantaló impermeables, gorro, guants, buff, mitjons de recanvi i roba seca per dormir.</li>
+    <li><b>Peus:</b> botes de muntanya; bastons si en feu servir.</li>
+    <li><b>Frontal</b> amb piles o càrrega de recanvi.</li>
+    <li><b>Aigua</b> (mínim 1,5–2 L) i <b>menjar dels dos dies</b>, més menjar ràpid a mà. Si cuineu: fogonet, gas i encenedor.</li>
+    <li>Farmaciola personal i <b>medicació pròpia</b>; crema solar i ulleres de sol.</li>
+    <li>DNI i targeta sanitària; mòbil carregat i bateria externa.</li>
+    <li>Bossa per a les deixalles i paper higiènic: tot el que pugem, ho baixem.</li></ul>`)+
+  sec(6,'fun','Funcionament del grup',`<ul>
+    <li>Jo vaig <b>davant</b> i marco el ritme. Ningú m'avança.</li>
+    <li>Anem <b>junts</b>. Demanaré a una persona que vagi l'última i m'avisi si algú es despenja.</li>
+    <li>Pararem una estona cada hora, més o menys. Si necessiteu parar (aigua, roba, lavabo, una rascada o una butllofa), digueu-ho de seguida: com més aviat, millor.</li>
+    <li>Les <b>instruccions de seguretat</b> i com passar els trams delicats us les aniré dient quan toqui.</li>
+    <li>Els canvis d'itinerari (hora, meteo, cansament) els decideixo jo i us explicaré el perquè.</li>
+    <li>Si algú es perd de vista: es queda quiet on és i em truca (667 999 040). Si no hi ha cobertura, el 112.</li>
+    <li>Som dins un espai protegit: res de foc, no deixem rastre, respectem el bestiar i deixem les tanques com les trobem.</li>
+    <li>Dubtes? … Som-hi!</li></ul>`)+
+  `<div class="botons"><button class="btn s" id="bri-reset">Desmarcar-ho tot</button></div>`);
+  document.querySelectorAll('#bri section[data-s] input').forEach(c=>c.onchange=()=>{
+    const s=c.closest('section'), e=briEstat(); e[s.dataset.s]=c.checked; s.classList.toggle('fet',c.checked);
+    try{localStorage.setItem(BRI_KEY,JSON.stringify(e))}catch(x){} });
+  $('bri-notes').oninput=()=>{ try{localStorage.setItem(BRI_NOTES,$('bri-notes').value)}catch(x){} };
+  $('bri-reset').onclick=()=>{ try{localStorage.removeItem(BRI_KEY)}catch(x){} pintaBriefing(); };
+}
 
 // ---------- Obaga / solell, sol i confort del grup ----------
 const DIRNOM={N:'nord',NE:'nord-est',E:'est',SE:'sud-est',S:'sud',SO:'sud-oest',O:'oest',NO:'nord-oest'};
