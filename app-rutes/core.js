@@ -210,7 +210,7 @@ function plansBDia(G,dia,trackNodes){
   const decisions=dia.wp.filter(w=>w.i>0&&w.i<n-1).map(w=>w.i);
   if(decisions.length<2){ for(let i=1;i<6;i++) decisions.push(Math.round(i*(n-1)/6)); }
   for(const i0 of decisions){
-    const hRest=hA(st,i0,n-1);
+    const hRest=hA(st,i0,n-1); if(hRest<0.6) continue; // a menys de ~35 min del final no cal pla B
     // 1) cap al final de la ruta pel camí més ràpid · 2) cap a la carretera/pista asfaltada més propera (accés amb vehicle)
     const R1=dijkstra(G,prop(i0));
 
@@ -315,7 +315,7 @@ async function creaRuta(nom,dies,opc,log){
   } else dies.forEach(d=>d.plansb=[]);
   // punts per a la meteo: el més baix, un de mig i el més alt
   const tots=dies.flatMap(d=>d.pts.map((p,i)=>({p,d,i}))).sort((a,b)=>a.p[2]-b.p[2]);
-  const nomA=o=>{ const w=o.d.wp.reduce((b,w)=>{const dd=hav(o.p,o.d.pts[w.i]); return dd<b.d?{w,d:dd}:b;},{d:600}).w; return w?w.n.split(' · ')[0].slice(0,18):null; };
+  const nomA=o=>{ const w=o.d.wp.reduce((b,w)=>{const dd=hav(o.p,o.d.pts[w.i]); return dd<b.d?{w,d:dd}:b;},{d:600}).w; return w?(w.n.split(' · ')[1]||w.n.split(' · ')[0]).slice(0,22):null; };
   const tria=[tots[0],tots[Math.floor(tots.length/2)],tots[tots.length-1]];
   const metPts=tria.map((o,i)=>({n:nomA(o)||['Punt baix','Punt mig','Punt alt'][i],lat:+o.p[0].toFixed(4),lon:+o.p[1].toFixed(4),e:Math.round(o.p[2])}));
   if(metPts[1].e<=metPts[0].e) metPts[1].e=metPts[0].e+1; if(metPts[2].e<=metPts[1].e) metPts[2].e=metPts[1].e+1;

@@ -1,0 +1,24 @@
+{"punts":{"dia1":{
+ "P0":{"titol":"Inici · Bigues i Riells del Fai","punts":["Som a la vall de Riells, al terme de Bigues i Riells del Fai (Vallès Oriental), al peu dels Cingles de Bertí.","Els Cingles de Bertí fan de frontera entre la depressió del Vallès i l'altiplà del Moianès: són part de la Serralada Prelitoral.","Abans de sortir: consulta si hi ha restriccions d'accés al medi natural (pesta porcina africana) i, si voleu entrar al recinte de Sant Miquel del Fai, cal reserva prèvia."]},
+ "P1":{"titol":"Inici de la pujada","punts":["Comença la pujada cap als cingles: uns 250 m de desnivell en poc més d'un quilòmetre i mig.","Bon moment per ajustar capes abans de l'esforç i recordar el ritme del grup."]},
+ "P2":{"titol":"Dalt dels cingles","punts":["Els cingles són parets verticals de roques sedimentàries: gresos, margues i conglomerats.","Mireu cap al sud: la plana del Vallès i, al fons, la Serralada Litoral. Al nord comença l'altiplà del Moianès.","Pregunta: per què creieu que aquí hi ha una paret tan vertical i a l'altre costat una plana?"]},
+ "P3":{"titol":"Punt més alt dels cingles","punts":["Punt més alt de la ruta (uns 660 m).","Els Cingles de Bertí són un Espai d'Interès Natural (PEIN) des de 1992 i formen part de la Xarxa Natura 2000 (Gallifa-Cingles de Bertí).","El nom de Bertí ve de l'antic nucli de Bertí, del qual es conserva l'església romànica de Sant Pere de Bertí."]},
+ "P4":{"titol":"Carena dels cingles","punts":["Caminem per la vora de la cinglera: compte amb el grup a prop dels estimballs, sobretot amb vent o terra mullada.","Geologia: aquí es veu el límit entre la Serralada Prelitoral i la Conca de l'Ebre. Les capes de roca es van plegar i encavalcar quan es van formar aquestes serres."]},
+ "P5":{"titol":"Sant Miquel del Fai","punts":["Conjunt històric encaixat als cingles, on conflueixen la riera de Tenes i el Rossinyol després de dos salts d'aigua espectaculars.","Al recinte hi ha el pont del Rossinyol (1592), el pas de la Foradada, la Casa Prioral gòtica, l'església romànica de Sant Miquel, el salt del Rossinyol i la cova de Sant Miquel, una gran balma.","El recinte és gratuït però amb reserva prèvia (666 541 593), tanca per manteniment a l'hivern i també amb risc alt d'incendi o mal temps. Hi ha aigua potable i lavabos.","Pregunta: per què creieu que es va construir un monestir en un lloc tan amagat i abrupte?"]},
+ "P6":{"titol":"Baixada cap a Riells","punts":["Baixem per la vall de Riells, la capçalera de la vall que fa la riera de Tenes.","La zona de Sant Miquel del Fai i els encavalcaments de la vall del Tenes és un Espai d'Interès Geològic: s'hi veuen molt bé roques del Triàsic al Paleogen."]}
+}},
+ "tels":[
+  {"nom":"Sant Miquel del Fai · informació i reserves","tel":"666 541 593","nota":"reserva prèvia per entrar al recinte"},
+  {"nom":"CAP Bigues i Riells","tel":"93 865 90 36","nota":"dl–dv de 8 a 20 h"},
+  {"nom":"CAP La Cruïlla (Lliçà d'Amunt) · atenció continuada","tel":"93 841 52 50","nota":"fora d'horari, nits i caps de setmana: millor trucar abans al 061"},
+  {"nom":"Hospital General de Granollers","tel":"93 842 50 00","nota":"hospital de referència"},
+  {"nom":"Salut Respon","tel":"061","nota":"consulta sanitària 24 h"}
+ ],
+ "acces":"Sortida a la vall de Riells (Bigues i Riells del Fai). A Sant Miquel del Fai hi arriba la carretera BV-1485 (km 7) i té aparcament amb reserva.",
+ "notaTels":"En cap de setmana el CAP de Bigues és tancat: truqueu al 061 perquè us adrecin al punt d'atenció continuada que toqui; per a urgències greus, 112.",
+ "plansB":{"dia1":{
+  "B1":"Tornar per on hem pujat: camí conegut, però amb trams molt drets a la baixada dels cingles (pendent fins al 50 %): compte amb terra mullada.",
+  "B2":"Sortida ràpida cap a una pista amb accés de vehicles: útil per a evacuació des del punt més alt; comprova al mapa on surt.",
+  "B3":"Des de Sant Miquel del Fai, la carretera BV-1485 i l'aparcament del recinte són a tocar: el millor punt d'evacuació amb vehicle de tota la ruta.",
+  "B4":"Drecera per pista a la part final: camí ample i fàcil, estalvia la volta del final."
+ }}}
