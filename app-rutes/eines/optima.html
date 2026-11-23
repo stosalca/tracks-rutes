@@ -40,6 +40,12 @@ for(let k=0;k<nodes.length-1;k++){
   out.trams.push({de:NOMS[k],a:NOMS[k+1],millor:resum(best),alternativa:resum(alt2)});
 }
 log('FET');
+const tol=+(Q.get('simp')||0);
+if(tol){ const dp=(P)=>{ if(P.length<3) return P; const a=P[0],b=P[P.length-1]; let im=0,dm=0; const k=Math.cos(a[0]*Math.PI/180);
+    for(let i=1;i<P.length-1;i++){ const x=(P[i][1]-a[1])*k*111320,y=(P[i][0]-a[0])*110540,bx=(b[1]-a[1])*k*111320,by=(b[0]-a[0])*110540, L=Math.hypot(bx,by)||1, d=Math.abs(x*by-y*bx)/L; if(d>dm){dm=d;im=i;} }
+    return dm>tol?[...dp(P.slice(0,im+1)).slice(0,-1),...dp(P.slice(im))]:[a,b]; };
+  const c=P=>dp(P).map(q=>[+q[0].toFixed(5),+q[1].toFixed(5),Math.round(q[2])]);
+  out.trams.forEach(t=>{ ['millor','alternativa'].forEach(k=>{ t[k].n=t[k].pts.length; t[k].pts=c(t[k].pts); }); }); delete out.snap; }
 document.getElementById('out').textContent=JSON.stringify(out);
 }catch(e){ log('ERROR: '+e.message+' '+e.stack); }
 })();
