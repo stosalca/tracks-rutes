@@ -12,7 +12,25 @@
 :root{--pis:#1E2A2E;--ter:#C8553D;--sor:#F3EFE6;--bla:#fff;--gris:#6b7478;--ok:#2f7d4f;--av:#b7791f}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--sor);color:var(--pis);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
-body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 16px)}
+body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 76px)}
+nav.vistes{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--pis);padding:0 0 env(safe-area-inset-bottom);box-shadow:0 -2px 8px rgba(0,0,0,.15)}
+nav.vistes button{flex:1;background:none;border:0;color:var(--sor);opacity:.65;font:600 13px/1.2 inherit;font-family:inherit;padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.vistes button b{font-size:20px;line-height:1}
+nav.vistes button.on{opacity:1;color:#fff;box-shadow:inset 0 3px 0 var(--ter)}
+nav.vistes button.e112 b{color:#ff7a62}
+.b112{display:block;text-align:center;background:var(--ter);color:#fff;text-decoration:none;font-weight:800;font-size:24px;padding:18px;border-radius:14px;margin-bottom:10px;box-shadow:0 2px 0 #9c3f2c}
+.coord{font:600 17px/1.5 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.2px}
+.coord small{font:500 12px Inter,system-ui,sans-serif;color:var(--gris);display:block}
+.tels{width:100%;border-collapse:collapse;font-size:14px}
+.tels td{padding:7px 4px;border-top:1px solid #eee7da;vertical-align:top}
+.tels td:last-child{text-align:right;white-space:nowrap}
+.tels a{display:inline-block;background:#f3efe6;border:1px solid #d9d3c6;color:var(--pis);text-decoration:none;font-weight:700;border-radius:99px;padding:5px 10px}
+.tels a.urg{background:var(--ter);border-color:var(--ter);color:#fff}
+.tels .grup td{border-top:0;padding-top:12px;font-weight:800;color:var(--ter);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.prot li{margin:4px 0 4px 20px}
+.punts112{width:100%;border-collapse:collapse;font-size:12px}
+.punts112 td,.punts112 th{padding:5px 3px;border-top:1px solid #eee7da;text-align:left}
+.punts112 td:nth-child(3),.punts112 td:nth-child(4){font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
 header{background:var(--pis);color:var(--sor);padding:12px 14px 0;position:sticky;top:0;z-index:5}
 .marca{display:flex;justify-content:space-between;align-items:baseline}
 .marca h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:20px}
@@ -125,7 +143,7 @@ details.det.act summary{color:var(--ter)}
   <div class="marca"><h1>Petjada <span>·</span> Catllaràs</h1><small id="rellotge">--:--</small></div>
   <div class="tabs"><button data-d="dia1">Dia 1 · dissabte</button><button data-d="dia2">Dia 2 · diumenge</button></div>
 </header>
-<main>
+<main id="vruta">
   <div class="estat"><span id="gps" class="pill">GPS apagat</span><span id="track" class="pill">—</span><span id="prec" class="pill" hidden></span></div>
   <div id="avis" class="avis"></div>
 
@@ -250,6 +268,55 @@ details.det.act summary{color:var(--ter)}
     <p class="nota" style="margin-top:10px">Funciona sense cobertura un cop oberta una vegada amb connexió. Pots dur el mòbil bloquejat: en desbloquejar-lo, l'app et torna a situar sobre el track i els km i desnivells fets inclouen tot el que has caminat mentrestant (el temps compta des de l'inici). El que no queda gravat és el traç real que has fet amb la pantalla apagada: si surts del track, grava amb el TwoNav. Els km i desnivells es calculen sobre el track (filtre de 5 m), no amb l'altímetre del mòbil.</p>
   </section>
 </main>
+
+<main id="v112" hidden>
+  <a class="b112" href="tel:112">📞 Trucar al 112</a>
+
+  <section class="card">
+    <h2>On sóc</h2>
+    <div id="e-on"><p class="nota">Activa el GPS per veure les coordenades (funciona sense cobertura).</p></div>
+    <div class="botons" style="margin-top:8px">
+      <button id="e-gps" class="btn s">Activar GPS</button>
+      <button id="e-copia" class="btn s">Copiar coordenades</button>
+      <a id="e-sms" class="btn s" style="text-decoration:none;display:inline-block;text-align:center">Enviar per SMS</a>
+    </div>
+    <p class="nota" style="margin-top:6px">Un SMS de vegades surt amb molt poca cobertura, quan una trucada no es pot fer. L'SMS s'obre amb les coordenades escrites: tu tries a qui l'envies.</p>
+  </section>
+
+  <section class="card">
+    <h2>Protocol (PAS)</h2>
+    <ol class="prot">
+      <li><b>Protegir</b> el grup i la víctima: lloc segur, fora del perill.</li>
+      <li><b>Avisar</b> al 112: codi del punt més proper, coordenades d'aquí dalt, què ha passat, quantes persones i en quin estat, meteo i si hi ha lloc per a l'helicòpter.</li>
+      <li><b>Socórrer</b>: valorar la víctima, mantenir-la calenta i aïllada de terra, i deixar el telèfon lliure perquè us puguin trucar.</li>
+    </ol>
+    <p class="nota" style="margin-top:8px"><b>Ferit que no pot caminar o hipotèrmia amb confusió:</b> no baixar-lo a peu. Abrigar, aïllar de terra i esperar el rescat.</p>
+    <p class="nota"><b>Sense cobertura:</b> provar l'SMS, pujar a un collet o carena, o enviar dues persones amb les coordenades apuntades. El grup no es divideix sense un responsable a cada part.</p>
+    <p class="nota"><b>Accés amb vehicle:</b> al Monestir (P0) i a la Pobla; al Xalet per la pista forestal des de Falgars (cal verificar l'estat de la pista).</p>
+    <p class="nota"><b>Alerta externa:</b> si el contacte extern no té notícies a l'hora acordada, truca al 112.</p>
+  </section>
+
+  <section class="card">
+    <h2>Telèfons</h2>
+    <table class="tels" id="e-tels"></table>
+    <div style="margin-top:10px">
+      <label class="nota" for="e-ext">Contacte extern (nom i telèfon; es desa al mòbil):</label>
+      <div style="display:flex;gap:6px;margin-top:4px"><input id="e-ext-nom" placeholder="Nom" style="flex:1;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:inherit"><input id="e-ext" type="tel" placeholder="Telèfon" style="flex:1;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:inherit"></div>
+    </div>
+    <p class="nota" style="margin-top:8px">El cap de setmana el consultori de la Pobla és tancat: l'atenció urgent és al CAP de Guardiola (24 h dissabtes i diumenges). Hospital de referència: Berga.</p>
+  </section>
+
+  <section class="card">
+    <h2>Coordenades dels punts</h2>
+    <div id="e-punts"></div>
+    <p class="nota" style="margin-top:6px">UTM fus 31N (ETRS89). Cotes del track ajustat del 21/11.</p>
+  </section>
+</main>
+
+<nav class="vistes">
+  <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
+  <button data-v="v112" class="e112"><b>✚</b>112</button>
+</nav>
 <script src="rutes.js"></script>
 <script src="info.js"></script>
 <script src="vessants.js"></script>
@@ -522,6 +589,67 @@ function pintaPlansB(E,seg,now){
       ${fila('Amb '+b.id,tB)}${b.fi?'':fila('Amb el pla A',tA)}</tbody></table>${siLim}${viu}</div>`;
   }).join('');
 }
+
+
+// ---------- Pestanya 112 ----------
+const TELS=[
+  ['Emergències',[['Emergències (sanitat, bombers, policia)','112',1],['Salut Respon (consulta sanitària 24 h)','061'],['Mossos d’Esquadra','088'],['Mossos d’Esquadra · comissaria de Berga','938815785']]],
+  ['Salut',[['CAP Guardiola de Berguedà · urgències 24 h ds, dg i festius (dl–dv de 20 a 8 h)','938227172'],['Consultori de la Pobla de Lillet · dl–dv','938236006'],['Hospital de Berga (Sant Bernabé)','938243400'],['Hospital de Campdevànol (Ripollès)','972730013'],['Farmàcia de la Pobla de Lillet','938236110']]],
+  ['Taxis (Berga)',[['Taxis Berga','938211111'],['Taxi Berga (guàrdies nocturnes)','640738862'],['Taxi Berga (guàrdies nocturnes)','686561712']]],
+  ['Logística',[['Hostal del Santuari de Falgars','937441095'],['Oficina de turisme de la Pobla de Lillet','687998541'],['Ajuntament de la Pobla de Lillet','938236011'],['Guia · Sergi Tossal','667999040']]]
+];
+const fmtTel=t=>t.length===9?t.replace(/(\d{3})(\d{2})(\d{2})(\d{2})/,'$1 $2 $3 $4'):t;
+function pintaTels(){
+  let ext={}; try{ext=JSON.parse(localStorage.getItem('petjada-ext')||'{}')}catch(e){}
+  let h=''; TELS.forEach(([g,ll])=>{ h+=`<tr class="grup"><td colspan="2">${g}</td></tr>`;
+    ll.forEach(([n,t,u])=>{ h+=`<tr><td>${n}</td><td><a class="${u?'urg':''}" href="tel:${t}">${fmtTel(t)}</a></td></tr>`; }); });
+  if(ext.tel) h+=`<tr class="grup"><td colspan="2">Contacte extern</td></tr><tr><td>${esc(ext.nom||'')}</td><td><a href="tel:${esc(ext.tel.replace(/\s/g,''))}">${esc(ext.tel)}</a></td></tr>`;
+  $('e-tels').innerHTML=h; $('e-ext').value=ext.tel||''; $('e-ext-nom').value=ext.nom||'';
+}
+// WGS84 → UTM (fus 31N); ETRS89 i WGS84 coincideixen a efectes pràctics
+function utm(lat,lon,zona=31){
+  const a=6378137,f=1/298.257223563,k0=0.9996,e2=f*(2-f),ep2=e2/(1-e2),r=Math.PI/180;
+  const l0=((zona-1)*6-180+3)*r,ph=lat*r,la=lon*r,N=a/Math.sqrt(1-e2*Math.sin(ph)**2),T=Math.tan(ph)**2,C=ep2*Math.cos(ph)**2,A=Math.cos(ph)*(la-l0);
+  const M=a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*ph-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*ph)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*ph)-(35*e2**3/3072)*Math.sin(6*ph));
+  const x=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000;
+  const y=k0*(M+N*Math.tan(ph)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
+  return [Math.round(x),Math.round(y)];
+}
+function gms(v,p,n){ const s=v<0?n:p; v=Math.abs(v); const g=Math.floor(v), m=Math.floor((v-g)*60), sg=((v-g)*60-m)*60; return `${g}°${String(m).padStart(2,'0')}'${sg.toFixed(1).padStart(4,'0')}"${s}`; }
+function puntsTots(){ const L=[]; for(const k of ['dia1','dia2']){ const r=RUTES[k]; r.wp.forEach(w=>{ const p=r.pts[w.i];
+  if(L.some(x=>Math.abs(x.lat-p[0])<2e-4&&Math.abs(x.lon-p[1])<2e-4&&x.k===w.k)) return;
+  const t=((INFO[k]||{})[w.k]||{}).titol||w.n; L.push({k:w.k,n:t.split(' · ')[0].replace(/\s*\((≈|sortida|arribada)\)/g,'').trim(),lat:p[0],lon:p[1],z:p[2],dia:k}); }); } return L; }
+function textCoord(){ if(!lastFix) return ''; const [x,y]=utm(lastFix.lat,lastFix.lon), pr=puntMesProper();
+  return `Som a ${lastFix.lat.toFixed(5)}, ${lastFix.lon.toFixed(5)} (UTM 31N ${x} ${y})`+(lastFix.alt!=null?`, ${Math.round(lastFix.alt)} m`:'')+(pr?`. A ${pr.d<1000?Math.round(pr.d)+' m':km(pr.d)+' km'} de ${pr.p.k} ${pr.p.n}`:'')+`. Serra del Catllaràs, la Pobla de Lillet.`; }
+function puntMesProper(){ if(!lastFix) return null; let b=null; for(const p of puntsTots()){ const d=hav([lastFix.lat,lastFix.lon],[p.lat,p.lon]); if(!b||d<b.d) b={p,d}; } return b; }
+function pinta112(){
+  if($('v112').hidden) return;
+  const el=$('e-on');
+  if(!lastFix){ el.innerHTML='<p class="nota">Activa el GPS per veure les coordenades (funciona sense cobertura).</p>'; }
+  else{ const [x,y]=utm(lastFix.lat,lastFix.lon), pr=puntMesProper(), edat=Math.round((Date.now()-lastFix.ts)/60000);
+    el.innerHTML=`<div class="coord">${lastFix.lat.toFixed(5)}, ${lastFix.lon.toFixed(5)}<small>Graus decimals (WGS84)</small></div>
+      <div class="coord" style="margin-top:6px">${gms(lastFix.lat,'N','S')} ${gms(lastFix.lon,'E','O')}<small>Graus, minuts i segons</small></div>
+      <div class="coord" style="margin-top:6px">31T ${x} ${y}<small>UTM fus 31N (X, Y)</small></div>
+      <p class="sub" style="margin-top:8px">${lastFix.alt!=null?'Alçada GPS '+Math.round(lastFix.alt)+' m · ':''}precisió ±${Math.round(lastFix.acc)} m · ${edat<1?'ara mateix':'fa '+edat+' min'}</p>`+
+      (pr?`<p class="sub">Punt més proper: <b>${pr.p.k} ${esc(pr.p.n)}</b> a ${pr.d<1000?Math.round(pr.d)+' m':km(pr.d)+' km'}</p>`:'');
+    $('e-sms').href='sms:?body='+encodeURIComponent(textCoord()); }
+  if(!$('e-punts').dataset.ok){ $('e-punts').dataset.ok=1;
+    $('e-punts').innerHTML='<table class="punts112"><thead><tr><th>Codi</th><th>Punt</th><th>WGS84</th><th>UTM 31N</th><th>Cota</th></tr></thead><tbody>'+
+      puntsTots().map(p=>{const [x,y]=utm(p.lat,p.lon); return `<tr><td><b>${p.k}</b></td><td>${esc(p.n)}</td><td>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</td><td>${x} ${y}</td><td>${Math.round(p.z)} m</td></tr>`;}).join('')+'</tbody></table>'; }
+}
+document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
+  $('vruta').hidden=b.dataset.v!=='vruta'; $('v112').hidden=b.dataset.v!=='v112';
+  document.querySelector('header .tabs').style.display=b.dataset.v==='v112'?'none':'';
+  window.scrollTo(0,0); pinta112(); });
+$('e-gps').onclick=()=>{ gpsOn(); };
+$('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }
+  try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
+  setTimeout(()=>$('e-copia').textContent='Copiar coordenades',2500); };
+$('e-sms').onclick=e=>{ if(!lastFix){ e.preventDefault(); gpsOn(); } };
+const desaExt=()=>{ try{localStorage.setItem('petjada-ext',JSON.stringify({nom:$('e-ext-nom').value.trim(),tel:$('e-ext').value.trim()}))}catch(e){} pintaTels(); };
+$('e-ext').onchange=desaExt; $('e-ext-nom').onchange=desaExt;
+pintaTels();
 
 // ---------- Obaga / solell, sol i confort del grup ----------
 const DIRNOM={N:'nord',NE:'nord-est',E:'est',SE:'sud-est',S:'sud',SO:'sud-oest',O:'oest',NO:'nord-oest'};
@@ -1024,7 +1152,7 @@ $('b-desc').onclick=async()=>{
 
 // ---------- GPS ----------
 function onFix(p){
-  const c=p.coords; lastFix={lat:c.latitude,lon:c.longitude,acc:c.accuracy,ts:p.timestamp};
+  const c=p.coords; lastFix={lat:c.latitude,lon:c.longitude,acc:c.accuracy,alt:c.altitude,ts:p.timestamp}; try{pinta112()}catch(e){}
   $('prec').hidden=false; $('prec').textContent='± '+Math.round(c.accuracy)+' m';
   $('gps').className='pill ok'; $('gps').textContent='GPS actiu';
   if(prova) return;
