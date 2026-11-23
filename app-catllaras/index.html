@@ -97,6 +97,17 @@ input[type=range]{width:100%;accent-color:var(--ter)}
 .bri .xif strong{display:block;font-size:13px;margin-bottom:4px}
 .bri .xif span{display:block;font-size:13px;line-height:1.5}
 .trk{display:inline-block;margin-top:6px;font-size:13px;font-weight:700;color:var(--pis);border:1.5px solid var(--pis);border-radius:8px;padding:4px 10px;text-decoration:none}
+.plans p{font-size:14px;line-height:1.45;margin:6px 0}.plans ol{padding-left:18px;font-size:14px;line-height:1.45;margin:6px 0}
+.pmap{width:100%;border-radius:10px;margin:8px 0;display:block}
+.tg{display:inline-block;color:#fff;font-weight:800;font-size:12px;border-radius:5px;padding:1px 6px;margin-right:4px}.tg.a1{background:#1b9e4b}.tg.a2{background:#0b6e4f}.tg.a{background:#7a3cc8}.tg.c{background:#6c3a91}
+.pdec{font-size:14px;line-height:1.7;background:#f4efe5;border-radius:10px;padding:8px 10px}
+.pc.a1{border-left:5px solid #1b9e4b}.pc.a2{border-left:5px solid #0b6e4f}.pc.c1,.pc.c2{border-left:5px solid #6c3a91}
+.pc h2{flex-wrap:wrap;gap:4px}.pc h2>span{font-size:15px;text-transform:none;letter-spacing:0;color:var(--pis)}
+table.pt{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}table.pt th{text-align:right;color:var(--gris);font-weight:700;border-bottom:1px solid #ddd;padding:3px}table.pt th:first-child,table.pt td:first-child{text-align:left}
+table.pt td{text-align:right;padding:4px 3px;border-bottom:1px solid #eee}table.pt tr.b td{font-weight:800}table.pt td.tsep{text-align:left;color:var(--gris);font-weight:700;padding-top:8px}
+.plans .lim{color:#b02a1a}.plans .av{background:#fff3dc;color:#8a4a00;border-radius:8px;padding:6px 8px;font-size:13px}
+details.sol{background:#eef7f0;border-radius:8px;padding:6px 8px;font-size:13.5px;line-height:1.45;margin:6px 0}details.sol summary{font-weight:700;color:#1b6e3a}
+nav.vistes button{flex-direction:column;gap:2px;font-size:12px;padding:6px 2px}
 .nota{font-size:12px;color:var(--gris);line-height:1.45}
 .avis{background:#fbe5e0;color:#8f2f1c;border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px;margin-bottom:10px;display:none}
 .avis.on{display:block}
@@ -164,6 +175,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
   <nav class="vistes">
     <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
     <button data-v="vbri"><b>📣</b>Briefing</button>
+    <button data-v="vplans"><b>🔀</b>A+ / C</button>
     <button data-v="vmet"><b>⛅</b>Meteo</button>
     <button data-v="v112" class="e112"><b>✚</b>112</button>
   </nav>
@@ -287,6 +299,60 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 </main>
 
 <main id="vbri" class="bri" hidden><div id="bri"></div></main>
+
+<main id="vplans" hidden class="plans">
+  <section class="card"><h2>Plans A+ · dia 2 <b>si anem bé d'horari</b></h2>
+    <p class="nota">Dia 1: no hi ha A+ (amb la grimpada de P5 l'arribada al Xalet és a les 16:16 i la posta a les 17:23). Dia 2: se'n tria un com a màxim. Objectiu: Monestir (P0) cap a les 15:00, màxim 15:30 al pàrquing.</p>
+    <a href="mapa-aplus.jpg" target="_blank"><img class="pmap" src="mapa-aplus.jpg" alt="Mapa dels plans A+ del dia 2"></a><p class="nota" style="margin-top:-4px">Toca el mapa per ampliar-lo.</p>
+    <div class="pdec"><b>Decisió a P14 (Rec del Corb):</b><br><span class="tg a1">A+1</span> abans de les <b>13:45</b>, grup bé i bona visibilitat → taller d'orientació.<br><span class="tg a2">A+2</span> si no fem el taller: a la Desv. A+2 abans de les <b>13:25</b> i grup amb forces → Emprius i camí ral.<br><span class="tg a">A</span> si no: pla A fins al Monestir (2,65 km · 54 min).</div>
+  </section>
+  <section class="card pc a1"><h2><span><span class="tg a1">A+1</span> Taller d'orientació</span><b>P14 → Roca del Castell → Monestir</b></h2>
+    <p>A partir de P14, els participants troben amb el mapa el camí <b>més eficient</b> (temps, desnivell, distància i camí net) fins a la Roca del Castell de Lillet i tornen al pàrquing del Monestir.</p>
+    <p class="sub">Inici P14 · pas previst 12:41 · <b class="lim">límit 13:45</b> · amb el taller (≈ 1 h 40) arribada ≈ <b>14:20</b></p>
+    <table class="pt"><thead><tr><th>Des de P14 fins a P0</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th></tr></thead><tbody>
+      <tr class="b"><td>A+1 · ruta òptima</td><td>2,79</td><td>75</td><td>245</td><td>1 h 02</td></tr>
+      <tr><td>Pla A (sense castell)</td><td>2,65</td><td>6</td><td>172</td><td>54 min</td></tr>
+      <tr><td>Error típic: Monestir i pujar al castell</td><td>3,88</td><td>134</td><td>304</td><td>1 h 27</td></tr></tbody></table>
+    <ol><li><b>A P14 (10 min):</b> orientar el mapa amb la brúixola, situar-nos i localitzar l'objectiu (restes del castell i creu, ≈ 1.030 m).</li>
+      <li><b>Per parelles (3 min):</b> cada parella proposa la ruta al mapa; el grup en tria una i la justifica.</li>
+      <li><b>Navegació:</b> lidera una parella per tram i es canvia a cada cruïlla. Jo vaig darrere i només intervinc si és insegur o massa lent.</li>
+      <li><b>A la Roca del Castell (10 min):</b> comparem la ruta triada amb l'òptima i baixem al Monestir.</li></ol>
+    <details class="sol"><summary>Solució (només guia) · toca per veure-la</summary>Pla A des de P14 fins a la <b>cruïlla clau</b> (1,52 km · −116 m · 31 min) → camí cap al NO que puja al castell (0,66 km · +56 m · 17 min; tram curt i dret, fins al 40 %) → corriol directe de baixada al Monestir (0,61 km · −107 m · 19 min).</details>
+    <p class="nota">Material: un mapa 1:25.000 per parella i brúixola. Els últims metres fins a les restes, amb el guia al davant.</p>
+    <a class="trk" href="../catllaras/fitxa/Catllaras_Dia2_Aplus1_Castell.gpx" download>⬇ Track A+1 (GPX)</a>
+  </section>
+  <section class="card pc a2"><h2><span><span class="tg a2">A+2</span> Els Emprius i camí ral</span><b>Castellsec → carretera → Monestir</b></h2>
+    <p>Del Desv. A+2 (1,0 km després de P14) pugem pels Emprius, pel vessant de Castellsec, fins a la carretera i tornem al Monestir pel camí ral.</p>
+    <p class="sub">Cruïlla: Desv. A+2 · pas previst 13:02 · <b class="lim">límit 13:25</b> · Què mirem: horari, forces del grup (+241 m), llum i meteo.</p>
+    <table class="pt"><thead><tr><th>Des de la cruïlla fins a P0</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th></tr></thead><tbody>
+      <tr class="b"><td>Amb A+2</td><td>5,48</td><td>241</td><td>307</td><td>1 h 53</td></tr>
+      <tr><td>Amb el pla A</td><td>1,63</td><td>0</td><td>72</td><td>33 min</td></tr>
+      <tr><td colspan="5" class="tsep">Trams</td></tr>
+      <tr><td>Desv. → punt alt (1.128 m)</td><td>1,62</td><td>167</td><td>21</td><td>44 min</td></tr>
+      <tr><td>Punt alt → carretera</td><td>1,81</td><td>25</td><td>163</td><td>37 min</td></tr>
+      <tr><td>Carretera → camí ral</td><td>0,24</td><td>0</td><td>37</td><td>7 min</td></tr>
+      <tr><td>Camí ral → Monestir</td><td>1,79</td><td>51</td><td>84</td><td>37 min</td></tr></tbody></table>
+    <p class="sub">Sortint a les 13:02: al Monestir a les <b>14:55</b>. Si hi arribeu a l'hora límit: <b>15:18</b>.</p>
+    <p class="av">⚠ Camí poc concorregut (heatmap d'Strava): el guia l'ha de reconèixer (fer-lo) prèviament. Tram de carretera: en filera i pel costat.</p>
+    <a class="trk" href="../catllaras/fitxa/Catllaras_Dia2_Aplus2_Emprius.gpx" download>⬇ Track A+2 (GPX)</a>
+  </section>
+  <section class="card pc c1"><h2><span><span class="tg c">C1</span> Travessa de la Clusa</span><b>2 dies amb nit al refugi</b></h2>
+    <p><b>Quan s'activa:</b> si el bivac es complica per fred extrem. Passa pel refugi de Sant Romà de la Clusa per assegurar una pernocta més agradable. Mateixa trobada i zona, sense grimpada.</p>
+    <a href="mapa-c1.jpg" target="_blank"><img class="pmap" src="mapa-c1.jpg" alt="Mapa del pla C1"></a>
+    <table class="pt"><thead><tr><th>Etapa</th><th>km</th><th>D+ / D−</th><th>Marxa</th><th>Horari</th></tr></thead><tbody>
+      <tr><td><b>Dia 1</b> · Monestir → refugi de la Clusa</td><td>10</td><td>+820 / −382</td><td>4 h 26</td><td>11:00 → ≈ 16:30</td></tr>
+      <tr><td><b>Dia 2</b> · refugi → Monestir</td><td>11</td><td>+500 / −942</td><td>4 h 50</td><td>8:00 → ≈ 13:50</td></tr>
+      <tr class="b"><td>Total</td><td>21</td><td>+1.320 / −1.324</td><td>≈ 9 h 16</td><td>—</td></tr></tbody></table>
+    <p><b>Refugi i reserva:</b> Refugi de Sant Romà de la Clusa (Castell de l'Areny), ≈ 25 places · Ramon <a href="tel:696597210">696 597 210</a>. Prereserva abans de dc 25/11; confirmació dv 27/11 abans de les 20:00.</p>
+    <p><b>Logística:</b> trobada igual (10:30, Monestir). Cotxes al Monestir. Tot a peu. No cal material de bivac. Avís al grup dv 27/11 a les 20:30.</p>
+    <a class="trk" href="../catllaras/fitxa/Catllaras_C1_Dia1_Clusa.gpx" download>⬇ Track C1 dia 1</a> <a class="trk" href="../catllaras/fitxa/Catllaras_C1_Dia2_Monestir.gpx" download>⬇ Track C1 dia 2</a>
+  </section>
+  <section class="card pc c2"><h2><span><span class="tg c">C2</span> Mal temps fort</span><b>activitat a baixa cota</b></h2>
+    <p><b>Dia 1:</b> avís taronja o vermell per al dissabte (vent &gt; 80 km/h, nevada, tempestes) o neu per sota de 1.300 m: no es puja a la carena. 11:00 visita guiada als Jardins Artigas · 12:15–15:30 pràctica d'orientació i conducció per camins baixos (Monestir, Sant Miquel, Castell de Lillet) i reavaluacions · 16:00 fi.</p>
+    <p><b>Dia 2:</b> si per mala meteo hem hagut de tornar molt aviat, a primera hora del diumenge (B1): 9:16 Monestir · 10:00 Jardins Artigas · 11:15–12:30 debrief i avaluació a lloc cobert.</p>
+    <p><b>Reserves:</b> Oficina de Turisme de la Pobla de Lillet (Jardins Artigas) <a href="tel:687998541">687 99 85 41</a> · lillet.tur@poblalillet.cat · reservar la visita de grup.</p>
+  </section>
+</main>
 
 <main id="vmet" hidden>
   <section class="card" id="meteo">
@@ -672,7 +738,7 @@ function pinta112(){
 document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   const v=b.dataset.v;
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
-  for(const id of ['vruta','vbri','vmet','v112']) $(id).hidden=id!==v;
+  for(const id of ['vruta','vbri','vplans','vmet','v112']) $(id).hidden=id!==v;
   document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
   window.scrollTo(0,0); if(v==='v112') pinta112(); if(v==='vbri') pintaBriefing(); if(v==='vmet') try{pintaMeteo()}catch(e){} });
 $('e-gps').onclick=()=>{ gpsOn(); };
