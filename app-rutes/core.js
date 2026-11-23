@@ -210,7 +210,7 @@ function plansBDia(G,dia,trackNodes){
   const decisions=dia.wp.filter(w=>w.i>0&&w.i<n-1).map(w=>w.i);
   if(decisions.length<2){ for(let i=1;i<6;i++) decisions.push(Math.round(i*(n-1)/6)); }
   for(const i0 of decisions){
-    const hRest=hA(st,i0,n-1); if(hRest<0.6) continue; // a menys de ~35 min del final no cal pla B
+    const hRest=hA(st,i0,n-1); if(hRest<0.75) continue; // a menys de ~45 min del final no cal pla B
     // 1) cap al final de la ruta pel camí més ràpid · 2) cap a la carretera/pista asfaltada més propera (accés amb vehicle)
     const R1=dijkstra(G,prop(i0));
 
