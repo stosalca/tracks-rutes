@@ -128,6 +128,11 @@ details.det.act summary{color:var(--ter)}
 .dies button.on{background:var(--pis);color:var(--sor);border-color:var(--pis)}
 .mres{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:2px 8px;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:8px}
 .mres b{font-size:12px;color:var(--gris)}
+.mres small{color:var(--gris);font-size:11px}
+#met-hores{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#met-hores table{min-width:520px}
+#met-hores td:first-child,#met-hores th:first-child{position:sticky;left:0;background:#fff}
+.fv{display:inline-block;font-weight:800;color:#2b6cb0;line-height:1}
 .mav{border-radius:10px;padding:7px 10px;font-size:14px;margin-bottom:6px;background:#fbf0d9;color:#7a5410}
 .mav.r{background:#fbe5e0;color:#8f2f1c}
 .mav.ok{background:#e3f1e8;color:var(--ok)}
@@ -775,6 +780,11 @@ function diesMeteo(){
   return d0.filter(k=>k>=kd(avui)&&k<='2026-11-30').map(k=>{const x=new Date(k+'T12:00:00');
     return {k,n:(k===kd(avui)?'Avui':DS[x.getDay()]+' '+x.getDate())+(k==='2026-11-28'?' · dia 1':k==='2026-11-29'?' · dia 2':'')};});
 }
+// direcció del vent: d'on bufa (graus) → punt cardinal, nom català i fletxa cap on va
+const VENTS=[['N','tramuntana'],['NE','gregal'],['E','llevant'],['SE','xaloc'],['S','migjorn'],['SO','garbí'],['O','ponent'],['NO','mestral']];
+function ventDir(g){ if(g==null||isNaN(g)) return null; const k=Math.round(((g%360)+360)%360/45)%8; return {c:VENTS[k][0],n:VENTS[k][1],g}; }
+function fletxa(g,mida){ return `<span class="fv" style="transform:rotate(${(g+180)%360}deg);${mida?'font-size:'+mida+'px':''}" title="bufa de ${Math.round(g)}°">↑</span>`; }
+function dirMitjana(a){ let x=0,y=0; a.forEach(([g,w])=>{ if(g==null) return; x+=Math.sin(g*Math.PI/180)*(w||1); y+=Math.cos(g*Math.PI/180)*(w||1); }); return (x||y)?(Math.atan2(x,y)*180/Math.PI+360)%360:null; }
 function pintaMeteo(){
   set('met-links',[
     ['Meteocat · la Pobla de Lillet','https://www.meteo.cat/prediccio/municipal/081666'],
@@ -804,6 +814,7 @@ function pintaMeteo(){
   const fila=(nom,f)=>{res+=`<span>${nom}</span>`+H.map(h=>`<span>${f(h)}</span>`).join('');};
   fila('Temp.',h=>`${tC(mn(hores.map(i=>h.temperature_2m[i])))} / ${tC(mx(hores.map(i=>h.temperature_2m[i])))} °C`);
   fila('Sensació mín.',h=>`${tC(mn(hores.map(i=>h.apparent_temperature[i])))} °C`);
+  fila('Vent dominant',h=>{ const d=ventDir(dirMitjana(hores.map(i=>[h.wind_direction_10m[i],h.wind_speed_10m[i]]))); return d?`${fletxa(d.g)} ${d.c} <small>${d.n}</small>`:'–'; });
   fila('Ratxa màx.',h=>`${mx(hores.map(i=>h.wind_gusts_10m[i])).toFixed(0)} km/h`);
   fila('Prob. precip.',h=>`${mx(hores.map(i=>h.precipitation_probability[i]??0)).toFixed(0)} %`);
   res+='</div>';
@@ -825,10 +836,10 @@ function pintaMeteo(){
   if(!av.length) av.push(['ok','Sense avisos destacables en les hores de marxa.']);
   set('met-avisos',av.map(([c,t])=>`<div class="mav ${c}">${t}</div>`).join(''));
   // taula per hores: temperatura a dues alçades, vent i precipitació
-  let tb='<table><thead><tr><th>Hora</th><th>Cel</th><th>Xalet<br>T (sens.)</th><th>Roca J. Pilota<br>T (sens.)</th><th>Vent / ratxa<br>km/h</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>';
+  let tb='<table><thead><tr><th>Hora</th><th>Cel</th><th>Xalet<br>T (sens.)</th><th>Roca J. Pilota<br>T (sens.)</th><th>Vent<br>km/h / ratxa</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>';
   hores.forEach(i=>{ const x=H[1], m=H[2], pr=x.precipitation[i]||0, sn=x.snowfall?x.snowfall[i]||0:0;
-    tb+=`<tr><td>${T[i].slice(11,16)}</td><td>${WMO[x.weather_code[i]]||''}</td><td>${tC(x.temperature_2m[i])} (${tC(x.apparent_temperature[i])})</td><td>${tC(m.temperature_2m[i])} (${tC(m.apparent_temperature[i])})</td><td>${Math.round(x.wind_speed_10m[i])} / ${Math.round(m.wind_gusts_10m[i])}</td><td>${pr?pr.toFixed(1):'0'}${sn?' ❄':''} (${x.precipitation_probability[i]??0} %)</td></tr>`; });
-  tb+='</tbody></table><p class="nota">Temperatures en °C. Vent mitjà al Xalet / ratxa màxima a la Roca del Joc de Pilota (la més exposada). ❄ = previsió de neu.</p>';
+    tb+=`<tr><td>${T[i].slice(11,16)}</td><td>${WMO[x.weather_code[i]]||''}</td><td>${tC(x.temperature_2m[i])} (${tC(x.apparent_temperature[i])})</td><td>${tC(m.temperature_2m[i])} (${tC(m.apparent_temperature[i])})</td><td style="white-space:nowrap">${(d=>d?fletxa(d.g)+' '+d.c+' ':'')(ventDir(m.wind_direction_10m[i]))}${Math.round(x.wind_speed_10m[i])} / ${Math.round(m.wind_gusts_10m[i])}</td><td>${pr?pr.toFixed(1):'0'}${sn?' ❄':''} (${x.precipitation_probability[i]??0} %)</td></tr>`; });
+  tb+='</tbody></table><p class="nota">Temperatures en °C. Vent: la fletxa indica cap on bufa i la lletra d\'on ve (N tramuntana, NE gregal, E llevant, SE xaloc, S migjorn, SO garbí, O ponent, NO mestral); direcció a la Roca del Joc de Pilota, vent mitjà al Xalet i ratxa màxima a la Roca (la més exposada). ❄ = previsió de neu.</p>';
   set('met-hores',tb);
 }
 
