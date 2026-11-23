@@ -325,7 +325,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
       <tr><td>Anada (baixada)</td><td>0,72</td><td>0</td><td>91</td><td>16 min</td></tr>
       <tr><td>Tornada (pujada)</td><td>0,72</td><td>88</td><td>0</td><td>21 min</td></tr>
       <tr class="b"><td>Total + 15 min de visita</td><td>1,45</td><td>88</td><td>91</td><td>≈ 55 min</td></tr></tbody></table>
-    <p class="sub"><b>Quan:</b> a P3 (dinar al Xalet) si hi arribeu <b class="lim">abans de les 12:05</b>, o a l'arribada al bivac (P6) si hi arribeu <b class="lim">abans de les 15:30</b>. Així arribem al bivac amb ≥ 50 min de llum (posta 17:23).</p>
+    <p class="sub"><b>Quan:</b> a P3 (Xalet) si hi arribeu <b class="lim">abans de les 12:05</b>, o a l'arribada al bivac (P6) si hi arribeu <b class="lim">abans de les 15:30</b>. Així arribem al bivac amb ≥ 50 min de llum (posta 17:23).</p>
     <p class="sub">Camí: 0,5 km de pista i 0,2 km de corriol; l'últim tram, curt i dret. Material de bivac al Xalet: anem lleugers.</p>
     <a class="trk" href="../catllaras/fitxa/Catllaras_Dia1_Aplus_MinaCable.gpx" download>⬇ Track A+ mina del Cable (GPX)</a>
   </section>
@@ -786,7 +786,7 @@ $('e-ext').onchange=desaExt; $('e-ext-nom').onchange=desaExt;
 pintaTels();
 
 // ---------- Briefing inicial ----------
-const PARADES={dia1:{min:45,txt:'dinar ≈ 25 min + parades curtes i explicacions'},dia2:{min:60,txt:'mos ≈ 15 min, dinar ≈ 25 min + parades curtes'}};
+const PARADES={dia1:{min:45,txt:'1a parada a P1 (aigua i capes) ≈ 10 min, descans al Xalet ≈ 20 min + parades curtes i explicacions'},dia2:{min:60,txt:'mos ≈ 15 min, descans al Coll de Llevat ≈ 20 min + parades curtes'}};
 const BRI_KEY='catllaras-bri', BRI_NOTES='catllaras-bri-notes';
 function briEstat(){ try{return JSON.parse(localStorage.getItem(BRI_KEY))||{}}catch(e){return {}} }
 function sumaHora(hhmm,h){ const [H,M]=hhmm.split(':').map(Number); const t=Math.round(H*60+M+h*60); return String(Math.floor(t/60)%24).padStart(2,'0')+':'+String(t%60).padStart(2,'0'); }
