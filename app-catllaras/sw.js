@@ -1,6 +1,6 @@
-const CACHE='catllaras-v22';
+const CACHE='catllaras-v23';
 const TILES='catllaras-mapes-v1';
-const FILES=['./','index.html','rutes.js','info.js','vessants.js','plansb.js','aplus.js','mapa-aplus.jpg','mapa-c1.jpg','mapa-cable.jpg','manifest.webmanifest','icon-192.png','icon-512.png'];
+const FILES=['./','index.html','rutes.js','info.js','vessants.js','plansb.js','aplus.js','mapa-aplus.jpg','mapa-c1.jpg','mapa-cable.jpg','mapa-cobertura.jpg','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE&&x!==TILES).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
