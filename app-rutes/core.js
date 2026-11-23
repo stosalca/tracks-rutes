@@ -320,7 +320,7 @@ async function creaRuta(nom,dies,opc,log){
   const metPts=tria.map((o,i)=>({n:nomA(o)||['Punt baix','Punt mig','Punt alt'][i],lat:+o.p[0].toFixed(4),lon:+o.p[1].toFixed(4),e:Math.round(o.p[2])}));
   if(metPts[1].e<=metPts[0].e) metPts[1].e=metPts[0].e+1; if(metPts[2].e<=metPts[1].e) metPts[2].e=metPts[1].e+1;
   const c=[(S+N)/2,(W+E)/2];
-  const r={id:'r'+Date.now().toString(36),nom,creat:new Date().toISOString(),dem:demOk,catalunya:c[0]>40.4&&c[0]<42.95&&c[1]>0.1&&c[1]<3.4,metPts,
+  const r={id:opc.id||('r'+Date.now().toString(36)),nom,creat:new Date().toISOString(),dem:demOk,catalunya:c[0]>40.4&&c[0]<42.95&&c[1]>0.1&&c[1]<3.4,metPts,
     dies:dies.map(d=>({key:d.key,titol:d.titol,data:d.data,sortida:d.sortida,objectiu:d.objectiu,pts:d.pts,wp:d.wp,ves:d.ves,plansb:d.plansb})),info:{},tels:[]};
   desaRuta(r);
   lg(`Fet en ${Math.round((Date.now()-t0)/1000)} s.`);
@@ -376,11 +376,43 @@ async function generaGuio(r,log){
   return aplicaResposta(r,text,{via:'API',model:CONF.model||'claude-sonnet-5-5',cerques:(j.usage&&j.usage.server_tool_use&&j.usage.server_tool_use.web_search_requests)||null});
 }
 
+// fitxers GPX [{name,text}] → dies (un per track) amb els seus waypoints
+function preparaDies(fitxers){
+  const pend=[]; let wpts=[];
+  for(const f of fitxers){ const g=llegeixGPX(f.text,f.name); g.trks.forEach(t=>pend.push({titol:t.nom,pts:t.pts,src:f.name})); wpts=wpts.concat(g.wpts.map(w=>({...w,src:f.name}))); }
+  if(!pend.length) throw new Error('Els fitxers no tenen cap track.');
+  const norm=x=>x.toLowerCase().replace(/\.gpx$/,''), afin=(a,b)=>{ a=norm(a); b=norm(b); if(a===b) return 1e3; let k=0; while(k<a.length&&a[k]===b[k]) k++; return k; };
+  const aprop=(w,d)=>d.pts.some((p,k)=>k%3===0&&hav([w.lat,w.lon],p)<200);
+  wpts.forEach(w=>{ const ds=pend.filter(d=>aprop(w,d)); if(!ds.length) return; const mx=Math.max(...ds.map(d=>afin(w.src,d.src)));
+    ds.filter(d=>afin(w.src,d.src)===mx).forEach(d=>(d.wpts=d.wpts||[]).push(w)); });
+  const avui=new Date(); avui.setDate(avui.getDate()+1);
+  pend.forEach((d,i)=>{ d.key='dia'+(i+1); d.wpts=d.wpts||[];
+    const dd=new Date(avui); dd.setDate(avui.getDate()+i); d.data=dd.toISOString().slice(0,10); d.sortida='09:00'; d.objectiu='17:00';
+    if(pend.length>1&&!/dia/i.test(d.titol)) d.titol='Dia '+(i+1)+' · '+d.titol; });
+  pend.nWpts=wpts.length;
+  return pend;
+}
+// rutes publicades al repositori (rutes/index.json): les preparo jo (Claude) a partir dels GPX que m'envies
+async function sincronitzaPublicades(){
+  if(!navigator.onLine) return 0;
+  let idx; try{ const r=await fetchT('rutes/index.json?t='+Date.now(),15000,{cache:'no-store'}); if(!r.ok) return 0; idx=await r.json(); }catch(e){ return 0; }
+  let n=0;
+  for(const e of idx.rutes||[]){
+    const loc=carregaRuta(e.id);
+    if(loc&&loc.actualitzat===e.actualitzat) continue;
+    try{ const r=await (await fetchT('rutes/'+e.fitxer+'?v='+encodeURIComponent(e.actualitzat),30000,{cache:'no-store'})).json();
+      r.publicada=true; r.actualitzat=e.actualitzat;
+      if(loc&&loc.horesLocals) r.dies.forEach((d,i)=>{ const l=loc.dies[i]; if(l){ d.data=l.data; d.sortida=l.sortida; d.objectiu=l.objectiu; } });
+      desaRuta(r); n++; }catch(err){}
+  }
+  return n;
+}
+
 // ---------- interfície de la biblioteca ----------
 let pendents=null; // dies llegits del GPX abans de crear la ruta
 function pintaLib(){
   const act=llegeix(ACT,null), L=lib();
-  $('lib-llista').innerHTML=L.length?L.slice().reverse().map(x=>`<div class="lr ${x.id===act?'on':''}"><h3>${esc(x.nom)}</h3>
+  $('lib-llista').innerHTML=L.length?L.slice().reverse().map(x=>`<div class="lr ${x.id===act?'on':''}"><h3>${esc(x.nom)}${(carregaRuta(x.id)||{}).publicada?' <small class="pub">preparada per Claude</small>':''}</h3>
     <p class="nota">${x.dies.map(d=>esc(d.titol)+(d.data?' · '+new Date(d.data+'T12:00').toLocaleDateString('ca-ES',{weekday:'short',day:'numeric',month:'short'}):'')).join(' / ')}</p>
     <div class="botons" style="margin-top:6px"><button class="btn s" data-obre="${x.id}">${x.id===act?'Obrir':'Fer servir aquesta ruta'}</button>
     <button class="btn s" data-xat="${x.id}">Guió amb Claude (xat)</button>${(CONF.key||'').trim()?`<button class="btn s" data-guio="${x.id}">Guió amb Claude (API)</button>`:''}<button class="btn s" data-hores="${x.id}">Dates i hores</button><button class="btn s" data-esb="${x.id}">Esborrar</button></div>
@@ -407,7 +439,7 @@ function pintaLib(){
   });
   document.querySelectorAll('[data-hores]').forEach(b=>b.onclick=()=>{ const id=b.dataset.hores, r=carregaRuta(id), el=$('ed-'+id);
     el.innerHTML=r.dies.map((d,i)=>formDia(d,i,'e'+id)).join('')+`<div class="botons"><button class="btn s" id="sv-${id}">Desar</button></div>`;
-    $('sv-'+id).onclick=()=>{ r.dies.forEach((d,i)=>llegeixFormDia(d,i,'e'+id)); desaRuta(r); el.innerHTML='<p class="nota">Desat.</p>'; if(llegeix(ACT,null)===id) location.reload(); }; });
+    $('sv-'+id).onclick=()=>{ r.dies.forEach((d,i)=>llegeixFormDia(d,i,'e'+id)); r.horesLocals=true; desaRuta(r); el.innerHTML='<p class="nota">Desat.</p>'; if(llegeix(ACT,null)===id) location.reload(); }; });
 }
 function formDia(d,i,p){ return `<div class="dia-f"><b>${esc(d.titol)}</b>
   <label>Data<input type="date" id="${p}-d${i}" value="${d.data||''}"></label>
@@ -419,18 +451,9 @@ function iniciaLib(){
   const dc=()=>{ const tenia=!!(CONF.key||'').trim(); CONF.key=$('c-key').value.trim(); CONF.model=$('c-model').value; CONF.guiaNom=$('c-gnom').value.trim(); CONF.guiaTel=$('c-gtel').value.trim(); escriu(CONFK,CONF); if(tenia!==!!CONF.key) pintaLib(); };
   ['c-key','c-model','c-gnom','c-gtel'].forEach(id=>$(id).onchange=dc);
   $('n-gpx').onchange=async()=>{
-    const fs=[...$('n-gpx').files]; pendents=[]; let wpts=[];
-    try{ for(const f of fs){ const g=llegeixGPX(await f.text(),f.name); g.trks.forEach(t=>pendents.push({titol:t.nom,pts:t.pts,src:f.name})); wpts=wpts.concat(g.wpts.map(w=>({...w,src:f.name}))); } }
-    catch(e){ $('n-log').textContent=e.message; return; }
-    if(!pendents.length){ $('n-log').textContent='Els fitxers no tenen cap track.'; return; }
-    const avui=new Date(); avui.setDate(avui.getDate()+1);
-    const norm=x=>x.toLowerCase().replace(/\.gpx$/,''), afin=(a,b)=>{ a=norm(a); b=norm(b); if(a===b) return 1e3; let k=0; while(k<a.length&&a[k]===b[k]) k++; return k; };
-    const aprop=(w,d)=>d.pts.some((p,k)=>k%3===0&&hav([w.lat,w.lon],p)<200);
-    wpts.forEach(w=>{ const ds=pendents.filter(d=>aprop(w,d)); if(!ds.length) return; const mx=Math.max(...ds.map(d=>afin(w.src,d.src)));
-      ds.filter(d=>afin(w.src,d.src)===mx).forEach(d=>(d.wpts=d.wpts||[]).push(w)); });
-    pendents.forEach((d,i)=>{ d.key='dia'+(i+1); d.wpts=d.wpts||[];
-      const dd=new Date(avui); dd.setDate(avui.getDate()+i); d.data=dd.toISOString().slice(0,10); d.sortida='09:00'; d.objectiu='17:00';
-      if(pendents.length>1&&!/dia/i.test(d.titol)) d.titol='Dia '+(i+1)+' · '+d.titol; });
+    try{ pendents=preparaDies(await Promise.all([...$('n-gpx').files].map(async f=>({name:f.name,text:await f.text()})))); }
+    catch(e){ $('n-log').textContent=e.message; pendents=null; return; }
+    const wpts={length:pendents.nWpts};
     if(!$('n-nom').value) $('n-nom').value=pendents[0].titol.replace(/^Dia \d+ · /,'').replace(/[_-]?(dia|day|d)\s*\d+$/i,'').replace(/_/g,' ').trim();
     $('n-dies').innerHTML='<p class="nota">Per a cada dia: la data, l\'hora de sortida i l\'hora a què voleu arribar al punt final (serveix per calcular les hores límit).</p>'+pendents.map((d,i)=>formDia(d,i,'n')).join('')+
       `<p class="nota">${wpts.length} waypoints al GPX.</p>`;
@@ -453,6 +476,10 @@ function mostraVista(v){
 // ---------- arrencada ----------
 window.arrencaApp=function(){
   iniciaLib();
+  sincronitzaPublicades().then(n=>{ if(!n) return; const act=llegeix(ACT,null);
+    if(!act||!carregaRuta(act)){ const L=lib(); escriu(ACT,L[L.length-1].id); location.reload(); return; }
+    pintaLib(); const b=document.querySelector('nav.vistes button[data-v="vlib"]'); if(b) b.classList.add('nou');
+    if(window.RUTA&&carregaRuta(act).actualitzat!==RUTA.actualitzat) location.reload(); });
   document.querySelector('nav.vistes button[data-v="vlib"]').addEventListener('click',()=>{ mostraVista('vlib'); pintaLib(); });
   const id=llegeix(ACT,null), r=id&&carregaRuta(id);
   if(!r){ // sense ruta: només la biblioteca
@@ -470,5 +497,5 @@ window.arrencaApp=function(){
   const s=document.createElement('script'); s.src='app.js'; document.body.appendChild(s);
 };
 // per a les proves
-window.__core={peticioClaude,aplicaResposta,llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
+window.__core={preparaDies,sincronitzaPublicades,peticioClaude,aplicaResposta,llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
 })();
