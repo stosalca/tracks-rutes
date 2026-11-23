@@ -277,7 +277,7 @@ const TELS=[
 ];
 const fmtTel=t=>/^\d{9}$/.test(t)?t.replace(/(\d{3})(\d{2})(\d{2})(\d{2})/,'$1 $2 $3 $4'):t;
 function pintaTels(){
-  let ext={}; try{ext=JSON.parse(localStorage.getItem('petjada-ext')||'{}')}catch(e){}
+  let ext={}; try{ext=JSON.parse(localStorage.getItem('petjada-rutes-ext')||'{}')}catch(e){}
   let h=''; TELS.forEach(([g,ll])=>{ h+=`<tr class="grup"><td colspan="2">${esc(g)}</td></tr>`;
     ll.forEach(([n,t,u])=>{ h+=`<tr><td>${esc(n)}</td><td><a class="${u?'urg':''}" href="tel:${esc(t)}">${esc(fmtTel(t))}</a></td></tr>`; }); });
   if(ext.tel) h+=`<tr class="grup"><td colspan="2">Contacte extern</td></tr><tr><td>${esc(ext.nom||'')}</td><td><a href="tel:${esc(ext.tel.replace(/\s/g,''))}">${esc(ext.tel)}</a></td></tr>`;
@@ -326,7 +326,7 @@ $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textCo
   try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
   setTimeout(()=>$('e-copia').textContent='Copiar coordenades',2500); };
 $('e-sms').onclick=e=>{ if(!lastFix){ e.preventDefault(); gpsOn(); } };
-const desaExt=()=>{ try{localStorage.setItem('petjada-ext',JSON.stringify({nom:$('e-ext-nom').value.trim(),tel:$('e-ext').value.trim()}))}catch(e){} pintaTels(); };
+const desaExt=()=>{ try{localStorage.setItem('petjada-rutes-ext',JSON.stringify({nom:$('e-ext-nom').value.trim(),tel:$('e-ext').value.trim()}))}catch(e){} pintaTels(); };
 $('e-ext').onchange=desaExt; $('e-ext-nom').onchange=desaExt;
 pintaTels();
 
@@ -782,8 +782,8 @@ function dibuixaOSM(x0,y0,W,H){
   sv.innerHTML=g;
 }
 (function(){
-  try{ const c=JSON.parse(localStorage.getItem('petjada-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
-  const desa=()=>{try{localStorage.setItem('petjada-capes',JSON.stringify({osm:OSM.on,op:+$('c-op').value}))}catch(e){}};
+  try{ const c=JSON.parse(localStorage.getItem('petjada-rutes-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
+  const desa=()=>{try{localStorage.setItem('petjada-rutes-capes',JSON.stringify({osm:OSM.on,op:+$('c-op').value}))}catch(e){}};
   const op=()=>{ $('tiles').style.opacity=$('c-op').value/100; $('c-opv').textContent=$('c-op').value+' %'; };
   $('c-osm').checked=OSM.on; op();
   $('c-osm').onchange=()=>{OSM.on=$('c-osm').checked; desa(); dibuixaMapa();};
@@ -791,7 +791,7 @@ function dibuixaOSM(x0,y0,W,H){
 })();
 
 // ---------- Descàrrega de mapes per anar sense cobertura ----------
-const TILE_CACHE='catllaras-mapes-v1';
+const TILE_CACHE='petjada-rutes-mapes-v1';
 function llistaTeselles(){
   const BUF={12:1500,13:1500,14:1200,15:800,16:500}, set=new Set();
   for(const k of DIES){ const p=RUTES[k].pts;

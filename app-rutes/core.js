@@ -444,7 +444,7 @@ window.arrencaApp=function(){
     INFO[d.key]=(r.info||{})[d.key]||{}; VESSANTS[d.key]=d.ves||[]; PLANSB[d.key]=d.plansb||[]; LIMIT[d.key]={h:d.objectiu||'17:00',txt:'hora objectiu'}; DATES[d.key]=d.data||''; });
   const ds=Object.values(DATES).filter(Boolean).sort(); const fi=ds.length?new Date(ds[ds.length-1]+'T12:00'):new Date(); fi.setDate(fi.getDate()+1);
   window.DATA_FI=fi.toISOString().slice(0,10);
-  $('nom-ruta').textContent=r.nom; document.title=r.nom+' · Petjada';
+  $('nom-ruta').textContent=r.nom; document.title='Petjada · '+r.nom;
   $('tabs-dies').innerHTML=r.dies.length>1?DIES.map(k=>`<button data-d="${k}">${esc(RUTES[k].curt)}</button>`).join(''):'';
   const s=document.createElement('script'); s.src='app.js'; document.body.appendChild(s);
 };

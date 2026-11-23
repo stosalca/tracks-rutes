@@ -1,6 +1,6 @@
 {
- "name": "Petjada · Rutes",
- "short_name": "Rutes",
+ "name": "Petjada",
+ "short_name": "Petjada",
  "description": "Rutes de senderisme guiades: carrega el GPX i l'app calcula km, temps, desnivells, plans B, hores límit i meteo.",
  "lang": "ca",
  "start_url": "./",
