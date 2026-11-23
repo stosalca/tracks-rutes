@@ -115,6 +115,8 @@ nav.vistes button{flex-direction:column;gap:2px;font-size:12px;padding:6px 2px}
 .nom2{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:18px;margin-bottom:6px;line-height:1.2}
 .guio ul,.det ul,#flora ul{padding-left:18px;font-size:15px;line-height:1.45}
 .guio li,.det li,#flora li{margin-bottom:6px}
+.fil{display:inline-block;color:#fff;font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;margin:2px 4px 4px 0}
+.filintro{font-size:13px;line-height:1.45;border-left:4px solid;padding:4px 0 4px 8px;margin:6px 0}
 .preg{font-size:14px;background:#eef3f6;border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.4}
 .preg:empty{display:none}
 details.det{border-top:1px solid #f0ebe1;padding:8px 0}
@@ -269,6 +271,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
   <section class="card guio" id="guio-ara">
     <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
     <div class="nom2" id="guio-nom"></div>
+    <div id="guio-fil"></div>
     <ul id="guio-punts"></ul>
     <p class="preg" id="guio-preg"></p>
   </section>
@@ -1006,6 +1009,7 @@ function pintaMeteo(){
 
 // ---------- Guió per als clients ----------
 const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const filsDe=inf=>(inf&&inf.fil&&typeof FILS!=='undefined')?inf.fil.map(f=>FILS[f]?`<span class="fil" style="background:${FILS[f].col}">${esc(FILS[f].nom)}</span>`:'').join(''):'';
 function pintaGuio(E,w){
   // si acabes de passar un punt (< 250 m), mostra'n el guió; si no, el del punt següent
   const prev=R.wp[w-1], nx=R.wp[w];
@@ -1014,14 +1018,15 @@ function pintaGuio(E,w){
   if(R.cd[nx.i]-E.d<150){ p=nx; tag='Ets aquí'; dist=''; }
   const inf=p.info;
   set('guio-tag',tag); set('guio-dist',dist); set('guio-nom',esc(p.n));
+  set('guio-fil', filsDe(inf));
   set('guio-punts', inf? inf.punts.map(x=>`<li>${esc(x)}</li>`).join('') : '<li>Sense notes per a aquest punt.</li>');
   set('guio-preg', inf&&inf.pregunta? '❓ '+esc(inf.pregunta):'');
   document.querySelectorAll('#guio-tots details').forEach(d=>d.classList.toggle('act',d.dataset.k===p.k));
 }
 function pintaGuioTots(){
-  set('guio-tots', R.wp.filter(x=>x.info).map(x=>
-    `<details class="det" data-k="${x.k}"><summary>${esc(x.n)} · ${mts(R.p[x.i][2])}</summary><ul>${x.info.punts.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>${x.info.pregunta?`<p class="preg">❓ ${esc(x.info.pregunta)}</p>`:''}</details>`).join('')+
-    '<p class="nota" style="margin-top:8px">(≈) Topònim situat sobre el mapa per coordenades: confirma\'l al reconeixement.</p>');
+  const fd=typeof FILS!=='undefined'?FILS[dia==='dia1'?'guell':'bosc']:null;
+  set('guio-tots', (fd?`<p class="filintro" style="border-color:${fd.col}"><b style="color:${fd.col}">${esc(fd.nom)}${/[?.!]$/.test(fd.nom)?'':'.'}</b> ${esc(fd.intro)}</p>`:'')+R.wp.filter(x=>x.info).map(x=>
+    `<details class="det" data-k="${x.k}"><summary>${esc(x.n)} · ${mts(R.p[x.i][2])}</summary>${filsDe(x.info)}<ul>${x.info.punts.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>${x.info.pregunta?`<p class="preg">❓ ${esc(x.info.pregunta)}</p>`:''}</details>`).join(''));
 }
 function pintaFlora(){
   if(typeof FLORA==='undefined') return;
