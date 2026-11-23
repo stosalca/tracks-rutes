@@ -31,6 +31,7 @@ nav.vistes button b{font-size:17px;line-height:1}
 .pbq{font-size:12px;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .pbq span{background:#f3efe6;border-radius:99px;padding:2px 8px}
 .pbq a{color:#C55A11;font-weight:700}
+.xat textarea{width:100%;margin:6px 0;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:12px/1.4 ui-monospace,Menlo,monospace}
 nav.vistes button.on{opacity:1;background:var(--sor);color:var(--pis);border-color:var(--sor)}
 nav.vistes button.e112{border-color:#ff7a62}
 nav.vistes button.e112.on{background:var(--ter);color:#fff;border-color:var(--ter)}
@@ -305,7 +306,8 @@ details.det.act summary{color:var(--ter)}
   </section>
   <section class="card">
     <h2>Claude (opcional)</h2>
-    <p class="nota">Amb la teva clau d'API d'Anthropic, Claude redacta el guió interpretatiu de cada punt, busca els telèfons d'emergència de la zona i revisa els plans B. Cada usuari fa servir la seva clau i paga el seu ús. La clau es desa només en aquest mòbil i s'envia directament a Anthropic.</p>
+    <p class="nota"><b>Sense clau:</b> a cada ruta, «Guió amb Claude (xat)» copia una petició que enganxes en un xat de Claude.ai amb la teva subscripció; després enganxes la resposta a l'app.</p>
+    <p class="nota" style="margin-top:6px"><b>Amb clau d'API</b> (es fa tot sol): Claude redacta el guió interpretatiu de cada punt, busca els telèfons d'emergència de la zona i revisa els plans B. Cada usuari fa servir la seva clau i paga el seu ús. La clau es desa només en aquest mòbil i s'envia directament a Anthropic.</p>
     <label class="camp">Clau d'API<input id="c-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
     <label class="camp">Model<select id="c-model"><option value="claude-sonnet-5-5">Claude Sonnet 5.5 (recomanat)</option><option value="claude-haiku-5-5">Claude Haiku 5.5 (més barat)</option><option value="claude-opus-5-5">Claude Opus 5.5 (més car)</option></select></label>
     <label class="camp">Nom del guia<input id="c-gnom" placeholder="Nom"></label>

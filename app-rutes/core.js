@@ -337,7 +337,7 @@ async function cridaClaude(messages,tools,maxTok){
     throw new Error(res.status===401?'La clau d\'API no és vàlida.':res.status===429?'Massa peticions o límit de despesa: torna-ho a provar d\'aquí una estona.':res.status===400&&/credit/i.test(m)?'El compte de l\'API no té saldo.':'Error de l\'API ('+res.status+'): '+m); }
   return j;
 }
-async function generaGuio(r,log){
+function peticioClaude(r){
   const dades=r.dies.map(d=>{ const s=estat(d.pts); return {dia:d.key,titol:d.titol,data:d.data,sortida:d.sortida,objectiu:d.objectiu,
     punts:d.wp.map(w=>({codi:w.k,nom:w.n,lat:d.pts[w.i][0],lon:d.pts[w.i][1],alcada:Math.round(d.pts[w.i][2]),km:+(s.cd[w.i]/1000).toFixed(2)})),
     plansB:(d.plansb||[]).map(b=>({id:b.id,nom:b.nom,km:b.km,dPos:b.up,dNeg:b.dn,composicio:b.q,inici:[b.pts[0][0],b.pts[0][1]],final:[b.pts.at(-1)[0],b.pts.at(-1)[1]]}))}; });
@@ -352,6 +352,19 @@ Busca informació fiable a la web i torna NOMÉS un objecte JSON (sense text aba
  "notaTels":"una frase sobre on anar en cas d'urgència segons el dia de la setmana de la sortida",
  "plansB":{"<dia>":{"<id>":"una frase de valoració del pla B (estat del camí, perills, si és una bona alternativa)"}}}
 Regles: no t'inventis res; si no trobes un nom o un fet, posa-ho com a «a confirmar». Només telèfons trobats en fonts fiables (webs oficials). Fes servir els noms de lloc reals propers a les coordenades.`;
+  return prompt;
+}
+function aplicaResposta(r,text,extra){
+  const a=text.indexOf('{'), b=text.lastIndexOf('}'); if(a<0||b<a) throw new Error('La resposta no conté el JSON esperat.');
+  let o; try{ o=JSON.parse(text.slice(a,b+1)); }catch(e){ throw new Error('El JSON de la resposta no és vàlid (copia-la sencera).'); }
+  r.info=o.punts||{}; r.tels=Array.isArray(o.tels)?o.tels.filter(t=>t&&t.tel):[]; r.acces=o.acces||''; r.notaTels=o.notaTels||'';
+  for(const d of r.dies) for(const pb of d.plansb||[]){ const c=((o.plansB||{})[d.key]||{})[pb.id]; if(c) pb.coment=c; }
+  r.claude={...(extra||{}),data:new Date().toISOString()};
+  desaRuta(r);
+  return r;
+}
+async function generaGuio(r,log){
+  const prompt=peticioClaude(r);
   let messages=[{role:'user',content:prompt}], j=null;
   for(let k=0;k<4;k++){
     log(k?'Claude continua buscant…':'Claude està buscant informació i redactant (pot trigar un o dos minuts)…');
@@ -360,13 +373,7 @@ Regles: no t'inventis res; si no trobes un nom o un fet, posa-ho com a «a confi
     messages=[...messages,{role:'assistant',content:j.content}];
   }
   const text=(j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
-  const a=text.indexOf('{'), b=text.lastIndexOf('}'); if(a<0||b<a) throw new Error('Claude no ha tornat el format esperat.');
-  const o=JSON.parse(text.slice(a,b+1));
-  r.info=o.punts||{}; r.tels=Array.isArray(o.tels)?o.tels.filter(t=>t&&t.tel):[]; r.acces=o.acces||''; r.notaTels=o.notaTels||'';
-  for(const d of r.dies) for(const pb of d.plansb||[]){ const c=((o.plansB||{})[d.key]||{})[pb.id]; if(c) pb.coment=c; }
-  r.claude={model:CONF.model||'claude-sonnet-5-5',data:new Date().toISOString(),cerques:(j.usage&&j.usage.server_tool_use&&j.usage.server_tool_use.web_search_requests)||null};
-  desaRuta(r);
-  return r;
+  return aplicaResposta(r,text,{via:'API',model:CONF.model||'claude-sonnet-5-5',cerques:(j.usage&&j.usage.server_tool_use&&j.usage.server_tool_use.web_search_requests)||null});
 }
 
 // ---------- interfície de la biblioteca ----------
@@ -376,7 +383,7 @@ function pintaLib(){
   $('lib-llista').innerHTML=L.length?L.slice().reverse().map(x=>`<div class="lr ${x.id===act?'on':''}"><h3>${esc(x.nom)}</h3>
     <p class="nota">${x.dies.map(d=>esc(d.titol)+(d.data?' · '+new Date(d.data+'T12:00').toLocaleDateString('ca-ES',{weekday:'short',day:'numeric',month:'short'}):'')).join(' / ')}</p>
     <div class="botons" style="margin-top:6px"><button class="btn s" data-obre="${x.id}">${x.id===act?'Obrir':'Fer servir aquesta ruta'}</button>
-    <button class="btn s" data-guio="${x.id}">Guió amb Claude</button><button class="btn s" data-hores="${x.id}">Dates i hores</button><button class="btn s" data-esb="${x.id}">Esborrar</button></div>
+    <button class="btn s" data-xat="${x.id}">Guió amb Claude (xat)</button>${(CONF.key||'').trim()?`<button class="btn s" data-guio="${x.id}">Guió amb Claude (API)</button>`:''}<button class="btn s" data-hores="${x.id}">Dates i hores</button><button class="btn s" data-esb="${x.id}">Esborrar</button></div>
     <pre class="log" id="lg-${x.id}"></pre><div id="ed-${x.id}"></div></div>`).join(''):'<p class="nota">Encara no hi ha cap ruta. Crea\'n una a sota amb el GPX.</p>';
   document.querySelectorAll('[data-obre]').forEach(b=>b.onclick=()=>{ escriu(ACT,b.dataset.obre); location.reload(); });
   document.querySelectorAll('[data-esb]').forEach(b=>b.onclick=()=>{ if(b.dataset.c){ esborraRuta(b.dataset.esb); location.reload(); } else { b.dataset.c=1; b.textContent='Toca per confirmar'; } });
@@ -384,6 +391,20 @@ function pintaLib(){
     if(!(CONF.key||'').trim()){ lg('Primer posa la teva clau d\'API a l\'apartat Claude, a sota.'); return; }
     b.disabled=true; try{ const r=await generaGuio(carregaRuta(id),lg); lg(`Fet: guió de ${Object.values(r.info).reduce((a,x)=>a+Object.keys(x).length,0)} punts i ${r.tels.length} telèfons.`+(llegeix(ACT,null)===id?' Recarregant…':''));
       if(llegeix(ACT,null)===id) setTimeout(()=>location.reload(),1200); }catch(e){ lg('No s\'ha pogut fer: '+e.message); } b.disabled=false; });
+  document.querySelectorAll('[data-xat]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.xat, r=carregaRuta(id), el=$('ed-'+id), txt=peticioClaude(r);
+    let copiat=false; try{ await navigator.clipboard.writeText(txt); copiat=true; }catch(e){}
+    el.innerHTML=`<div class="xat"><p class="nota"><b>1.</b> ${copiat?'Petició copiada.':'Copia aquesta petició:'} Obre un xat nou a Claude (millor amb la cerca web activada), enganxa-la i envia-la.</p>
+      <textarea id="xp-${id}" readonly rows="3">${esc(txt)}</textarea>
+      <div class="botons"><button class="btn s" id="xc-${id}">Tornar a copiar</button><a class="btn s" href="https://claude.ai/new" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">Obrir Claude ↗</a></div>
+      <p class="nota" style="margin-top:8px"><b>2.</b> Quan Claude acabi, copia tota la resposta i enganxa-la aquí:</p>
+      <textarea id="xr-${id}" rows="5" placeholder="Enganxa aquí la resposta de Claude"></textarea>
+      <div class="botons"><button class="btn" id="xa-${id}">Aplicar la resposta</button></div></div>`;
+    $('xc-'+id).onclick=async()=>{ try{ await navigator.clipboard.writeText(txt); $('xc-'+id).textContent='Copiat ✓'; }catch(e){ $('xp-'+id).select(); document.execCommand('copy'); $('xc-'+id).textContent='Copiat ✓'; } };
+    $('xa-'+id).onclick=()=>{ const lg=m=>$('lg-'+id).textContent=m;
+      try{ const r2=aplicaResposta(carregaRuta(id),$('xr-'+id).value,{via:'xat'});
+        lg(`Fet: guió de ${Object.values(r2.info).reduce((a,x)=>a+Object.keys(x).length,0)} punts i ${r2.tels.length} telèfons.`+(llegeix(ACT,null)===id?' Recarregant…':'')); el.innerHTML='';
+        if(llegeix(ACT,null)===id) setTimeout(()=>location.reload(),1200); }catch(e){ lg('No s\'ha pogut aplicar: '+e.message); } };
+  });
   document.querySelectorAll('[data-hores]').forEach(b=>b.onclick=()=>{ const id=b.dataset.hores, r=carregaRuta(id), el=$('ed-'+id);
     el.innerHTML=r.dies.map((d,i)=>formDia(d,i,'e'+id)).join('')+`<div class="botons"><button class="btn s" id="sv-${id}">Desar</button></div>`;
     $('sv-'+id).onclick=()=>{ r.dies.forEach((d,i)=>llegeixFormDia(d,i,'e'+id)); desaRuta(r); el.innerHTML='<p class="nota">Desat.</p>'; if(llegeix(ACT,null)===id) location.reload(); }; });
@@ -395,7 +416,7 @@ function formDia(d,i,p){ return `<div class="dia-f"><b>${esc(d.titol)}</b>
 function llegeixFormDia(d,i,p){ d.data=$(p+'-d'+i).value; d.sortida=$(p+'-s'+i).value||'09:00'; d.objectiu=$(p+'-o'+i).value||'17:00'; }
 function iniciaLib(){
   $('c-key').value=CONF.key||''; $('c-model').value=CONF.model||'claude-sonnet-5-5'; $('c-gnom').value=CONF.guiaNom||''; $('c-gtel').value=CONF.guiaTel||'';
-  const dc=()=>{ CONF.key=$('c-key').value.trim(); CONF.model=$('c-model').value; CONF.guiaNom=$('c-gnom').value.trim(); CONF.guiaTel=$('c-gtel').value.trim(); escriu(CONFK,CONF); };
+  const dc=()=>{ const tenia=!!(CONF.key||'').trim(); CONF.key=$('c-key').value.trim(); CONF.model=$('c-model').value; CONF.guiaNom=$('c-gnom').value.trim(); CONF.guiaTel=$('c-gtel').value.trim(); escriu(CONFK,CONF); if(tenia!==!!CONF.key) pintaLib(); };
   ['c-key','c-model','c-gnom','c-gtel'].forEach(id=>$(id).onchange=dc);
   $('n-gpx').onchange=async()=>{
     const fs=[...$('n-gpx').files]; pendents=[]; let wpts=[];
@@ -449,5 +470,5 @@ window.arrencaApp=function(){
   const s=document.createElement('script'); s.src='app.js'; document.body.appendChild(s);
 };
 // per a les proves
-window.__core={llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
+window.__core={peticioClaude,aplicaResposta,llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
 })();
