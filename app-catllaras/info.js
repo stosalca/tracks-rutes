@@ -34,9 +34,7 @@ const INFO = {
       titol: 'Encreuament del Xalet', fil: ['guell'],
       punts: [
         "Hem pujat uns 380 m. Som a la pista que porta al Xalet: molts camins i pistes que trepitgem són de l'època minera.",
-        "Una mica més amunt, per sota de la pista i a l'alçada del torrent de les mines, hi ha la mina del Cable i les restes del telefèric. D'aquí sortia «el cable»: el telefèric general d'Asland.",
-        "El cable feia 2.013 m i salvava 444 m de desnivell fins a l'estació de «l'Empalme», on el carbó passava als vagons del tren de Guardiola i anava fins al Clot del Moro.",
-        "Abans del telefèric, el carbó es baixava a bast, amb animals. Després, des de les altres mines s'hi arribava amb vagonetes, pous i telefèrics petits (el de la Roca de la Lluna i el del Teixó).",
+        "El carbó de totes aquestes mines s'havia de baixar fins a la fàbrica: primer a bast, amb animals, i després amb vagonetes, pous i telefèrics. Al Xalet veurem on començava el gran telefèric.",
         "Bon lloc per beure i menjar alguna cosa abans d'arribar al Xalet."
       ],
       pregunta: "Com baixaríeu tones de carbó des d'aquí fins a la fàbrica, sense carretera?"
@@ -49,6 +47,7 @@ const INFO = {
         "Segons l'estudi, Gaudí no el va reivindicar mai perquè el resultat construït no era el que ell havia dibuixat. Va coincidir amb la Casa Batlló i el Park Güell.",
         "Mentre treballava en el Xalet, Gaudí es va allotjar a casa de la família Artigas, a la Pobla. En agraïment, va dissenyar els Jardins Artigas.",
         "Al costat hi havia la mina del Xalet. Sota la pista, vora la font, queden els murs de la Cantina, que donava servei als miners (alguns hi dormien).",
+        "A uns 200–250 m del Xalet, per sota de la pista i a l'alçada del torrent de les mines (fora del nostre track), hi ha la mina del Cable: un petit túnel picat a la roca i, a sota, una explanada amb murs de tallers i magatzems de carbó. D'aquí sortia «el cable», el telefèric general: 2.013 m i 444 m de desnivell fins a l'estació de l'Empalme, on el carbó passava al tren cap al Clot del Moro. De les torres metàl·liques no en queden restes clares.",
         "Deixem el material de bivac i fem el bucle lleugers."
       ],
       pregunta: "Per què un industrial com Güell faria dissenyar a Gaudí un allotjament per a enginyers enmig del bosc?"
@@ -57,7 +56,7 @@ const INFO = {
       titol: 'Roc de la Lluna', fil: ['guell', 'bosc'],
       punts: [
         "Mirador: vistes al Pedraforca, l'Ensija i el Cadí-Moixeró. Bon moment per situar la vall del Llobregat i, cap al nord, la zona del Clot del Moro.",
-        "Aquí arribava una de les cadenes del carbó: des de les mines del Teixó i de Font Freda, el carbó venia amb vagonetes sobre rails fins a la Roca de la Lluna. D'aquí, un telefèric el portava fins al cable general.",
+        "Aquí arribava una de les cadenes del carbó: des de les mines del Teixó i de Font Freda, el carbó venia amb vagonetes sobre rails fins a la Roca de la Lluna i, d'aquí, un telefèric el portava fins al cable general. No en queden restes visibles des del camí: cal imaginar-lo.",
         "Les mines van tenir el seu moment més rendible amb la Primera Guerra Mundial, que va encarir el carbó d'importació. El 1922 Asland va tancar totes les mines del Catllaràs.",
         "Avís de bosc: des d'aquí es veu bé com, als vessants que miren al nord, el bosc és més fosc i dens, i als que miren al sud, més clar. Demà ho veurem de prop."
       ]
