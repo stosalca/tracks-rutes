@@ -47,7 +47,7 @@ const INFO = {
         "Segons l'estudi, Gaudí no el va reivindicar mai perquè el resultat construït no era el que ell havia dibuixat. Va coincidir amb la Casa Batlló i el Park Güell.",
         "Mentre treballava en el Xalet, Gaudí es va allotjar a casa de la família Artigas, a la Pobla. En agraïment, va dissenyar els Jardins Artigas.",
         "Al costat hi havia la mina del Xalet. Sota la pista, vora la font, queden els murs de la Cantina, que donava servei als miners (alguns hi dormien).",
-        "A uns 200–250 m del Xalet, per sota de la pista i a l'alçada del torrent de les mines (fora del nostre track), hi ha la mina del Cable: un petit túnel picat a la roca i, a sota, una explanada amb murs de tallers i magatzems de carbó. D'aquí sortia «el cable», el telefèric general: 2.013 m i 444 m de desnivell fins a l'estació de l'Empalme, on el carbó passava al tren cap al Clot del Moro. De les torres metàl·liques no en queden restes clares.",
+        "A uns 200–250 m del Xalet, per sota de la pista i a l'alçada del torrent de les mines (fora del nostre track), hi ha la mina del Cable: un petit túnel picat a la roca i, a sota, una explanada amb murs de tallers i magatzems de carbó. D'aquí sortia «el cable», el telefèric general: 2.013 m i 444 m de desnivell fins a l'estació de l'Empalme, on el carbó passava al tren cap al Clot del Moro. De les torres metàl·liques no en queden restes clares. Si anem avançats, és l'A+ del dia (≈ 55 min anada i tornada).",
         "Deixem el material de bivac i fem el bucle lleugers."
       ],
       pregunta: "Per què un industrial com Güell faria dissenyar a Gaudí un allotjament per a enginyers enmig del bosc?"
