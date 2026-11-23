@@ -12,11 +12,13 @@
 :root{--pis:#1E2A2E;--ter:#C8553D;--sor:#F3EFE6;--bla:#fff;--gris:#6b7478;--ok:#2f7d4f;--av:#b7791f}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--sor);color:var(--pis);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
-body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 76px)}
-nav.vistes{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--pis);padding:0 0 env(safe-area-inset-bottom);box-shadow:0 -2px 8px rgba(0,0,0,.15)}
-nav.vistes button{flex:1;background:none;border:0;color:var(--sor);opacity:.65;font:600 13px/1.2 inherit;font-family:inherit;padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px}
-nav.vistes button b{font-size:20px;line-height:1}
-nav.vistes button.on{opacity:1;color:#fff;box-shadow:inset 0 3px 0 var(--ter)}
+body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 16px)}
+nav.vistes{display:flex;gap:6px;margin:10px 0 2px}
+nav.vistes button{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:10px;color:var(--sor);opacity:.8;font:700 14px/1.2 inherit;font-family:inherit;padding:8px 4px;display:flex;align-items:center;justify-content:center;gap:6px}
+nav.vistes button b{font-size:17px;line-height:1}
+nav.vistes button.on{opacity:1;background:var(--sor);color:var(--pis);border-color:var(--sor)}
+nav.vistes button.e112{border-color:#ff7a62}
+nav.vistes button.e112.on{background:var(--ter);color:#fff;border-color:var(--ter)}
 nav.vistes button.e112 b{color:#ff7a62}
 .b112{display:block;text-align:center;background:var(--ter);color:#fff;text-decoration:none;font-weight:800;font-size:24px;padding:18px;border-radius:14px;margin-bottom:10px;box-shadow:0 2px 0 #9c3f2c}
 .coord{font:600 17px/1.5 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.2px}
@@ -141,6 +143,11 @@ details.det.act summary{color:var(--ter)}
 <body>
 <header>
   <div class="marca"><h1>Petjada <span>·</span> Catllaràs</h1><small id="rellotge">--:--</small></div>
+  <nav class="vistes">
+    <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
+    <button data-v="vmet"><b>⛅</b>Meteo</button>
+    <button data-v="v112" class="e112"><b>✚</b>112</button>
+  </nav>
   <div class="tabs"><button data-d="dia1">Dia 1 · dissabte</button><button data-d="dia2">Dia 2 · diumenge</button></div>
 </header>
 <main id="vruta">
@@ -226,16 +233,6 @@ details.det.act summary{color:var(--ter)}
     <p class="nota" style="margin-top:6px">Hora límit a la cruïlla = hora de pas prevista (des de la sortida prevista, sense parades) + 1 h 30, o el marge que quedi fins a l'hora objectiu. Distàncies, desnivells i temps fins al final del dia, comptant el tros de pla A que queda després del pla B. Tracks: Catllaras_Dia1_B1…B5 i Catllaras_Dia2_B1…B3 al TwoNav. Al mapa, en taronja discontinu.</p>
   </section>
 
-  <section class="card" id="meteo">
-    <h2>Meteo de la zona <b id="met-act"></b></h2>
-    <div class="dies" id="met-dies"></div>
-    <div id="met-resum"></div>
-    <div id="met-avisos"></div>
-    <div class="taula-h" id="met-hores"></div>
-    <div class="botons" style="margin-top:8px"><button class="btn s" id="b-met">Actualitzar previsió</button></div>
-    <div class="enllacos" id="met-links"></div>
-    <p class="nota" id="met-nota"></p>
-  </section>
 
   <section class="card guio" id="guio-ara">
     <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
@@ -266,6 +263,19 @@ details.det.act summary{color:var(--ter)}
       <button class="btn s" id="b-reset">Reiniciar aquest dia</button>
     </div>
     <p class="nota" style="margin-top:10px">Funciona sense cobertura un cop oberta una vegada amb connexió. Pots dur el mòbil bloquejat: en desbloquejar-lo, l'app et torna a situar sobre el track i els km i desnivells fets inclouen tot el que has caminat mentrestant (el temps compta des de l'inici). El que no queda gravat és el traç real que has fet amb la pantalla apagada: si surts del track, grava amb el TwoNav. Els km i desnivells es calculen sobre el track (filtre de 5 m), no amb l'altímetre del mòbil.</p>
+  </section>
+</main>
+
+<main id="vmet" hidden>
+  <section class="card" id="meteo">
+    <h2>Meteo de la zona <b id="met-act"></b></h2>
+    <div class="dies" id="met-dies"></div>
+    <div id="met-resum"></div>
+    <div id="met-avisos"></div>
+    <div class="taula-h" id="met-hores"></div>
+    <div class="botons" style="margin-top:8px"><button class="btn s" id="b-met">Actualitzar previsió</button></div>
+    <div class="enllacos" id="met-links"></div>
+    <p class="nota" id="met-nota"></p>
   </section>
 </main>
 
@@ -312,11 +322,6 @@ details.det.act summary{color:var(--ter)}
     <p class="nota" style="margin-top:6px">UTM fus 31N (ETRS89). Cotes del track ajustat del 21/11.</p>
   </section>
 </main>
-
-<nav class="vistes">
-  <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
-  <button data-v="v112" class="e112"><b>✚</b>112</button>
-</nav>
 <script src="rutes.js"></script>
 <script src="info.js"></script>
 <script src="vessants.js"></script>
@@ -638,10 +643,11 @@ function pinta112(){
       puntsTots().map(p=>{const [x,y]=utm(p.lat,p.lon); return `<tr><td><b>${p.k}</b></td><td>${esc(p.n)}</td><td>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</td><td>${x} ${y}</td><td>${Math.round(p.z)} m</td></tr>`;}).join('')+'</tbody></table>'; }
 }
 document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
+  const v=b.dataset.v;
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
-  $('vruta').hidden=b.dataset.v!=='vruta'; $('v112').hidden=b.dataset.v!=='v112';
-  document.querySelector('header .tabs').style.display=b.dataset.v==='v112'?'none':'';
-  window.scrollTo(0,0); pinta112(); });
+  for(const id of ['vruta','vmet','v112']) $(id).hidden=id!==v;
+  document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
+  window.scrollTo(0,0); if(v==='v112') pinta112(); if(v==='vmet') try{pintaMeteo()}catch(e){} });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }
   try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
