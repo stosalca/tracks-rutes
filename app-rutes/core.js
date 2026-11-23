@@ -497,5 +497,5 @@ window.arrencaApp=function(){
   const s=document.createElement('script'); s.src='app.js'; document.body.appendChild(s);
 };
 // per a les proves
-window.__core={preparaDies,sincronitzaPublicades,peticioClaude,aplicaResposta,llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
+window.__core={carregaDEM,alt,camins,nouGraf,node,aresta,dijkstra,cami,estat,hores,hav,unwpx,cost,preparaDies,sincronitzaPublicades,peticioClaude,aplicaResposta,llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
 })();

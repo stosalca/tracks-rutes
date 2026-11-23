@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ca"><head><meta charset="utf-8"><title>Petjada · ruta òptima</title>
+<style>body{font:13px/1.4 system-ui;margin:12px}pre{white-space:pre-wrap;word-break:break-all;font-size:11px}</style></head>
+<body><h1>Ruta òptima per camins (OSM + terreny)</h1><div id="log">Carregant…</div><pre id="out"></pre>
+<script src="../core.js"></script>
+<script src="../../app-catllaras/rutes.js"></script>
+<script>
+(async()=>{
+const C=window.__core, Q=new URLSearchParams(location.search), log=m=>document.getElementById('log').textContent=m;
+const P=Q.get('p').split('|').map(s=>s.split(',').map(Number)), NOMS=(Q.get('n')||'').split('|');
+const pla=Q.get('pla'); // ruta de l'app del Catllaràs per afegir el pla A com a camí (dia1/dia2)
+try{
+let S=90,W=180,N=-90,E=-180; P.forEach(p=>{S=Math.min(S,p[0]);N=Math.max(N,p[0]);W=Math.min(W,p[1]);E=Math.max(E,p[1]);});
+const mg=+(Q.get('mg')||0.006);
+await C.carregaDEM(S-mg,W-mg*1.35,N+mg,E+mg*1.35,log);
+const ways=await C.camins(S-mg,W-mg*1.35,N+mg,E+mg*1.35,log);
+const G=C.nouGraf(), Z=14;
+for(const w of ways){ let prev=-1; for(let k=0;k<w.g.length;k+=2){ const gx=w.g[k],gy=w.g[k+1],s=256/w.ext,[lat,lon]=C.unwpx(gx*s,gy*s,Z); const v=C.node(G,gx+','+gy,lat,lon); if(prev>=0) C.aresta(G,prev,v,w.t); prev=v; } }
+{ const CC=0.0003, cell=new Map(); G.ll.forEach((p,i)=>{ const k=Math.floor(p[0]/CC)+','+Math.floor(p[1]/CC); (cell.get(k)||cell.set(k,[]).get(k)).push(i); });
+  G.ll.forEach((p,i)=>{ if(G.adj[i].length!==1) return; const ci=Math.floor(p[0]/CC), cj=Math.floor(p[1]/CC), ve=G.adj[i][0][0]; let b=-1,bd=12;
+    for(let a=-1;a<=1;a++) for(let c=-1;c<=1;c++) for(const u of cell.get((ci+a)+','+(cj+c))||[]){ if(u===i||u===ve||!G.adj[u].length||G.adj[ve].some(x=>x[0]===u)) continue; const dd=C.hav(p,G.ll[u]); if(dd<bd){bd=dd;b=u;} }
+    if(b>=0) C.aresta(G,i,b,G.adj[i][0][2]); }); }
+if(pla&&window.RUTES&&RUTES[pla]){ const pts=RUTES[pla].pts.filter(p=>p[0]>S-mg&&p[0]<N+mg&&p[1]>W-mg*1.35&&p[1]<E+mg*1.35);
+  const tn=pts.map((p,i)=>C.node(G,'A:'+i,p[0],p[1])); tn.forEach((v,i)=>{ if(i&&C.hav(G.ll[tn[i-1]],G.ll[v])<60) C.aresta(G,tn[i-1],v,5); });
+  const tset=new Set(tn), cell=new Map(), CC=0.0004; G.ll.forEach((p,i)=>{ if(tset.has(i)) return; const k=Math.floor(p[0]/CC)+','+Math.floor(p[1]/CC); (cell.get(k)||cell.set(k,[]).get(k)).push(i); });
+  tn.forEach(v=>{ const p=G.ll[v], ci=Math.floor(p[0]/CC), cj=Math.floor(p[1]/CC); let b=-1,bd=20; for(let a=-1;a<=1;a++) for(let c=-1;c<=1;c++) for(const u of cell.get((ci+a)+','+(cj+c))||[]){ const dd=C.hav(p,G.ll[u]); if(dd<bd){bd=dd;b=u;} } if(b>=0) C.aresta(G,v,b,5); }); }
+const proper=ll=>{ let b=-1,bd=1e9; G.ll.forEach((q,i)=>{ if(!G.adj[i].length) return; const d=C.hav(ll,q); if(d<bd){bd=d;b=i;} }); return [b,bd]; };
+const TN=['carretera','asfalt/servei','pista','corriol','escales','pla A'];
+const resum=(nodes)=>{ const pts=nodes.map(v=>[+G.ll[v][0].toFixed(6),+G.ll[v][1].toFixed(6),Math.round(G.z[v]*10)/10]); const st=C.estat(pts), n=pts.length-1;
+  const tip={}; let gmax=0; for(let i=1;i<nodes.length;i++){ const a=nodes[i-1],b=nodes[i], e=G.adj[a].find(x=>x[0]===b); const t=e?e[2]:-1, d=e?e[1]:C.hav(G.ll[a],G.ll[b]); tip[TN[t]||'?']=(tip[TN[t]||'?']||0)+d;
+    if(d>=15){ gmax=Math.max(gmax,Math.abs(G.z[b]-G.z[a])/d); } }
+  Object.keys(tip).forEach(k=>tip[k]=Math.round(tip[k]));
+  return {km:+(st.cd[n]/1000).toFixed(3),up:Math.round(st.cu[n]),dn:Math.round(st.cn[n]),h:+C.hores(st.cd[n]/1000,st.cu[n],st.cn[n]).toFixed(3),tipus:tip,pendMax:Math.round(gmax*100),pts}; };
+const out={snap:[],trams:[]};
+const nodes=P.map((p,i)=>{ const [b,d]=proper(p); out.snap.push({nom:NOMS[i]||('P'+i),dist:Math.round(d),node:G.ll[b]}); return b; });
+for(let k=0;k<nodes.length-1;k++){
+  const R=C.dijkstra(G,nodes[k],u=>u===nodes[k+1]); const best=C.cami(R,nodes[k+1]);
+  const pen=new Set(); for(let i=1;i<best.length;i++){ const a=best[i-1],b=best[i]; pen.add(a<b?a+','+b:b+','+a); }
+  const R2=C.dijkstra(G,nodes[k],u=>u===nodes[k+1],pen); const alt2=C.cami(R2,nodes[k+1]);
+  out.trams.push({de:NOMS[k],a:NOMS[k+1],millor:resum(best),alternativa:resum(alt2)});
+}
+log('FET');
+document.getElementById('out').textContent=JSON.stringify(out);
+}catch(e){ log('ERROR: '+e.message+' '+e.stack); }
+})();
+</script></body></html>
