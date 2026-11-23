@@ -689,8 +689,8 @@ function pintaPlansB(E,seg,now){
   const tPlaA=i=>({km:(R.cd[fiA]-R.cd[i])/1000,up:R.cu[fiA]-R.cu[i],dn:R.cn[fiA]-R.cn[i],h:horesEntre(i,fiA)+paradesEntre(R.cd[i],fiA)});
   const tAmbB=b=>{ const hB=hores(b.km,b.up,b.dn); if(b.ib==null) return {km:b.km,up:b.up,dn:b.dn,h:hB};
     const t=tPlaA(b.ib); return {km:b.km+t.km,up:b.up+t.up,dn:b.dn+t.dn,h:hB+t.h}; };
-  // cadena de decisions: plans B que tornen al pla A (no B4 ni el B1 del dia 2)
-  const chain=L.filter(b=>!b.fi&&!b.senseLimit&&!b.limitPropi).sort((x,y)=>x.ia-y.ia);
+  // cadena de decisions: plans B que acaben al mateix final (no el B4 de Falgars)
+  const chain=L.filter(b=>!b.limitPropi&&(!b.fi||b.fi===fiNom)).sort((x,y)=>x.ia-y.ia);
   const trajecte=(i,j)=>horesEntre(i,j)+paradesEntre(R.cd[i],j);
   // millor opció si ens saltem la cruïlla i: pla A o un pla B posterior
   const alt=i=>{ let best={h:tPlaA(i).h,via:'el pla A'};
@@ -708,7 +708,7 @@ function pintaPlansB(E,seg,now){
       const op=chain.filter(b=>!passat(b)).map(b=>{ const eta=now+(horesDesE(E,b.ia)+paradesEntre(E.d,b.ia))*3600e3; return {b,eta,arr:eta+tAmbB(b).h*3600e3}; });
       const ok=op.filter(o=>o.arr<=obj).sort((x,y)=>y.b.ia-x.b.ia);
       if(ok.length){ const o=ok[0]; recId=o.b.id;
-        rec=`<div class="pbrec">Amb el pla A arribaríeu a les <b>${rel(new Date(arrA))}</b>, després de ${objTxt}. Podeu seguir fins a <b>${nomCruilla(o.b.ia)}</b> (cap a les ${rel(new Date(o.eta))}) i agafar <b>${o.b.id}</b>: arribada <b>${rel(new Date(o.arr))}</b>.`+
+        rec=`<div class="pbrec">Amb el pla A arribaríeu a les <b>${rel(new Date(arrA))}</b>, després de ${objTxt}. `+(o.eta-now<3*60e3?`Agafeu <b>${o.b.id}</b> ara (${nomCruilla(o.b.ia)}): arribada <b>${rel(new Date(o.arr))}</b>.`:`Podeu seguir fins a <b>${nomCruilla(o.b.ia)}</b> (cap a les ${rel(new Date(o.eta))}) i agafar <b>${o.b.id}</b>: arribada <b>${rel(new Date(o.arr))}</b>.`)+
           (ok.length>1?` <span style="opacity:.85">Abans de la cruïlla de ${o.b.id} no cal desviar-se.</span>`:'')+`</div>`; }
       else if(op.length){ const o=op.sort((x,y)=>x.arr-y.arr)[0]; recId=o.b.id;
         rec=`<div class="pbrec">Amb el pla A arribaríeu a les <b>${rel(new Date(arrA))}</b>. Cap pla B us fa arribar abans de ${objTxt}; el que arriba abans és <b>${o.b.id}</b> (${rel(new Date(o.arr))}). Valoreu-ho amb el grup i, si cal, truqueu al 112.</div>`; }
@@ -718,10 +718,10 @@ function pintaPlansB(E,seg,now){
   const fila=(n,t,arr)=>`<tr><td>${n}</td><td>${km(t.km*1000)}</td><td>${Math.round(t.up)}</td><td>${Math.round(t.dn)}</td><td>${hm(t.h)}</td>${arr!==undefined?`<td>${arr}</td>`:''}</tr>`;
   const html=L.map(b=>{
     const fi=b.fi||fiNom, tB=tAmbB(b), enC=S.b&&S.b.id===b.id, ps=passat(b);
-    const dec=b.senseLimit?'es decideix a la sortida (meteo o estat del grup)'
-      :b.limitPropi?`sortir del Xalet abans de les <b>${rel(new Date(obj-hores(b.km,b.up,b.dn)*3600e3))}</b> per arribar-hi amb llum`
+    const dec=b.limitPropi?`sortir del Xalet abans de les <b>${rel(new Date(obj-hores(b.km,b.up,b.dn)*3600e3))}</b> per arribar-hi amb llum`
       :(()=>{ const a=alt(b.ia), lim=obj-a.h*3600e3;
-        return `si hi passeu <b>més tard de les ${rel(new Date(lim))}</b>, agafeu ${b.id} <span class="nota">(abans d'aquesta hora, saltant-vos-el encara arribeu a temps amb ${a.via})</span>`; })();
+        const qui=b.ia===0?`si sortiu <b>més tard de les ${rel(new Date(lim))}</b>`:`si hi passeu <b>més tard de les ${rel(new Date(lim))}</b>`;
+        return `${qui}, agafeu ${b.id} <span class="nota">(abans d'aquesta hora, saltant-vos-el encara arribeu a temps amb ${a.via})</span>`+(b.senseLimit?'. També per meteo o estat del grup.':''); })();
     const viu=enRuta&&!ps&&!enC, base=viu?now+(horesDesE(E,b.ia)+paradesEntre(E.d,b.ia))*3600e3:null;
     const arrB=viu?rel(new Date(base+tB.h*3600e3)):undefined, tA=b.fi?null:tPlaA(b.ia), arrA=viu&&tA?rel(new Date(base+tA.h*3600e3)):undefined;
     const cls=enC?'ok':ps?'passat':recId===b.id?'alerta':'', st=enC?'en curs':ps?'cruïlla passada':recId===b.id?'recomanat':'';
