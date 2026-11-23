@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Petjada · Sergi Tossal" xmlns="http://www.topografix.com/GPX/1/1">
+<metadata><name>Catllaràs · Dia 1 · B2 · Retorn al Xalet després de P4</name><desc>Poc després de P4 tornem directes al Xalet: no pugem a P5 (Roca del Joc de Pilota). Inclou la resta del pla A fins al final del dia.</desc><author><name>Sergi Tossal · Petjada</name></author></metadata>
+<wpt lat="42.221413" lon="1.965783"><ele>1461</ele><name>B2 inici · Coll Fred</name></wpt>
+<wpt lat="42.221661" lon="1.971534"><ele>1439</ele><name>B2 unió amb el pla A</name></wpt>
+<wpt lat="42.223894" lon="1.971264"><ele>1366</ele><name>P6 Xalet del Catllaràs (pernocta)</name></wpt>
+<trk><name>Catllaràs · Dia 1 · B2 · Retorn al Xalet després de P4</name><trkseg>
+<trkpt lat="42.221413" lon="1.965783"><ele>1460.7</ele></trkpt>
+<trkpt lat="42.221509" lon="1.966219"><ele>1452.5</ele></trkpt>
+<trkpt lat="42.221547" lon="1.96664"><ele>1451.0</ele></trkpt>
+<trkpt lat="42.221604" lon="1.967051"><ele>1452.1</ele></trkpt>
+<trkpt lat="42.221742" lon="1.967486"><ele>1453.1</ele></trkpt>
+<trkpt lat="42.221742" lon="1.96759"><ele>1453.9</ele></trkpt>
+<trkpt lat="42.221638" lon="1.967654"><ele>1454.7</ele></trkpt>
+<trkpt lat="42.221501" lon="1.967664"><ele>1455.6</ele></trkpt>
+<trkpt lat="42.221339" lon="1.967682"><ele>1457.6</ele></trkpt>
+<trkpt lat="42.221035" lon="1.967736"><ele>1461.3</ele></trkpt>
+<trkpt lat="42.220806" lon="1.967773"><ele>1464.1</ele></trkpt>
+<trkpt lat="42.220693" lon="1.967939"><ele>1460.7</ele></trkpt>
+<trkpt lat="42.22064" lon="1.968117"><ele>1458.6</ele></trkpt>
+<trkpt lat="42.220584" lon="1.96856"><ele>1460.1</ele></trkpt>
+<trkpt lat="42.220507" lon="1.968854"><ele>1462.0</ele></trkpt>
+<trkpt lat="42.220438" lon="1.969156"><ele>1465.5</ele></trkpt>
+<trkpt lat="42.22045" lon="1.969456"><ele>1464.1</ele></trkpt>
+<trkpt lat="42.220541" lon="1.969691"><ele>1457.4</ele></trkpt>
+<trkpt lat="42.220739" lon="1.970166"><ele>1442.8</ele></trkpt>
+<trkpt lat="42.22096" lon="1.970643"><ele>1432.5</ele></trkpt>
+<trkpt lat="42.221169" lon="1.970932"><ele>1427.2</ele></trkpt>
+<trkpt lat="42.221315" lon="1.971154"><ele>1428.8</ele></trkpt>
+<trkpt lat="42.221452" lon="1.971363"><ele>1433.8</ele></trkpt>
+<trkpt lat="42.221661" lon="1.971534"><ele>1439.4</ele></trkpt>
+<trkpt lat="42.221661" lon="1.971534"><ele>1439.1</ele></trkpt>
+<trkpt lat="42.221815" lon="1.971583"><ele>1435.1</ele></trkpt>
+<trkpt lat="42.222033" lon="1.971551"><ele>1429.3</ele></trkpt>
+<trkpt lat="42.222416" lon="1.971556"><ele>1419.2</ele></trkpt>
+<trkpt lat="42.222776" lon="1.971536"><ele>1405.6</ele></trkpt>
+<trkpt lat="42.222972" lon="1.971427"><ele>1396.6</ele></trkpt>
+<trkpt lat="42.223159" lon="1.971281"><ele>1388.0</ele></trkpt>
+<trkpt lat="42.223306" lon="1.971014"><ele>1379.9</ele></trkpt>
+<trkpt lat="42.2234" lon="1.970935"><ele>1376.4</ele></trkpt>
+<trkpt lat="42.22346" lon="1.970927"><ele>1374.8</ele></trkpt>
+<trkpt lat="42.223523" lon="1.970955"><ele>1373.3</ele></trkpt>
+<trkpt lat="42.223639" lon="1.971051"><ele>1370.8</ele></trkpt>
+<trkpt lat="42.223894" lon="1.971264"><ele>1366.2</ele></trkpt>
+</trkseg></trk>
+</gpx>
