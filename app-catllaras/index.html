@@ -74,6 +74,8 @@ tr.fet td{color:#9aa1a4}
 tr.act td{background:#fbe9e4;font-weight:700}
 .prova{display:none;margin-top:10px}
 .prova.on{display:block}
+.pbrec{background:#b02a1a;color:#fff;border-radius:10px;padding:9px 11px;font-size:14px;line-height:1.45;margin-bottom:8px}
+.phora{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:14px;font-weight:600}.phora input{font:inherit;padding:5px 6px;border:1px solid #cfc8bb;border-radius:8px}.phora .btn{padding:6px 10px;font-size:13px}
 input[type=range]{width:100%;accent-color:var(--ter)}
 .pb{border-left:5px solid #C55A11;padding:8px 0 8px 10px;margin:8px 0;border-top:1px solid #f0ebe1}
 .pb:first-child{border-top:0}
@@ -293,6 +295,13 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
     <div class="prova" id="prova">
       <p class="nota" style="margin:10px 0 4px">Mou el punt pel track per provar l'app a casa (no fa servir el GPS).</p>
       <input type="range" id="slider" min="0" max="1000" value="0">
+      <div class="phora">
+        <label for="prova-h">Hora simulada</label>
+        <input type="time" id="prova-h">
+        <button class="btn s" id="prova-ara">Ara</button>
+        <button class="btn s" id="prova-prev">Hora prevista</button>
+      </div>
+      <p class="nota" id="prova-hnota" style="margin:4px 0 0">Sense hora simulada, l'app suposa que passeu per cada punt a l'hora prevista. Posa una hora (o toca «Ara») per veure com aniríeu de temps i quins plans B toquen.</p>
     </div>
     <div class="botons" style="margin-top:8px">
       <button class="btn s" id="b-reset">Reiniciar aquest dia</button>
@@ -435,7 +444,7 @@ const LIMIT={dia1:{h:'17:23',txt:'posta de sol'},dia2:{h:'15:30',txt:'arribada a
 const ST_KEY='petjada-catllaras-v1';
 let st=load();
 let dia=st.dia||'dia1';
-let provaHora=null, INI=null;
+let provaHora=null, INI=null, provaManual=null;
 let R=null, pos=null, gpsWatch=null, lastFix=null, wake=null, prova=false;
 
 function load(){try{return JSON.parse(localStorage.getItem(ST_KEY))||{}}catch(e){return {}}}
@@ -660,8 +669,8 @@ function pintaPlansB(E,seg,now){
   if(!L.length){ el.innerHTML='<p class="nota">Sense plans B per a aquest dia.</p>'; return; }
   set('pb-obj',(dia==='dia1'?'objectiu: arribar abans de la posta ':'objectiu: acabar abans de les ')+LIMIT[dia].h);
   const fiA=R.n-1, fiNom=nomPunt(R.wp[R.wp.length-1].k);
-  const obj=+objectiu(now), enRuta=!!(pos||prova||ds().inici);
-  el.innerHTML=L.map(b=>{
+  const obj=+objectiu(now), enRuta=!!(pos||prova||ds().inici); const cand=[]; let arrAglob=null;
+  const html=L.map(b=>{
     const hB=hores(b.km,b.up,b.dn), ib=b.ib;
     const kA=ib!=null?(R.cd[fiA]-R.cd[ib])/1000:0, uA=ib!=null?R.cu[fiA]-R.cu[ib]:0, nA=ib!=null?R.cn[fiA]-R.cn[ib]:0, hA=ib!=null?horesEntre(ib,fiA):0;
     const fi=b.fi||fiNom;
@@ -681,7 +690,7 @@ function pintaPlansB(E,seg,now){
     else if(fet){ cls='passat'; st='fet'; }
     else if(!passat&&enRuta){
       const hX=horesDesE(E,b.ia), dX=Math.max(0,R.cd[b.ia]-E.d)/1000, uX=Math.max(0,R.cu[b.ia]-E.u), nX=Math.max(0,R.cn[b.ia]-E.n);
-      const etaX=now+hX*3600e3, arrB=etaX+tB.h*3600e3, arrA=now+horesDesE(E,fiA)*3600e3;
+      const etaX=now+hX*3600e3, arrB=etaX+tB.h*3600e3, arrA=now+horesDesE(E,fiA)*3600e3; arrAglob=arrA; if(!b.fi) cand.push({id:b.id,arrB,etaX,lim});
       if(lim!=null){
         const P=b.limitPropi;
         if(etaX>lim){cls='alerta'; st=P?'no hi arribeu amb llum':'toca pla B';}
@@ -700,6 +709,18 @@ function pintaPlansB(E,seg,now){
       <table><thead><tr><th>Des de la cruïlla fins a ${esc(fi)}</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th></tr></thead><tbody>
       ${fila('Amb '+b.id,tB)}${b.fi?'':fila('Amb el pla A',tA)}</tbody></table>${siLim}${viu}${b.pts.length>1?trkLink(b,'Track '+b.id):'<div class="nota" style="margin-top:4px">Sense track: ens quedem al Xalet.</div>'}</div>`;
   }).join('');
+  // recomanació global: si amb el pla A no arribeu a l'objectiu, quin pla B us hi porta
+  let rec='';
+  if(enRuta&&arrAglob!=null&&cand.length){
+    const fora=c=>c.lim!=null&&c.etaX>c.lim, tard=arrAglob>obj||cand.some(fora);
+    if(tard){
+      const ok=cand.filter(c=>c.arrB<=obj).sort((a,b)=>a.etaX-b.etaX);
+      const objTxt=dia==='dia1'?'la posta ('+LIMIT[dia].h+')':LIMIT[dia].h;
+      rec=`<div class="pbrec">Ara (${rel(new Date(now))}) amb el pla A arribaríeu a les <b>${rel(new Date(arrAglob))}</b>`+(arrAglob>obj?`, <b>${hm((arrAglob-obj)/3600e3)} després de ${objTxt}</b>.`:'.')+
+        (ok.length?` Aplica <b>${ok[0].id}</b> a la propera cruïlla: arribada <b>${rel(new Date(ok[0].arrB))}</b>.`:` Cap pla B us hi porta a temps: valoreu-ho amb el grup i, si cal, truqueu al 112.`)+`</div>`;
+    }
+  }
+  el.innerHTML=rec+html;
 }
 
 
@@ -1443,8 +1464,15 @@ $('b-prova').onclick=()=>{prova=!prova;$('prova').classList.toggle('on',prova);$
 function mouProva(){const f=$('slider').value/1000, d=f*R.cd[R.n-1]; let i=0; while(i<R.n-2&&R.cd[i+1]<d)i++;
   const L=R.cd[i+1]-R.cd[i], t=L?(d-R.cd[i])/L:0; pos={seg:i,t,d:0};
   const [hh,mm]=R.r.sortida.split(':').map(Number); const dt=new Date(dia==='dia1'?'2026-11-28T00:00:00':'2026-11-29T00:00:00'); dt.setHours(hh,mm,0,0);
-  provaHora=new Date(+dt+horesEntre(0,i)*3600e3);
-  $('track').className='pill av'; $('track').textContent='Mode prova · '+(dia==='dia1'?'ds 28':'dg 29')+' a les '+rel(provaHora)+' (hora prevista)'; $('avis').classList.remove('on'); render();}
+  const prev=new Date(+dt+horesEntre(0,i)*3600e3);
+  if(provaManual!=null){ provaHora=new Date(dt); provaHora.setHours(Math.floor(provaManual/60),provaManual%60,0,0); }
+  else provaHora=prev;
+  const dif=Math.round((provaHora-prev)/60000), dTxt=provaManual==null?'(hora prevista)':(Math.abs(dif)<3?'(a l\'hora prevista)':dif>0?`(${hm(dif/60)} tard)`:`(${hm(-dif/60)} avançats)`);
+  $('prova-h').value=rel(provaHora);
+  $('track').className='pill av'; $('track').textContent='Mode prova · '+(dia==='dia1'?'ds 28':'dg 29')+' a les '+rel(provaHora)+' '+dTxt; $('avis').classList.remove('on'); render();}
+$('prova-h').onchange=()=>{ const v=$('prova-h').value; if(!v) return; const [h,m]=v.split(':').map(Number); provaManual=h*60+m; mouProva(); };
+$('prova-ara').onclick=()=>{ const d=new Date(); provaManual=d.getHours()*60+d.getMinutes(); mouProva(); };
+$('prova-prev').onclick=()=>{ provaManual=null; mouProva(); };
 $('slider').oninput=mouProva;
 async function llum(){try{wake=await navigator.wakeLock.request('screen');$('b-llum').textContent='Pantalla encesa ✓';st.llum=true;save();
   wake.addEventListener('release',()=>{$('b-llum').textContent='Pantalla sempre encesa'});}catch(e){$('b-llum').textContent='No disponible'}}
