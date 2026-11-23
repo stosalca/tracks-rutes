@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E2A2E">
+<title>Rutes · Petjada</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--pis:#1E2A2E;--ter:#C8553D;--sor:#F3EFE6;--bla:#fff;--gris:#6b7478;--ok:#2f7d4f;--av:#b7791f}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--sor);color:var(--pis);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 16px)}
+nav.vistes{display:flex;gap:6px;margin:10px 0 2px}
+nav.vistes button{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:10px;color:var(--sor);opacity:.8;font:700 14px/1.2 inherit;font-family:inherit;padding:8px 4px;display:flex;align-items:center;justify-content:center;gap:6px}
+nav.vistes button b{font-size:17px;line-height:1}
+.camp{display:block;font-size:13px;font-weight:600;margin:8px 0}
+.camp input,.camp select{display:block;width:100%;margin-top:4px;padding:9px;border:1px solid #d9d3c6;border-radius:8px;font:inherit;font-weight:400;background:#fff}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:8px 0}
+.log{white-space:pre-wrap;font-size:12px;color:var(--gris);margin-top:8px;max-height:260px;overflow:auto}
+.lr{border-top:1px solid #eee7da;padding:10px 0}.lr:first-child{border-top:0}
+.lr h3{font-size:16px;margin-bottom:2px}.lr.on h3::after{content:' · activa';color:var(--ok);font-size:12px}
+.dia-f{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border:1px solid #eee7da;border-radius:10px;padding:8px;margin:8px 0}
+.dia-f b{grid-column:1/-1;font-size:13px}
+.dia-f input{width:100%;padding:7px;border:1px solid #d9d3c6;border-radius:8px;font:inherit}
+.dia-f label{font-size:11px;color:var(--gris)}
+.pbq{font-size:12px;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pbq span{background:#f3efe6;border-radius:99px;padding:2px 8px}
+.pbq a{color:#C55A11;font-weight:700}
+nav.vistes button.on{opacity:1;background:var(--sor);color:var(--pis);border-color:var(--sor)}
+nav.vistes button.e112{border-color:#ff7a62}
+nav.vistes button.e112.on{background:var(--ter);color:#fff;border-color:var(--ter)}
+nav.vistes button.e112 b{color:#ff7a62}
+.b112{display:block;text-align:center;background:var(--ter);color:#fff;text-decoration:none;font-weight:800;font-size:24px;padding:18px;border-radius:14px;margin-bottom:10px;box-shadow:0 2px 0 #9c3f2c}
+.coord{font:600 17px/1.5 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.2px}
+.coord small{font:500 12px Inter,system-ui,sans-serif;color:var(--gris);display:block}
+.tels{width:100%;border-collapse:collapse;font-size:14px}
+.tels td{padding:7px 4px;border-top:1px solid #eee7da;vertical-align:top}
+.tels td:last-child{text-align:right;white-space:nowrap}
+.tels a{display:inline-block;background:#f3efe6;border:1px solid #d9d3c6;color:var(--pis);text-decoration:none;font-weight:700;border-radius:99px;padding:5px 10px}
+.tels a.urg{background:var(--ter);border-color:var(--ter);color:#fff}
+.tels .grup td{border-top:0;padding-top:12px;font-weight:800;color:var(--ter);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.prot li{margin:4px 0 4px 20px}
+.punts112{width:100%;border-collapse:collapse;font-size:12px}
+.punts112 td,.punts112 th{padding:5px 3px;border-top:1px solid #eee7da;text-align:left}
+.punts112 td:nth-child(3),.punts112 td:nth-child(4){font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
+header{background:var(--pis);color:var(--sor);padding:12px 14px 0;position:sticky;top:0;z-index:5}
+.marca{display:flex;justify-content:space-between;align-items:baseline}
+.marca h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:20px}
+.marca h1 span{color:var(--ter)}
+.marca small{opacity:.75;font-size:12px}
+.tabs{display:flex;gap:6px;margin-top:10px}
+.tabs button{flex:1;background:transparent;color:var(--sor);border:0;border-bottom:3px solid transparent;padding:9px 4px 10px;font:600 15px inherit;font-family:inherit;opacity:.7}
+.tabs button.on{border-color:var(--ter);opacity:1}
+main{padding:10px 12px;max-width:640px;margin:0 auto}
+.estat{display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:8px;flex-wrap:wrap}
+.pill{border-radius:99px;padding:4px 10px;background:var(--bla);border:1px solid #d9d3c6;font-weight:600}
+.pill.ok{background:#e3f1e8;border-color:#b5d9c2;color:var(--ok)}
+.pill.ko{background:#fbe5e0;border-color:#efb7aa;color:var(--ter)}
+.pill.av{background:#fbf0d9;border-color:#ebcf93;color:var(--av)}
+.card{background:var(--bla);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 0 #e4ddcf}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between}
+.card h2 b{color:var(--pis);text-transform:none;letter-spacing:0;font-size:13px}
+.seg{border-left:6px solid var(--ter)}
+.nom{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:22px;margin-bottom:8px;line-height:1.15}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.v{font-size:30px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.v small{font-size:15px;font-weight:600;margin-left:2px}
+.v.m{font-size:22px}
+.l{font-size:12px;color:var(--gris);font-weight:600}
+.sub{font-size:13px;color:var(--gris);margin-top:8px}
+.up{color:var(--ter)} .dn{color:#3d6c86}
+.barra{height:8px;background:#ece6da;border-radius:9px;overflow:hidden;margin:10px 0 2px}
+.barra i{display:block;height:100%;background:var(--ter);width:0}
+svg{display:block;width:100%;height:auto}
+.botons{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:130px;border:0;border-radius:12px;padding:13px 10px;font:700 15px inherit;font-family:inherit;background:var(--pis);color:var(--sor)}
+.btn.t{background:var(--ter)}
+.btn.s{background:#e7e1d4;color:var(--pis)}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{font-size:11px;text-align:right;color:var(--gris);font-weight:700;padding:4px 3px;border-bottom:1px solid #e4ddcf}
+td{text-align:right;padding:6px 3px;border-bottom:1px solid #f0ebe1}
+th:first-child,td:first-child{text-align:left}
+tr.fet td{color:#9aa1a4}
+tr.act td{background:#fbe9e4;font-weight:700}
+.prova{display:none;margin-top:10px}
+.prova.on{display:block}
+input[type=range]{width:100%;accent-color:var(--ter)}
+.pb{border-left:5px solid #C55A11;padding:8px 0 8px 10px;margin:8px 0;border-top:1px solid #f0ebe1}
+.pb:first-child{border-top:0}
+.pb.passat{opacity:.45}
+.pb.alerta{background:#fbe5e0}.pb.avis{background:#fdf1dc}
+.pb-h{font-size:15px;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pb-h .id{color:#C55A11;font-weight:800}
+.pb-h .st{margin-left:auto;font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;background:#f3efe6}
+.pb.alerta .st{background:var(--ter);color:#fff}.pb.avis .st{background:var(--av);color:#fff}.pb.ok .st{background:#e3f1e8;color:var(--ok)}
+.pb table{font-size:12px;margin-top:6px}
+.pb .viu{font-size:13px;margin-top:6px}
+.nota{font-size:12px;color:var(--gris);line-height:1.45}
+.avis{background:#fbe5e0;color:#8f2f1c;border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px;margin-bottom:10px;display:none}
+.avis.on{display:block}
+.guio{border-left:6px solid #3d6c86}
+.nom2{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:18px;margin-bottom:6px;line-height:1.2}
+.guio ul,.det ul,#flora ul{padding-left:18px;font-size:15px;line-height:1.45}
+.guio li,.det li,#flora li{margin-bottom:6px}
+.preg{font-size:14px;background:#eef3f6;border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.4}
+.preg:empty{display:none}
+details.det{border-top:1px solid #f0ebe1;padding:8px 0}
+details.det summary{font-weight:700;font-size:15px;cursor:pointer;list-style:none}
+details.det summary::before{content:'▸ ';color:var(--ter)}
+details.det[open] summary::before{content:'▾ '}
+details.det.act summary{color:var(--ter)}
+#flora h3{font-size:15px;margin:10px 0 4px}
+#flora p{font-size:15px;line-height:1.45}
+.tmap{position:relative;height:400px;overflow:hidden;border-radius:10px;background:#eef2e8;touch-action:none;user-select:none;-webkit-user-select:none}
+#tiles img{position:absolute;pointer-events:none;max-width:none}
+#tover{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mbtn{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.mbtn button{width:42px;height:42px;border-radius:10px;border:0;background:#fff;color:var(--pis);font:700 22px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.mbtn button.on{background:var(--ter);color:#fff}
+.attr{position:absolute;left:0;bottom:0;font-size:10px;background:rgba(255,255,255,.75);padding:1px 5px;border-top-right-radius:6px}
+.capes{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:14px;font-weight:600}
+.capes label{display:flex;align-items:center;gap:8px}
+.capes input[type=range]{flex:1}
+.capes input[type=checkbox]{width:20px;height:20px;accent-color:var(--ter)}
+.lleg{font-weight:500;color:var(--gris);font-size:12px;display:inline-flex;align-items:center;gap:4px}
+.lleg i{display:inline-block;width:18px;border-top:3px dashed;margin-left:6px}
+#tosm{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.vess{border-left:6px solid var(--vc,#3d6c86)}
+.vtxt{font-size:15px;line-height:1.45}
+.met-ara{font-size:14px;margin:2px 0 6px;color:var(--pis)}
+.met-ara:empty{display:none}
+.cons{padding-left:18px;font-size:15px;line-height:1.45}
+.cons li{margin-bottom:5px}
+.parada{background:#eef3f6;border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.4;margin-top:6px}
+.parada:empty{display:none}
+.dies{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.dies button{border:1px solid #d9d3c6;background:#fff;border-radius:99px;padding:6px 12px;font:600 13px inherit;font-family:inherit;color:var(--pis)}
+.dies button.on{background:var(--pis);color:var(--sor);border-color:var(--pis)}
+.mres{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:2px 8px;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:8px}
+.mres b{font-size:12px;color:var(--gris)}
+.mres small{color:var(--gris);font-size:11px}
+#met-hores{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#met-hores table{min-width:520px}
+#met-hores td:first-child,#met-hores th:first-child{position:sticky;left:0;background:#fff}
+.fv{display:inline-block;font-weight:800;color:#2b6cb0;line-height:1}
+.mav{border-radius:10px;padding:7px 10px;font-size:14px;margin-bottom:6px;background:#fbf0d9;color:#7a5410}
+.mav.r{background:#fbe5e0;color:#8f2f1c}
+.mav.ok{background:#e3f1e8;color:var(--ok)}
+.taula-h{overflow-x:auto}
+.taula-h table{font-size:12px;min-width:100%}
+.taula-h td,.taula-h th{padding:4px 4px;white-space:nowrap}
+.enllacos{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.enllacos a{font-size:13px;font-weight:600;color:var(--pis);background:#e7e1d4;border-radius:99px;padding:6px 10px;text-decoration:none}
+.vrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:3px 0}
+.vrow i{width:14px;height:14px;border-radius:4px;display:inline-block;flex:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="marca"><h1>Petjada <span>·</span> <i id="nom-ruta" style="font-style:normal">Rutes</i></h1><small id="rellotge">--:--</small></div>
+  <nav class="vistes">
+    <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
+    <button data-v="vmet"><b>⛅</b>Meteo</button>
+    <button data-v="v112" class="e112"><b>✚</b>112</button>
+    <button data-v="vlib"><b>📚</b>Rutes</button>
+  </nav>
+  <div class="tabs" id="tabs-dies"></div>
+</header>
+<main id="vruta">
+  <div class="estat"><span id="gps" class="pill">GPS apagat</span><span id="track" class="pill">—</span><span id="prec" class="pill" hidden></span></div>
+  <div id="avis" class="avis"></div>
+
+  <section class="card seg">
+    <h2>Següent punt <b id="tram"></b></h2>
+    <div class="nom" id="seg-nom">—</div>
+    <div class="grid">
+      <div><div class="v" id="seg-km">–</div><div class="l">km que falten</div></div>
+      <div><div class="v" id="seg-t">–</div><div class="l">temps estimat</div></div>
+      <div><div class="v m up" id="seg-up">–</div><div class="l">desnivell +</div></div>
+      <div><div class="v m dn" id="seg-dn">–</div><div class="l">desnivell −</div></div>
+    </div>
+    <div class="sub" id="seg-hora">Arribada prevista: —</div>
+  </section>
+
+  <section class="card">
+    <h2>Fet fins ara <b id="pct"></b></h2>
+    <div class="grid">
+      <div><div class="v" id="f-km">–</div><div class="l">km caminats</div></div>
+      <div><div class="v" id="f-t">–</div><div class="l">temps de ruta</div></div>
+      <div><div class="v m up" id="f-up">–</div><div class="l">desnivell + fet</div></div>
+      <div><div class="v m dn" id="f-dn">–</div><div class="l">desnivell − fet</div></div>
+    </div>
+    <div class="barra"><i id="barra"></i></div>
+    <div class="sub" id="ritme"></div>
+  </section>
+
+  <section class="card">
+    <h2>Fins al final <b id="final-nom"></b></h2>
+    <div class="grid">
+      <div><div class="v m" id="r-km">–</div><div class="l">km que falten</div></div>
+      <div><div class="v m" id="r-t">–</div><div class="l">temps estimat</div></div>
+      <div><div class="v m up" id="r-up">–</div><div class="l">desnivell +</div></div>
+      <div><div class="v m dn" id="r-dn">–</div><div class="l">desnivell −</div></div>
+    </div>
+    <div class="sub" id="r-hora"></div>
+  </section>
+
+  <section class="card">
+    <h2>Mapa topogràfic <b id="mapa-estat">ICGC</b></h2>
+    <div class="tmap" id="tmap">
+      <div id="tiles"></div>
+      <svg id="tosm"></svg>
+      <svg id="tover"></svg>
+      <div class="mbtn"><button id="m-in" aria-label="Apropar">+</button><button id="m-out" aria-label="Allunyar">−</button><button id="m-seg" class="on" aria-label="Seguir la posició">⦿</button></div>
+      <div class="attr">© ICGC CC BY 4.0 · © OpenStreetMap ODbL</div>
+    </div>
+    <div class="capes">
+      <label><input type="checkbox" id="c-osm" checked> Camins OSM <span class="lleg"><i style="border-color:#d0342c"></i>corriol <i style="border-color:#8b5a2b"></i>pista</span></label>
+      <label>Mapa ICGC <input type="range" id="c-op" min="0" max="100" step="10" value="100"> <span id="c-opv">100 %</span></label>
+      <span class="nota" id="osm-estat"></span>
+    </div>
+    <div class="botons" style="margin-top:8px"><button class="btn s" id="b-desc">Descarregar mapes per anar sense cobertura</button></div>
+    <div class="barra" id="desc-barra" hidden><i id="desc-i"></i></div>
+    <p class="nota" id="desc-txt" style="margin-top:6px">Descarrega'ls amb wifi abans de la sortida (unes 190 teselles, totes dues rutes). Arrossega el mapa per moure'l; ⦿ el torna a centrar on ets.</p>
+  </section>
+
+  <section class="card">
+    <h2>Perfil <b><span style="color:#3d6c86">■</span> obaga <span style="color:#C8553D">■</span> solell <span style="color:#b7791f">■</span> llevant <span style="color:#8a6d3b">■</span> ponent</b></h2>
+    <svg id="perfil" viewBox="0 0 600 170"></svg>
+  </section>
+
+  <section class="card">
+    <h2>Trams <b id="sortida"></b></h2>
+    <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
+    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a l'hora objectiu d'arribada); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Alçades del model del terreny (si s'ha triat en crear la ruta).</p>
+  </section>
+
+  <section class="card vess" id="vess">
+    <h2>Sol, ombra i abric <b id="vess-seg"></b></h2>
+    <div class="nom2" id="vess-nom"></div>
+    <div class="met-ara" id="conf-met"></div>
+    <ul class="cons" id="conf-cons"></ul>
+    <div class="parada" id="conf-parada"></div>
+  </section>
+
+  <section class="card pbs" id="plansb">
+    <h2>Plans B <b id="pb-obj"></b></h2>
+    <div id="pb-llista"></div>
+    <p class="nota" style="margin-top:6px">Hora límit a la cruïlla = hora de pas prevista (des de la sortida prevista, sense parades) + 1 h 30, o el marge que quedi fins a l'hora objectiu. Distàncies, desnivells i temps fins al final del dia, comptant el tros de pla A que queda després del pla B. Plans B calculats sobre els camins d'OpenStreetMap: comprova'ls al terreny i amb el heatmap. Al mapa, en taronja discontinu.</p>
+  </section>
+
+
+  <section class="card guio" id="guio-ara">
+    <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
+    <div class="nom2" id="guio-nom"></div>
+    <ul id="guio-punts"></ul>
+    <p class="preg" id="guio-preg"></p>
+  </section>
+
+  <section class="card">
+    <h2>Guió de tots els punts <b>toca per obrir</b></h2>
+    <div id="guio-tots"></div>
+    <div id="flora"></div>
+  </section>
+
+  <section class="card">
+    <h2>Control</h2>
+    <div class="botons">
+      <button class="btn t" id="b-inici">Iniciar ruta</button>
+      <button class="btn" id="b-gps">Activar GPS</button>
+      <button class="btn s" id="b-llum">Pantalla sempre encesa</button>
+      <button class="btn s" id="b-prova">Mode prova</button>
+    </div>
+    <div class="prova" id="prova">
+      <p class="nota" style="margin:10px 0 4px">Mou el punt pel track per provar l'app a casa (no fa servir el GPS).</p>
+      <input type="range" id="slider" min="0" max="1000" value="0">
+    </div>
+    <div class="botons" style="margin-top:8px">
+      <button class="btn s" id="b-reset">Reiniciar aquest dia</button>
+    </div>
+    <p class="nota" style="margin-top:10px">Funciona sense cobertura un cop oberta una vegada amb connexió. Pots dur el mòbil bloquejat: en desbloquejar-lo, l'app et torna a situar sobre el track i els km i desnivells fets inclouen tot el que has caminat mentrestant (el temps compta des de l'inici). El que no queda gravat és el traç real que has fet amb la pantalla apagada: si surts del track, grava amb el TwoNav. Els km i desnivells es calculen sobre el track (filtre de 5 m), no amb l'altímetre del mòbil.</p>
+  </section>
+</main>
+
+<main id="vlib" hidden>
+  <section class="card">
+    <h2>Les meves rutes</h2>
+    <div id="lib-llista"></div>
+  </section>
+  <section class="card">
+    <h2>Nova ruta</h2>
+    <p class="nota">Carrega el GPX de la ruta (track i waypoints del roadbook, per exemple exportat del TwoNav). Si són diversos dies, un GPX per dia o un GPX amb un track per dia.</p>
+    <label class="camp">Nom de la ruta<input id="n-nom" placeholder="p. ex. Serra del Catllaràs"></label>
+    <label class="camp">Fitxers GPX<input id="n-gpx" type="file" accept=".gpx,application/gpx+xml" multiple></label>
+    <div id="n-dies"></div>
+    <label class="chk"><input type="checkbox" id="n-dem" checked> Corregir les alçades amb el model del terreny (recomanat si el GPX ve del TwoNav o d'un planificador)</label>
+    <label class="chk"><input type="checkbox" id="n-pb" checked> Dissenyar plans B amb els camins d'OpenStreetMap</label>
+    <div class="botons" style="margin-top:8px"><button class="btn" id="n-fes" disabled>Crear la ruta</button></div>
+    <pre id="n-log" class="log"></pre>
+  </section>
+  <section class="card">
+    <h2>Claude (opcional)</h2>
+    <p class="nota">Amb la teva clau d'API d'Anthropic, Claude redacta el guió interpretatiu de cada punt, busca els telèfons d'emergència de la zona i revisa els plans B. Cada usuari fa servir la seva clau i paga el seu ús. La clau es desa només en aquest mòbil i s'envia directament a Anthropic.</p>
+    <label class="camp">Clau d'API<input id="c-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
+    <label class="camp">Model<select id="c-model"><option value="claude-sonnet-5-5">Claude Sonnet 5.5 (recomanat)</option><option value="claude-haiku-5-5">Claude Haiku 5.5 (més barat)</option><option value="claude-opus-5-5">Claude Opus 5.5 (més car)</option></select></label>
+    <label class="camp">Nom del guia<input id="c-gnom" placeholder="Nom"></label>
+    <label class="camp">Telèfon del guia<input id="c-gtel" type="tel" placeholder="600 000 000"></label>
+    <p class="nota">Les claus es creen a console.anthropic.com (cal un compte de l'API amb saldo; la subscripció de Claude.ai no serveix per a l'API).</p>
+  </section>
+</main>
+
+<main id="vmet" hidden>
+  <section class="card" id="meteo">
+    <h2>Meteo de la zona <b id="met-act"></b></h2>
+    <div class="dies" id="met-dies"></div>
+    <div id="met-resum"></div>
+    <div id="met-avisos"></div>
+    <div class="taula-h" id="met-hores"></div>
+    <div class="botons" style="margin-top:8px"><button class="btn s" id="b-met">Actualitzar previsió</button></div>
+    <div class="enllacos" id="met-links"></div>
+    <p class="nota" id="met-nota"></p>
+  </section>
+</main>
+
+<main id="v112" hidden>
+  <a class="b112" href="tel:112">📞 Trucar al 112</a>
+
+  <section class="card">
+    <h2>On sóc</h2>
+    <div id="e-on"><p class="nota">Activa el GPS per veure les coordenades (funciona sense cobertura).</p></div>
+    <div class="botons" style="margin-top:8px">
+      <button id="e-gps" class="btn s">Activar GPS</button>
+      <button id="e-copia" class="btn s">Copiar coordenades</button>
+      <a id="e-sms" class="btn s" style="text-decoration:none;display:inline-block;text-align:center">Enviar per SMS</a>
+    </div>
+    <p class="nota" style="margin-top:6px">Un SMS de vegades surt amb molt poca cobertura, quan una trucada no es pot fer. L'SMS s'obre amb les coordenades escrites: tu tries a qui l'envies.</p>
+  </section>
+
+  <section class="card">
+    <h2>Protocol (PAS)</h2>
+    <ol class="prot">
+      <li><b>Protegir</b> el grup i la víctima: lloc segur, fora del perill.</li>
+      <li><b>Avisar</b> al 112: codi del punt més proper, coordenades d'aquí dalt, què ha passat, quantes persones i en quin estat, meteo i si hi ha lloc per a l'helicòpter.</li>
+      <li><b>Socórrer</b>: valorar la víctima, mantenir-la calenta i aïllada de terra, i deixar el telèfon lliure perquè us puguin trucar.</li>
+    </ol>
+    <p class="nota" style="margin-top:8px"><b>Ferit que no pot caminar o hipotèrmia amb confusió:</b> no baixar-lo a peu. Abrigar, aïllar de terra i esperar el rescat.</p>
+    <p class="nota"><b>Sense cobertura:</b> provar l'SMS, pujar a un collet o carena, o enviar dues persones amb les coordenades apuntades. El grup no es divideix sense un responsable a cada part.</p>
+    <p class="nota" id="e-acces"></p>
+    <p class="nota"><b>Alerta externa:</b> si el contacte extern no té notícies a l'hora acordada, truca al 112.</p>
+  </section>
+
+  <section class="card">
+    <h2>Telèfons</h2>
+    <table class="tels" id="e-tels"></table>
+    <div style="margin-top:10px">
+      <label class="nota" for="e-ext">Contacte extern (nom i telèfon; es desa al mòbil):</label>
+      <div style="display:flex;gap:6px;margin-top:4px"><input id="e-ext-nom" placeholder="Nom" style="flex:1;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:inherit"><input id="e-ext" type="tel" placeholder="Telèfon" style="flex:1;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:inherit"></div>
+    </div>
+    <p class="nota" style="margin-top:8px" id="e-nota-tels"></p>
+  </section>
+
+  <section class="card">
+    <h2>Coordenades dels punts</h2>
+    <div id="e-punts"></div>
+    <p class="nota" style="margin-top:6px">UTM fus 31N (ETRS89).</p>
+  </section>
+</main>
+<script src="core.js"></script>
+<script>arrencaApp();</script>
+</body>
+</html>
