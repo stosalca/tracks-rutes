@@ -30,5 +30,5 @@ jobs:
         run: |
           git config user.name "petjada-bot"
           git config user.email "petjada-bot@users.noreply.github.com"
-          git add app-rutes/rutes/*.json
+          [ -d app-rutes/rutes ] && git add app-rutes/rutes/*.json 2>/dev/null || true
           git diff --cached --quiet || (git commit -m "Rutes processades" && git push)
