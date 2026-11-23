@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Petjada" xmlns="http://www.topografix.com/GPX/1/1">
+<wpt lat="41.700458" lon="2.19912"><name>P0 Inici · Bigues i Riells del Fai</name></wpt>
+<wpt lat="41.704534" lon="2.205033"><ele>376</ele><name>P1 Inici de la pujada</name></wpt>
+<wpt lat="41.708801" lon="2.206946"><ele>552</ele><name>P2 Dalt dels cingles</name></wpt>
+<wpt lat="41.709915" lon="2.207801"><ele>655</ele><name>P3 Punt més alt dels cingles</name></wpt>
+<wpt lat="41.710671" lon="2.194528"><ele>564</ele><name>P4 Carena dels cingles</name></wpt>
+<wpt lat="41.714812" lon="2.19162"><ele>468</ele><name>P5 Sant Miquel del Fai</name></wpt>
+<wpt lat="41.704288" lon="2.190287"><ele>295</ele><name>P6 Baixada cap a Riells</name></wpt>
+</gpx>
