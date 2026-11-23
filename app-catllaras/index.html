@@ -96,6 +96,7 @@ input[type=range]{width:100%;accent-color:var(--ter)}
 .bri .xif div{background:#f4efe5;border-radius:10px;padding:8px}
 .bri .xif strong{display:block;font-size:13px;margin-bottom:4px}
 .bri .xif span{display:block;font-size:13px;line-height:1.5}
+.trk{display:inline-block;margin-top:6px;font-size:13px;font-weight:700;color:var(--pis);border:1.5px solid var(--pis);border-radius:8px;padding:4px 10px;text-decoration:none}
 .nota{font-size:12px;color:var(--gris);line-height:1.45}
 .avis{background:#fbe5e0;color:#8f2f1c;border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px;margin-bottom:10px;display:none}
 .avis.on{display:block}
@@ -224,6 +225,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
     <div class="botons" style="margin-top:8px"><button class="btn s" id="b-desc">Descarregar mapes per anar sense cobertura</button></div>
     <div class="barra" id="desc-barra" hidden><i id="desc-i"></i></div>
     <p class="nota" id="desc-txt" style="margin-top:6px">Descarrega'ls amb wifi abans de la sortida (unes 190 teselles, totes dues rutes). Arrossega el mapa per moure'l; ⦿ el torna a centrar on ets.</p>
+    <div id="trk-dia"></div>
   </section>
 
   <section class="card">
@@ -568,7 +570,11 @@ const nomPunt=k=>k==='X'?'Xalet':k==='P3'||k==='P6'?'Xalet ('+k+')':k==='P0'?'Mo
 function nomCruilla(i){ if(i>=R.n-1) return nomPunt(R.wp[R.wp.length-1].k);
   const w=[...R.wp].reverse().find(x=>x.i<=i), d=R.cd[i]-R.cd[w.i], nm=nomPunt(w.k);
   return d<60?nm:`${nm} + ${km(d)} km`; }
+const TRK_URL='../catllaras/fitxa/';
+function trkNom(b){ const n=dia==='dia1'?1:2; return b?`Catllaras_Dia${n}_${b.id}${/Falgars/.test(b.nom)?'_Falgars':''}.gpx`:`Catllaras_Dia${n}_PlaA.gpx`; }
+function trkLink(b,txt){ const f=trkNom(b); return `<a class="trk" href="${TRK_URL+f}" download="${f}">⬇ ${txt} (GPX)</a>`; }
 function pintaPlansB(E,seg,now){
+  if($('trk-dia')) $('trk-dia').innerHTML=trkLink(null,'Track del dia '+(dia==='dia1'?1:2)+' · pla A')+' '+`<a class="trk" href="${TRK_URL}Catllaras_tracks.zip" download>⬇ Tots els tracks (zip)</a>`;
   const L=plansB(); const el=$('pb-llista'); if(!el) return;
   if(!L.length){ el.innerHTML='<p class="nota">Sense plans B per a aquest dia.</p>'; return; }
   set('pb-obj',(dia==='dia1'?'objectiu: arribar abans de la posta ':'objectiu: acabar abans de les ')+LIMIT[dia].h);
@@ -611,7 +617,7 @@ function pintaPlansB(E,seg,now){
       <div class="nota">${esc(b.desc)}</div>
       <div class="sub" style="margin-top:4px">Cruïlla: <b>${nomCruilla(b.ia)}</b> · ${limTxt}</div>
       <table><thead><tr><th>Des de la cruïlla fins a ${esc(fi)}</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th></tr></thead><tbody>
-      ${fila('Amb '+b.id,tB)}${b.fi?'':fila('Amb el pla A',tA)}</tbody></table>${siLim}${viu}</div>`;
+      ${fila('Amb '+b.id,tB)}${b.fi?'':fila('Amb el pla A',tA)}</tbody></table>${siLim}${viu}${b.pts.length>1?trkLink(b,'Track '+b.id):'<div class="nota" style="margin-top:4px">Sense track: ens quedem al Xalet.</div>'}</div>`;
   }).join('');
 }
 
