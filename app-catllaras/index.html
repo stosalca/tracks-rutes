@@ -115,6 +115,7 @@ details.det.act summary{color:var(--ter)}
 .tmap{position:relative;height:400px;overflow:hidden;border-radius:10px;background:#eef2e8;touch-action:none;user-select:none;-webkit-user-select:none}
 #tiles img{position:absolute;pointer-events:none;max-width:none}
 #tover{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:auto;border-radius:0;z-index:9999}body.printmap .mbtn{display:none}
 .mbtn{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
 .mbtn button{width:42px;height:42px;border-radius:10px;border:0;background:#fff;color:var(--pis);font:700 22px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.25)}
 .mbtn button.on{background:var(--ter);color:#fff}
@@ -977,6 +978,7 @@ function dibuixaPerfil(E){
 // ---------- Mapa topogràfic ICGC (teselles) ----------
 const TILE_URL='https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png';
 const TZMAX=16, ZMIN=12, ZMAX=18;
+const PRINT=(new URLSearchParams(location.search).get('mapa')||'').replace(/[^a-z0-9]/g,'')||null;
 const M={z:15,cx:null,cy:null,follow:true,imgs:new Map(),E:null,ptrs:new Map(),pinch:null};
 function wpx(lat,lon,z){const s=256*2**z, la=rad(lat); return [(lon+180)/360*s,(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*s];}
 function tileUrl(z,x,y){return TILE_URL.replace('{z}',z).replace('{x}',x).replace('{y}',y);}
@@ -984,7 +986,7 @@ function dibuixaMapa(E){
   if(E) M.E=E; E=M.E; if(!E) return;
   const el=$('tmap'), W=el.clientWidth, H=el.clientHeight; if(!W) return;
   if(M.follow||M.cx==null) [M.cx,M.cy]=wpx(E.lat,E.lon,M.z);
-  const tz=Math.min(M.z,TZMAX), ts=256*2**(M.z-tz), x0=M.cx-W/2, y0=M.cy-H/2;
+  const tz=Math.min(Math.floor(M.z),TZMAX), ts=256*2**(M.z-tz), x0=M.cx-W/2, y0=M.cy-H/2;
   const keep=new Set(), cont=$('tiles'), n=2**tz;
   for(let tx=Math.floor(x0/ts);tx<=Math.floor((x0+W)/ts);tx++) for(let ty=Math.floor(y0/ts);ty<=Math.floor((y0+H)/ts);ty++){
     if(ty<0||ty>=n) continue;
@@ -999,14 +1001,14 @@ function dibuixaMapa(E){
   const P=(lat,lon)=>{const [x,y]=wpx(lat,lon,M.z);return [x-x0,y-y0]};
   let all='',done='';
   for(let i=0;i<R.n;i++){const [a,b]=P(R.p[i][0],R.p[i][1]); const s=a.toFixed(1)+','+b.toFixed(1)+' '; all+=s; if(R.cd[i]<=E.d) done+=s;}
-  const [cx,cy]=P(E.lat,E.lon); done+=cx.toFixed(1)+','+cy.toFixed(1);
+  const [cx,cy]=P(E.lat,E.lon); done+=cx.toFixed(1)+','+cy.toFixed(1); if(PRINT) done='';
   let g=`<polyline points="${all}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" opacity=".8"/>`+
         `<polyline points="${all}" fill="none" stroke="#7a3cc8" stroke-width="4" stroke-linejoin="round"/>`+
         `<polyline points="${done}" fill="none" stroke="#C8553D" stroke-width="5" stroke-linejoin="round"/>`;
   plansB().forEach(b=>{ if(b.pts.length<2) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
     g+=`<polyline points="${ps}" fill="none" stroke="#fff" stroke-width="6" opacity=".7"/><polyline points="${ps}" fill="none" stroke="#C55A11" stroke-width="3.5" stroke-dasharray="8 6"/>`;
-    const m=b.pts[Math.floor(b.pts.length/2)], [a,c]=P(m[0],m[1]);
-    g+=`<text x="${a+6}" y="${c+14}" font-size="13" font-weight="800" fill="#C55A11" paint-order="stroke" stroke="#fff" stroke-width="4">${b.id}</text>`; });
+    const m=b.pts[Math.floor(b.pts.length*(PRINT?0.35:0.5))], [a,c]=P(m[0],m[1]);
+    g+=`<text x="${a+6}" y="${c+14}" font-size="${PRINT?17:13}" font-weight="800" fill="#C55A11" paint-order="stroke" stroke="#fff" stroke-width="4">${b.id}</text>`; });
   const etq=[];
   R.wp.forEach(w=>{const [a,b]=P(R.p[w.i][0],R.p[w.i][1]); if(a<-50||a>W+50||b<-50||b>H+50) return;
     const lab=w.k==='X'?'Xalet':w.k, ja=etq.find(e=>Math.hypot(e.a-a,e.b-b)<18);
@@ -1014,7 +1016,11 @@ function dibuixaMapa(E){
   etq.forEach(e=>{ g+=`<circle cx="${e.a}" cy="${e.b}" r="6" fill="#fff" stroke="#1E2A2E" stroke-width="2.5"/><text x="${e.a+9}" y="${e.b-7}" font-size="14" font-weight="800" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="4">${e.l.join(' / ')}</text>`; });
   const mpp=156543.03*Math.cos(rad(E.lat))/2**M.z;
   if(lastFix&&!prova){const [a,b]=P(lastFix.lat,lastFix.lon); g+=`<circle cx="${a}" cy="${b}" r="${Math.max(8,Math.min(150,lastFix.acc/mpp))}" fill="#3d6c86" opacity=".18"/><circle cx="${a}" cy="${b}" r="6" fill="#3d6c86" stroke="#fff" stroke-width="2.5"/>`;}
-  g+=`<circle cx="${cx}" cy="${cy}" r="9" fill="#C8553D" stroke="#fff" stroke-width="3"/>`;
+  if(!PRINT) g+=`<circle cx="${cx}" cy="${cy}" r="9" fill="#C8553D" stroke="#fff" stroke-width="3"/>`;
+  else g+=`<rect x="12" y="12" width="190" height="92" rx="8" fill="#fff" opacity=".92" stroke="#1E2A2E" stroke-width="1"/>`+
+    `<text x="24" y="34" font-size="14" font-weight="800" fill="#1E2A2E">${dia==='dia1'?'Dia 1 · dissabte':'Dia 2 · diumenge'}</text>`+
+    `<line x1="24" x2="62" y1="56" y2="56" stroke="#7a3cc8" stroke-width="4"/><text x="70" y="61" font-size="13" font-weight="700" fill="#1E2A2E">Pla A</text>`+
+    `<line x1="24" x2="62" y1="82" y2="82" stroke="#C55A11" stroke-width="3.5" stroke-dasharray="8 6"/><text x="70" y="87" font-size="13" font-weight="700" fill="#1E2A2E">Plans B</text>`;
   const bar=[50,100,200,500,1000,2000].find(m=>m/mpp>=70)||2000;
   g+=`<line x1="10" x2="${10+bar/mpp}" y1="${H-24}" y2="${H-24}" stroke="#1E2A2E" stroke-width="3"/><text x="10" y="${H-29}" font-size="12" font-weight="700" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="3">${bar>=1000?bar/1000+' km':bar+' m'}</text>`;
   const sv=$('tover'); sv.setAttribute('viewBox',`0 0 ${W} ${H}`); sv.innerHTML=g;
@@ -1350,10 +1356,17 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 setInterval(()=>{$('rellotge').textContent=rel(new Date()); if(R) render();},20000);
 $('rellotge').textContent=rel(new Date());
 
+function fitPrint(){ const el=$('tmap'), W=el.clientWidth, H=el.clientHeight, pts=[...R.p,...plansB().flatMap(b=>b.pts)];
+  const xy=pts.map(q=>wpx(q[0],q[1],0)), b0=[Math.min(...xy.map(a=>a[0])),Math.max(...xy.map(a=>a[0])),Math.min(...xy.map(a=>a[1])),Math.max(...xy.map(a=>a[1]))];
+  const z=Math.min(16,Math.log2(Math.min((W-120)/(b0[1]-b0[0]),(H-120)/(b0[3]-b0[2])))), f=2**z, bb=b0.map(v=>v*f);
+  M.z=z; M.follow=false; M.cx=(bb[0]+bb[1])/2; M.cy=(bb[2]+bb[3])/2; dibuixaMapa(); }
+if(PRINT&&RUTES[PRINT]){ document.body.classList.add('printmap'); dia=PRINT; R=prepara(dia); render(); setTimeout(fitPrint,200); }
+else {
 R=prepara(dia); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false); carregaMeteo(false);
 $('b-met').onclick=()=>carregaMeteo(true);
 if(st.gps) gpsOn();
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+if(!PRINT&&'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
