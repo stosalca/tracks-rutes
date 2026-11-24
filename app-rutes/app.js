@@ -186,10 +186,30 @@ function render(){
     `<tr><td colspan="8" class="nota">Marxa ${hm(H)} + parades ${hm(HP)} = <b>${hm(H+HP)}</b>. Parades: ${esc(textParades())}.</td></tr>`;
   set('trams',rows);
   dibuixaPerfil(E); dibuixaMapa(E);
-  pintaGuio(E,w); pintaVessant(E); pintaPlansB(E,seg,now);
+  pintaGuio(E,w); pintaVessant(E); pintaPlansB(E,seg,now); pintaFinsA(E,now,PB);
 }
 
 
+// ---------- Fins a un punt (el que triïs) ----------
+function pintaFinsA(E,now,PB){ const el=$('fa-sel'); if(!el||!E) return; const s=ds();
+  if(el.dataset.k!==dia){ el.dataset.k=dia; el.innerHTML=R.wp.slice(1).map(w=>`<option value="${esc(w.k)}">${esc(w.n)}</option>`).join('');
+    el.onchange=()=>{ ds().fa=el.value; save(); render(); }; }
+  let w=R.wp.find(x=>x.k===s.fa);
+  if(!w){ w=R.wp.find(x=>R.cd[x.i]>E.d+20)||R.wp[R.wp.length-1]; }
+  el.value=w.k;
+  const passat=R.cd[w.i]<=E.d+20;
+  if(passat){ ['fa-km','fa-t','fa-up','fa-dn'].forEach(id=>set(id,'–'));
+    set('fa-hora',`Ja hi heu passat${(s.pas||{})[R.wp.indexOf(w)-1]?' a les <b>'+rel(new Date(s.pas[R.wp.indexOf(w)-1]))+'</b>':''}. Tria un punt de més endavant.`); return; }
+  const d=R.cd[w.i]-E.d, up=Math.max(0,R.cu[w.i]-E.u), dn=Math.max(0,R.cn[w.i]-E.n), h=horesDesE(E,w.i), p=paradesEntre(E.d,w.i);
+  set('fa-km',km(d)+'<small>km</small>'); set('fa-t',hm(h+p)); set('fa-up','+'+mts(up)); set('fa-dn','−'+mts(dn));
+  const arr=new Date(now+(h+p)*3600e3), lim=limitEn(w.i,now);
+  set('fa-hora',`Arribada prevista <b>${rel(arr)}</b> (${hm(h)} de marxa`+(p?` + ${hm(p)} de parades`:'')+`) · ${esc(w.k)} a ${mts(R.p[w.i][2])}`+
+    (w.i<R.n-1?` · límit ${rel(new Date(lim))} → `+(+arr<=lim?`<b style="color:var(--ok)">a temps</b>`:`<b style="color:var(--ter)">${hm((arr-lim)/3600e3)} tard</b>`):'')+
+    (PB?'<br><span class="nota">Calculat pel pla A des de la cruïlla del pla B.</span>':''));
+}
+
+$('trams').addEventListener('click',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const k=[...$('trams').children].indexOf(tr); if(k<0||k>=R.trams.length) return;
+  ds().fa=R.wp[k+1].k; save(); render(); $('fa').scrollIntoView({behavior:'smooth',block:'center'}); });
 // ---------- Plans B i hores límit ----------
 // quan caminem per un pla B: següent punt = enllaç amb el pla A (o final), fet i fins al final pel pla B
 function nomEnllac(i){ const w=R.wp.find(x=>x.i>=i)||R.wp[R.wp.length-1], d=R.cd[w.i]-R.cd[i];

@@ -182,6 +182,8 @@ details.det.act summary{color:var(--ter)}
 .pbchip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#C55A11;border:1.5px solid #C55A11;border-radius:99px;padding:2px 9px}
 .pbchip input{margin:0}.pbchip.off{color:#9a948a;border-color:#cfc8bb}.pbtots{font:inherit;font-size:12px;border:0;background:#e7e1d4;border-radius:99px;padding:3px 10px}
 .acu{color:#8a8478;font-weight:600;font-size:11px}
+.fasel{width:100%;font:inherit;font-size:15px;font-weight:600;padding:8px;border:1px solid #cfc8bb;border-radius:10px;margin:2px 0 8px;background:#fff}
+#trams tr{cursor:pointer}
 </style>
 </head>
 <body>
@@ -234,6 +236,20 @@ details.det.act summary{color:var(--ter)}
     </div>
     <div class="sub" id="r-hora"></div>
   </section>
+
+  <section class="card" id="fa">
+    <h2>Fins a un punt <b>tria'l</b></h2>
+    <select id="fa-sel" class="fasel" aria-label="Punt"></select>
+    <div class="grid">
+      <div><div class="v m" id="fa-km">–</div><div class="l">km que falten</div></div>
+      <div><div class="v m" id="fa-t">–</div><div class="l">temps estimat</div></div>
+      <div><div class="v m up" id="fa-up">–</div><div class="l">desnivell +</div></div>
+      <div><div class="v m dn" id="fa-dn">–</div><div class="l">desnivell −</div></div>
+    </div>
+    <div class="sub" id="fa-hora"></div>
+    <p class="nota" style="margin-top:4px">També pots tocar un punt a la taula de trams.</p>
+  </section>
+
 
   <section class="card">
     <h2>Mapa topogràfic <b id="mapa-estat"></b></h2>

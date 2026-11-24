@@ -173,6 +173,8 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 .vrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:3px 0}
 .vrow i{width:14px;height:14px;border-radius:4px;display:inline-block;flex:none}
 .acu{color:#8a8478;font-weight:600;font-size:11px}
+.fasel{width:100%;font:inherit;font-size:15px;font-weight:600;padding:8px;border:1px solid #cfc8bb;border-radius:10px;margin:2px 0 8px;background:#fff}
+#trams tr{cursor:pointer}
 </style>
 </head>
 <body>
@@ -225,6 +227,20 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
     </div>
     <div class="sub" id="r-hora"></div>
   </section>
+
+  <section class="card" id="fa">
+    <h2>Fins a un punt <b>tria'l</b></h2>
+    <select id="fa-sel" class="fasel" aria-label="Punt"></select>
+    <div class="grid">
+      <div><div class="v m" id="fa-km">–</div><div class="l">km que falten</div></div>
+      <div><div class="v m" id="fa-t">–</div><div class="l">temps estimat</div></div>
+      <div><div class="v m up" id="fa-up">–</div><div class="l">desnivell +</div></div>
+      <div><div class="v m dn" id="fa-dn">–</div><div class="l">desnivell −</div></div>
+    </div>
+    <div class="sub" id="fa-hora"></div>
+    <p class="nota" style="margin-top:4px">També pots tocar un punt a la taula de trams.</p>
+  </section>
+
 
   <section class="card">
     <h2>Mapa topogràfic <b id="mapa-estat"></b></h2>
@@ -630,10 +646,30 @@ function render(){
     `<tr><td colspan="8" class="nota">Marxa ${hm(H)} + parades ${hm(HP)} = <b>${hm(H+HP)}</b>.</td></tr>`;
   set('trams',rows);
   dibuixaPerfil(E); dibuixaMapa(E);
-  pintaGuio(E,w); pintaVessant(E); pintaPlansB(E,seg,now);
+  pintaGuio(E,w); pintaVessant(E); pintaPlansB(E,seg,now); pintaFinsA(E,now,PB);
 }
 
 
+// ---------- Fins a un punt (el que triïs) ----------
+function pintaFinsA(E,now,PB){ const el=$('fa-sel'); if(!el||!E) return; const s=ds();
+  if(el.dataset.k!==dia){ el.dataset.k=dia; el.innerHTML=R.wp.slice(1).map(w=>`<option value="${esc(w.k)}">${esc(w.n)}</option>`).join('');
+    el.onchange=()=>{ ds().fa=el.value; save(); render(); }; }
+  let w=R.wp.find(x=>x.k===s.fa);
+  if(!w){ w=R.wp.find(x=>R.cd[x.i]>E.d+20)||R.wp[R.wp.length-1]; }
+  el.value=w.k;
+  const passat=R.cd[w.i]<=E.d+20;
+  if(passat){ ['fa-km','fa-t','fa-up','fa-dn'].forEach(id=>set(id,'–'));
+    set('fa-hora',`Ja hi heu passat${(s.pas||{})[R.wp.indexOf(w)-1]?' a les <b>'+rel(new Date(s.pas[R.wp.indexOf(w)-1]))+'</b>':''}. Tria un punt de més endavant.`); return; }
+  const d=R.cd[w.i]-E.d, up=Math.max(0,R.cu[w.i]-E.u), dn=Math.max(0,R.cn[w.i]-E.n), h=horesDesE(E,w.i), p=paradesEntre(E.d,w.i);
+  set('fa-km',km(d)+'<small>km</small>'); set('fa-t',hm(h+p)); set('fa-up','+'+mts(up)); set('fa-dn','−'+mts(dn));
+  const arr=new Date(now+(h+p)*3600e3), lim=limitEn(w.i,now);
+  set('fa-hora',`Arribada prevista <b>${rel(arr)}</b> (${hm(h)} de marxa`+(p?` + ${hm(p)} de parades`:'')+`) · ${esc(w.k)} a ${mts(R.p[w.i][2])}`+
+    (w.i<R.n-1?` · límit ${rel(new Date(lim))} → `+(+arr<=lim?`<b style="color:var(--ok)">a temps</b>`:`<b style="color:var(--ter)">${hm((arr-lim)/3600e3)} tard</b>`):'')+
+    (PB?'<br><span class="nota">Calculat pel pla A des de la cruïlla del pla B.</span>':''));
+}
+
+$('trams').addEventListener('click',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const k=[...$('trams').children].indexOf(tr); if(k<0||k>=R.trams.length) return;
+  ds().fa=R.wp[k+1].k; save(); render(); $('fa').scrollIntoView({behavior:'smooth',block:'center'}); });
 // ---------- Plans B i hores límit ----------
 // quan caminem per un pla B: següent punt = enllaç amb el pla A (o final), fet i fins al final pel pla B
 function nomEnllac(i){ const w=R.wp.find(x=>x.i>=i)||R.wp[R.wp.length-1], d=R.cd[w.i]-R.cd[i];
