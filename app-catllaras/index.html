@@ -189,6 +189,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
   <div class="marca"><h1>Petjada <span>·</span> Catllaràs</h1><small id="rellotge">--:--</small></div>
   <nav class="vistes">
     <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
+    <button data-v="vguio"><b>📖</b>Què explicarem?</button>
     <button data-v="vbri"><b>📣</b>Briefing</button>
     <button data-v="vplans"><b>🔀</b>A+ / C</button>
     <button data-v="vmet"><b>⛅</b>Meteo</button>
@@ -297,20 +298,6 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
   </section>
 
 
-  <section class="card guio" id="guio-ara">
-    <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
-    <div class="nom2" id="guio-nom"></div>
-    <div id="guio-fil"></div>
-    <ul id="guio-punts"></ul>
-    <p class="preg" id="guio-preg"></p>
-  </section>
-
-  <section class="card">
-    <h2>Guió de tots els punts <b>toca per obrir</b></h2>
-    <div id="guio-tots"></div>
-    <div id="flora"></div>
-  </section>
-
   <section class="card">
     <h2>Control</h2>
     <div class="botons">
@@ -334,6 +321,22 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
       <button class="btn s" id="b-reset">Reiniciar aquest dia</button>
     </div>
     <p class="nota" style="margin-top:10px">Funciona sense cobertura un cop oberta una vegada amb connexió. Pots dur el mòbil bloquejat: en desbloquejar-lo, l'app et torna a situar sobre el track i els km i desnivells fets inclouen tot el que has caminat mentrestant (el temps compta des de l'inici). El que no queda gravat és el traç real que has fet amb la pantalla apagada: si surts del track, grava amb el TwoNav. Els km i desnivells es calculen sobre el track (filtre de 5 m), no amb l'altímetre del mòbil.</p>
+  </section>
+</main>
+
+<main id="vguio" hidden>
+  <section class="card guio" id="guio-ara">
+    <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
+    <div class="nom2" id="guio-nom"></div>
+    <div id="guio-fil"></div>
+    <ul id="guio-punts"></ul>
+    <p class="preg" id="guio-preg"></p>
+  </section>
+
+  <section class="card">
+    <h2>Guió de tots els punts <b>toca per obrir</b></h2>
+    <div id="guio-tots"></div>
+    <div id="flora"></div>
   </section>
 </main>
 
@@ -899,8 +902,8 @@ function pinta112(){
 document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   const v=b.dataset.v;
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
-  for(const id of ['vruta','vbri','vplans','vmet','v112']) $(id).hidden=id!==v;
-  document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
+  for(const id of ['vruta','vguio','vbri','vplans','vmet','v112']) $(id).hidden=id!==v;
+  document.querySelector('header .tabs').style.display=(v==='vruta'||v==='vguio')?'':'none';
   window.scrollTo(0,0); if(v==='v112') pinta112(); if(v==='vbri') pintaBriefing(); if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} pintaPasTots(); if(navigator.onLine) carregaMeteo(false); } });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }

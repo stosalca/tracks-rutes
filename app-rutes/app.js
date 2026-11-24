@@ -423,8 +423,8 @@ function pinta112(){
 document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   const v=b.dataset.v;
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
-  if(v==='vlib') return; for(const id of ['vruta','vbri','vmet','v112','vlib']) $(id).hidden=id!==v;
-  document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
+  if(v==='vlib') return; for(const id of ['vruta','vguio','vbri','vmet','v112','vlib']) $(id).hidden=id!==v;
+  document.querySelector('header .tabs').style.display=(v==='vruta'||v==='vguio')?'':'none';
   window.scrollTo(0,0); if(v==='vbri') pintaBriefing(); if(v==='v112'){ pinta112(); pintaCob(); } if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} pintaPasTots(); if(navigator.onLine) carregaMeteo(false); } });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }

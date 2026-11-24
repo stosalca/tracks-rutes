@@ -554,7 +554,7 @@ function iniciaLib(){
 }
 function mostraVista(v){
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
-  for(const id of ['vruta','vmet','v112','vlib']) { const e=$(id); if(e) e.hidden=id!==v; }
+  for(const id of ['vruta','vguio','vbri','vmet','v112','vlib']) { const e=$(id); if(e) e.hidden=id!==v; }
   const t=document.querySelector('header .tabs'); if(t) t.style.display=v==='vruta'?'':'none';
   window.scrollTo(0,0);
 }

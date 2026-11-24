@@ -195,6 +195,7 @@ details.det.act summary{color:var(--ter)}
   <div class="marca"><h1>Petjada <span>·</span> <i id="nom-ruta" style="font-style:normal">Rutes de senderisme</i></h1><small id="rellotge">--:--</small></div>
   <nav class="vistes">
     <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
+    <button data-v="vguio"><b>📖</b>Què explicarem?</button>
     <button data-v="vbri"><b>📣</b>Briefing</button>
     <button data-v="vmet"><b>⛅</b>Meteo</button>
     <button data-v="v112" class="e112"><b>✚</b>112</button>
@@ -305,19 +306,6 @@ details.det.act summary{color:var(--ter)}
   </section>
 
 
-  <section class="card guio" id="guio-ara">
-    <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
-    <div class="nom2" id="guio-nom"></div>
-    <ul id="guio-punts"></ul>
-    <p class="preg" id="guio-preg"></p>
-  </section>
-
-  <section class="card">
-    <h2>Guió de tots els punts <b>toca per obrir</b></h2>
-    <div id="guio-tots"></div>
-    <div id="flora"></div>
-  </section>
-
   <section class="card">
     <h2>Control</h2>
     <div class="botons">
@@ -336,6 +324,21 @@ details.det.act summary{color:var(--ter)}
       <button class="btn s" id="b-reset">Reiniciar aquest dia</button>
     </div>
     <p class="nota" style="margin-top:10px">Funciona sense cobertura un cop oberta una vegada amb connexió. Pots dur el mòbil bloquejat: en desbloquejar-lo, l'app et torna a situar sobre el track i els km i desnivells fets inclouen tot el que has caminat mentrestant (el temps compta des de l'inici). El que no queda gravat és el traç real que has fet amb la pantalla apagada: si surts del track, grava amb el TwoNav. Els km i desnivells es calculen sobre el track (filtre de 5 m), no amb l'altímetre del mòbil.</p>
+  </section>
+</main>
+
+<main id="vguio" hidden>
+  <section class="card guio" id="guio-ara">
+    <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
+    <div class="nom2" id="guio-nom"></div>
+    <ul id="guio-punts"></ul>
+    <p class="preg" id="guio-preg"></p>
+  </section>
+
+  <section class="card">
+    <h2>Guió de tots els punts <b>toca per obrir</b></h2>
+    <div id="guio-tots"></div>
+    <div id="flora"></div>
   </section>
 </main>
 
