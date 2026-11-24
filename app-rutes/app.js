@@ -673,11 +673,20 @@ async function radarMostra(){ const el=$('av-map'); el.dataset.k='radar';
   radarPinta(); try{ await radarFrames(); radarPinta(); }catch(e){ el.innerHTML='<p class="nota" style="padding:14px">No s\'ha pogut carregar el radar. Torna-ho a provar amb cobertura.</p>'; } }
 // ---------- Mapes de fronts (Met Office: anàlisi + previsió fins a 5 dies) ----------
 const FR={k:'fronts-metoffice',i:0,play:null,vista:'mo'};
+// l'índex del Met Office no es pot llegir des de l'app (CORS); les imatges sí: provem les passades recents i els passos que existeixen
+const FR_B='https://data.consumer-digital.api.metoffice.gov.uk/v1/surface-pressure/colour/';
+const imgOk=u=>new Promise(ok=>{ const im=new Image(), t=setTimeout(()=>ok(false),10000); im.onload=()=>{clearTimeout(t);ok(true)}; im.onerror=()=>{clearTimeout(t);ok(false)}; im.src=u; });
 async function frontsIndex(){
   let idx=null; try{ idx=JSON.parse(localStorage.getItem(FR.k)); }catch(e){}
-  if(navigator.onLine){ try{ const r=await fetchT('https://data.consumer-digital.api.metoffice.gov.uk/v1/surface-pressure/colour',12000);
-      if(r.ok){ const j=await r.json(); const p=(j.products||[]).map(x=>({t:Date.parse(x.data_date),u:x.uri})).sort((a,b)=>a.t-b.t);
-        if(p.length){ idx={issued:j.issued,p}; try{ localStorage.setItem(FR.k,JSON.stringify(idx)); }catch(e){} } } }catch(e){} }
+  if(navigator.onLine&&(!idx||Date.now()-(idx.ts||0)>30*60e3)){ try{
+    const now=Date.now(), c=[]; let r=new Date(now); r.setUTCMinutes(0,0,0); r.setUTCHours(r.getUTCHours()>=12?12:0);
+    for(let k=0;k<4;k++){ c.push(new Date(+r-k*12*3600e3)); }
+    for(const d of c){ const run=d.toISOString().slice(0,10)+'T'+String(d.getUTCHours()).padStart(2,'0')+'00';
+      if(!(await imgOk(FR_B+run+'/FSXX00T_00.gif'))) continue;
+      const st=[0,12,24,36,48,60,72,84,96,120], ok=await Promise.all(st.map(h=>imgOk(FR_B+run+'/FSXX00T_'+String(h).padStart(2,'0')+'.gif')));
+      const p=st.filter((h,k)=>ok[k]).map(h=>({t:+d+h*3600e3,u:FR_B+run+'/FSXX00T_'+String(h).padStart(2,'0')+'.gif'}));
+      idx={issued:+d,ts:now,p}; try{ localStorage.setItem(FR.k,JSON.stringify(idx)); }catch(e){} break; }
+  }catch(e){} }
   return idx; }
 function frontsAtura(){ if(FR.play){ clearInterval(FR.play); FR.play=null; } }
 function frontsTxt(t,base){ const d=new Date(t), h=Math.round((t-base)/3600e3);
@@ -690,14 +699,14 @@ async function frontsMostra(){
     if(!navigator.onLine){ el.innerHTML=sub+'<p class="nota" style="padding:50px 14px">Sense connexió: aquest mapa només funciona amb cobertura.</p>'; lliga(); return; }
     const [la,lo]=avisosCentre();
     el.innerHTML=sub+`<iframe src="https://embed.windy.com/embed2.html?lat=41&lon=-4&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=4&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates&metricWind=km%2Fh&metricTemp=%C2%B0C" title="Pressió i vent (Windy)" style="border:0;width:100%;height:100%"></iframe>`; lliga(); return; }
-  el.style.height='auto'; el.innerHTML=sub+'<p class="nota" style="padding:50px 14px">Carregant mapes de fronts…</p>'; lliga();
+  el.style.height='auto'; el.innerHTML=sub+'<p class="nota" style="padding:50px 14px">Buscant els mapes de fronts més recents…</p>'; lliga();
   const idx=await frontsIndex();
   if(!idx){ el.innerHTML=sub+'<p class="nota" style="padding:50px 14px">No hi ha mapes de fronts desats: obre aquesta pestanya amb cobertura abans de sortir.</p>'; lliga(); return; }
   const P=idx.p, base=P[0].t; if(FR.i>=P.length) FR.i=0;
   const pinta=()=>{ const f=P[FR.i];
     el.innerHTML=sub+`<div style="padding-top:44px;background:#fff"><img src="${f.u}" alt="Mapa de fronts ${frontsTxt(f.t,base)}" style="width:100%;display:block" onerror="this.replaceWith(Object.assign(document.createElement('p'),{className:'nota',style:'padding:20px 14px',textContent:'Aquest mapa no s\\'ha pogut carregar (sense cobertura i no desat).'}))"></div>`+
       `<div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:#f4f1ea"><button class="btn s" id="fr-play" style="padding:4px 10px">${FR.play?'❚❚':'▶'}</button><input type="range" id="fr-sl" min="0" max="${P.length-1}" value="${FR.i}" style="flex:1"><b style="font-size:13px;white-space:nowrap">${frontsTxt(f.t,base)}</b></div>`+
-      `<div style="font-size:10px;text-align:right;padding:2px 6px;color:#6b7478">© Crown Copyright, Met Office · emès ${new Date(idx.issued).toLocaleString('ca-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`;
+      `<div style="font-size:10px;text-align:right;padding:2px 6px;color:#6b7478">© Crown Copyright, Met Office · passada de les ${new Date(idx.issued).toLocaleString('ca-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`;
     lliga();
     $('fr-sl').oninput=e=>{ FR.i=+e.target.value; frontsAtura(); pinta(); };
     $('fr-play').onclick=()=>{ if(FR.play) frontsAtura(); else FR.play=setInterval(()=>{ if(avZ!=='fronts'||$('vmet').hidden||FR.vista!=='mo'){frontsAtura();return;} FR.i=(FR.i+1)%P.length; pinta(); },1200); pinta(); }; };
