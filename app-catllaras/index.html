@@ -172,6 +172,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 .enllacos a{font-size:13px;font-weight:600;color:var(--pis);background:#e7e1d4;border-radius:99px;padding:6px 10px;text-decoration:none}
 .vrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:3px 0}
 .vrow i{width:14px;height:14px;border-radius:4px;display:inline-block;flex:none}
+.acu{color:#8a8478;font-weight:600;font-size:11px}
 </style>
 </head>
 <body>
@@ -254,7 +255,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 
   <section class="card">
     <h2>Trams <b id="sortida"></b></h2>
-    <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
+    <table><thead><tr><th>Punt</th><th>km<br><small class="acu">acum.</small></th><th>D+<br><small class="acu">acum.</small></th><th>D−<br><small class="acu">acum.</small></th><th>Temps<br><small class="acu">acum.</small></th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
     <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a la posta el dia 1 / les 15:30 al pàrquing el dia 2); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
   </section>
 
@@ -622,7 +623,7 @@ function render(){
   const base=INI?new Date(INI):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows='';
   R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k], salt=(s.salt||{})[k];
-    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}</td><td>${Math.round(x.up)}</td><td>${Math.round(x.dn)}</td><td>${hm(x.h)}</td><td>${rel(new Date(+base+acc*3600e3))}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
+    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}<br><small class="acu">${(R.cd[x.ib]/1000).toFixed(2).replace('.',',')}</small></td><td>${Math.round(x.up)}<br><small class="acu">${Math.round(R.cu[x.ib])}</small></td><td>${Math.round(x.dn)}<br><small class="acu">${Math.round(R.cn[x.ib])}</small></td><td>${hm(x.h)}<br><small class="acu">${hm(acc)}</small></td><td>${rel(new Date(+base+acc*3600e3))}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
   let H=R.trams.reduce((a,x)=>a+x.h,0);
   rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td></td><td></td><td></td></tr>`;
   set('trams',rows);
