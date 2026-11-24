@@ -425,7 +425,7 @@ document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
   if(v==='vlib') return; for(const id of ['vruta','vbri','vmet','v112','vlib']) $(id).hidden=id!==v;
   document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
-  window.scrollTo(0,0); if(v==='vbri') pintaBriefing(); if(v==='v112'){ pinta112(); pintaCob(); } if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} pintaPasTots(); if(!MPAS&&navigator.onLine) carregaMeteo(false); } });
+  window.scrollTo(0,0); if(v==='vbri') pintaBriefing(); if(v==='v112'){ pinta112(); pintaCob(); } if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} pintaPasTots(); if(navigator.onLine) carregaMeteo(false); } });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }
   try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
@@ -594,7 +594,7 @@ let MET=null; try{ MET=JSON.parse(localStorage.getItem(MET_KEY)); }catch(e){}
 let metDia=null;
 const WMO={0:'serè',1:'poc núvol',2:'mig núvol',3:'tapat',45:'boira',48:'boira gebradora',51:'plugim',53:'plugim',55:'plugim fort',56:'plugim gelant',57:'plugim gelant',61:'pluja feble',63:'pluja',65:'pluja forta',66:'pluja gelant',67:'pluja gelant',71:'neu feble',73:'neu',75:'neu forta',77:'neu granulada',80:'ruixats',81:'ruixats',82:'ruixats forts',85:'ruixats de neu',86:'ruixats de neu',95:'tempesta',96:'tempesta i calamarsa',99:'tempesta i calamarsa'};
 function diaSortida(){ const d=new Date(), k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return Object.values(DATES).includes(k); }
-function maxEdat(){ return diaSortida()?20*60e3:3*3600e3; }
+function maxEdat(){ return diaSortida()?20*60e3:3600e3; }
 // els dies de sortida es demanen pocs dies (resposta ~10 vegades més petita: entra amb cobertura feble)
 function fDies(){ if(!diaSortida()) return 16; const last=Math.max(...Object.values(DATES).map(x=>+new Date(x+'T12:00'))); return Math.min(16,Math.max(2,Math.ceil((last-Date.now())/864e5)+2)); }
 // es prova cada 2 min (si les dades són velles i hi ha xarxa); amb el mòbil bloquejat es prova en desbloquejar-lo
@@ -891,10 +891,10 @@ function pintaMeteo(){
     ['Windy',`https://www.windy.com/${A.lat.toFixed(3)}/${A.lon.toFixed(3)}?${A.lat.toFixed(3)},${A.lon.toFixed(3)},12`],
     ['AEMET · muntanya','https://www.aemet.es/ca/eltiempo/prediccion/montana']
   ].map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(t)}</a>`).join(''));
-  set('met-nota',`Previsió per hores d'Open-Meteo a tres alçades de la ruta (${MET_PTS.map(p=>esc(p.n)+' '+Math.round(p.e)+' m').join(', ')}), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada 20 min els dies de la sortida i cada 3 hores la resta. Contrasta-la amb el servei meteorològic oficial; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.`);
+  set('met-nota',`Previsió per hores d'Open-Meteo a tres alçades de la ruta (${MET_PTS.map(p=>esc(p.n)+' '+Math.round(p.e)+' m').join(', ')}), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada 20 min els dies de la sortida i cada hora la resta (i sempre que obres aquesta pestanya). Contrasta-la amb el servei meteorològic oficial; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.`);
   if(!MET){ set('met-act','sense dades'); set('met-dies',''); set('met-resum','<p class="nota">Toca «Actualitzar previsió» amb connexió.</p>'); set('met-hores',''); set('met-avisos',''); return; }
   const fa=Math.round((Date.now()-MET.ts)/60000);
-  set('met-act', 'actualitzada '+(fa<60?`fa ${fa} min`:fa<1440?`fa ${Math.round(fa/60)} h`:new Date(MET.ts).toLocaleDateString('ca-ES')));
+  set('met-act', 'actualitzada '+(fa<1440?'a les '+new Date(MET.ts).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})+(fa<60?` (fa ${fa} min)`:` (fa ${Math.round(fa/60)} h)`):new Date(MET.ts).toLocaleDateString('ca-ES')));
   const dies=diesMeteo(); if(!dies.length){ set('met-resum','<p class="nota">La previsió desada ja no cobreix els propers dies: actualitza-la.</p>'); return; }
   if(!metDia||!dies.find(x=>x.k===metDia)) metDia=(dies.find(x=>x.k===DATES[dia])||dies[0]).k;
   set('met-dies',dies.map(x=>`<button data-k="${x.k}" class="${x.k===metDia?'on':''}">${x.n}</button>`).join(''));
