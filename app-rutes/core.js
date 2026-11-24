@@ -116,6 +116,63 @@ function situaWaypoints(pts,wpts){
     return {i:x.i,k,n,desc:x.w.desc||''}; });
 }
 
+// ---------- punts automàtics (track sense waypoints) ----------
+// Cims, colls, refugis i fonts d'OpenStreetMap a tocar del track; peu i dalt de les pujades i baixades fortes;
+// punts de descans perquè cap tram passi de ~1 h 15 de marxa. Es tornen com a waypoints (lat, lon, nom, desc).
+const TIPUS_POI={peak:'Cim',saddle:'Coll',hut:'Refugi',spring:'Font',view:'Mirador'};
+function tipusPOI(cl,sub,nom){ const s=(cl+' '+sub).toLowerCase(), n=(nom||'').toLowerCase();
+  if(/alpine_hut|wilderness_hut|shelter|hut/.test(s)||/refug|cabana|cabaña|xalet|abric|bivac/.test(n)) return 'hut';
+  if(/spring|drinking_water|water_point/.test(s)||/^(font|fuente|fontaine)\b/.test(n)) return 'spring';
+  if(/viewpoint/.test(s)) return 'view';
+  return null; }
+function puntsAuto(pts,pois){
+  const st=estat(pts), n=pts.length, cd=st.cd, z=pts.map(p=>p[2]), out=[];
+  const hT=(a,b)=>hores((cd[b]-cd[a])/1000,st.cu[b]-st.cu[a],st.cn[b]-st.cn[a]);
+  const idxD=d=>{ let lo=0,hi=n-1; while(lo<hi){const m=(lo+hi)>>1; if(cd[m]<d) lo=m+1; else hi=m;} return lo; };
+  // 1) llocs d'OpenStreetMap a menys de 80 m del track
+  for(const q of pois||[]){ let b=-1,bd=80; for(let i=0;i<n;i+=1){ const d=hav([q.lat,q.lon],pts[i]); if(d<bd){bd=d;b=i;} }
+    if(b<0) continue; const t=TIPUS_POI[q.t]||'';
+    const nom=q.nom?(q.nom.toLowerCase().startsWith(t.toLowerCase())||q.t==='peak'||q.t==='saddle'?q.nom:t+' '+q.nom):t;
+    out.push({i:b,pri:q.t==='hut'?5:q.t==='peak'||q.t==='saddle'?4:q.t==='spring'?3:2,nom,desc:q.t==='spring'?'Font: comprova si raja abans de comptar-hi':q.ele?Math.round(q.ele)+' m':''}); }
+  // 2) pujades i baixades fortes (≥ 150 m de desnivell amb pendent mitjà ≥ 12 %)
+  // trams drets: on els 400 m següents guanyen (o perden) ≥ 15 %; s'ajunten els consecutius i es queden els de ≥ 100 m de desnivell
+  const trams=sg=>{ const y=z.map(v=>v*sg), L=[]; let j=0, bl=null;
+    for(let i=0;i<n;i++){ while(j<n-1&&cd[j]-cd[i]<400) j++; const dret=cd[j]-cd[i]>=200&&(y[j]-y[i])/(cd[j]-cd[i])>=0.15;
+      if(dret){ if(!bl) bl={s:i,f:j}; else bl.f=Math.max(bl.f,j); }
+      else if(bl&&i>bl.f&&cd[i]-cd[bl.f]>300){ L.push(bl); bl=null; } }
+    if(bl) L.push(bl);
+    return L.map(b=>{ let e=b.s; for(let k=b.s;k<=b.f;k++) if(y[k]>y[e]) e=k; return {s:b.s,e,g:Math.round(y[e]-y[b.s]),d:cd[e]-cd[b.s]}; }).filter(c=>c.g>=100&&c.d>0); };
+  for(const c of trams(1)){ const pc=Math.round(c.g/c.d*100);
+    out.push({i:c.s,pri:3,nom:'Peu de pujada forta',desc:`+${c.g} m en ${(c.d/1000).toFixed(1).replace('.',',')} km (${pc} %): treure capa, beure i agrupar`});
+    if(c.g>=150) out.push({i:c.e,pri:2,nom:'Dalt de la pujada',desc:'Agrupar el grup i abrigar-se si fa vent'}); }
+  for(const c of trams(-1)){ const pc=Math.round(c.g/c.d*100);
+    out.push({i:c.s,pri:2,nom:'Inici de baixada forta',desc:`−${c.g} m en ${(c.d/1000).toFixed(1).replace('.',',')} km (${pc} %): bastons, ritme pautat`}); }
+  // 3) treure repetits (< 250 m): es queda el de més prioritat
+  out.sort((a,b)=>b.pri-a.pri); const sel=[];
+  for(const c of out){ if(c.i<=0||c.i>=n-1) continue; if(cd[c.i]<200||cd[n-1]-cd[c.i]<200) continue;
+    if(sel.some(s=>Math.abs(cd[s.i]-cd[c.i])<250)) continue; sel.push(c); }
+  sel.sort((a,b)=>a.i-b.i);
+  // 4) punts de descans: cap tram de més de 1 h 15 de marxa (es parteix cap a la meitat, en un lloc poc dret)
+  const talls=[0,...sel.map(s=>s.i),n-1]; let canvi=true, guard=0;
+  while(canvi&&guard++<40){ canvi=false;
+    for(let k=0;k<talls.length-1;k++){ const a=talls[k], b=talls[k+1], h=hT(a,b); if(h<=1.25) continue;
+      const parts=Math.ceil(h/1.0); let best=-1, bs=1e9;
+      for(let i=a+1;i<b;i++){ const f=hT(a,i)/h; if(Math.abs(f-1/parts)>0.12) continue;
+        const j=idxD(cd[i]+60), sl=Math.abs(z[Math.min(j,n-1)]-z[i])/Math.max(1,cd[Math.min(j,n-1)]-cd[i]); const sc=sl+Math.abs(f-1/parts);
+        if(sc<bs){bs=sc;best=i;} }
+      if(best<0) best=idxD(cd[a]+(cd[b]-cd[a])/parts);
+      sel.push({i:best,pri:1,nom:'Punt de descans',desc:`Parada curta: ${hm0(hT(0,best))} de marxa des de l'inici`}); talls.splice(k+1,0,best); canvi=true; break; } }
+  sel.sort((a,b)=>a.i-b.i);
+  return sel.map(s=>({lat:pts[s.i][0],lon:pts[s.i][1],nom:s.nom,desc:s.desc,auto:true}));
+}
+const hm0=h=>{ const t=Math.round(h*60); return Math.floor(t/60)+' h '+String(t%60).padStart(2,'0'); };
+// cruïlles del pla A amb camins que en surten (per buscar-hi plans B), una cada 400 m com a molt
+function cruillesTrack(G,tn,pts){ const st=estat(pts), out=[], tset=new Set(tn); let last=-1e9;
+  tn.forEach((v,i)=>{ if(i<2||i>pts.length-3) return;
+    const surt=G.adj[v].some(([u])=>!tset.has(u)&&G.adj[u].filter(([,,t])=>t!==5).length>=3);
+    if(!surt||st.cd[i]-last<400) return; out.push(i); last=st.cd[i]; });
+  return out; }
+
 // ---------- camins d'OpenStreetMap (teselles vectorials d'OpenFreeMap) ----------
 function llegeixMVT(buf){
   const u=new Uint8Array(buf); let p=0;
@@ -161,10 +218,17 @@ async function camins(S,W,N,E,log){
   const tj=await (await fetchT('https://tiles.openfreemap.org/planet',20000)).json();
   const tpl=tj.tiles[0], Z=14, [xa,ya]=wpx(N,W,Z), [xb,yb]=wpx(S,E,Z), tls=[];
   for(let x=Math.floor(xa/256);x<=Math.floor(xb/256);x++) for(let y=Math.floor(ya/256);y<=Math.floor(yb/256);y++) tls.push([x,y]);
-  const ways=[]; let fet=0, i=0;
+  const ways=[], pois=[]; let fet=0, i=0; ways.pois=pois;
   const work=async()=>{ while(i<tls.length){ const [tx,ty]=tls[i++];
     const r=await fetchT(tpl.replace('{z}',Z).replace('{x}',tx).replace('{y}',ty),20000); if(!r.ok) throw new Error('tesella '+r.status);
-    for(const L of llegeixMVT(await r.arrayBuffer())){ if(L.name!=='transportation') continue;
+    for(const L of llegeixMVT(await r.arrayBuffer())){
+      if(L.name==='mountain_peak'||L.name==='poi'){ // cims, colls, refugis, fonts
+        const tag=(F,k)=>{ const ki=L.keys.indexOf(k); if(ki<0) return ''; for(let j=0;j<F.tags.length;j+=2) if(F.tags[j]===ki) return L.vals[F.tags[j+1]]; return ''; };
+        for(const F of L.feats){ if(F.type!==1) continue; const cl=String(tag(F,'class')||''), sub=String(tag(F,'subclass')||''), nom=String(tag(F,'name')||tag(F,'name:latin')||'');
+          const t=L.name==='mountain_peak'?(/saddle/.test(cl)?'saddle':/peak|volcano/.test(cl)?'peak':null):tipusPOI(cl,sub,nom); if(!t) continue;
+          for(const pt of liniesMVT(F.geom)){ const s2=256/L.extent, [lat,lon]=unwpx((tx*L.extent+pt[0])*s2,(ty*L.extent+pt[1])*s2,Z); pois.push({t,nom,lat,lon,ele:+tag(F,'ele')||null}); } }
+        continue; }
+      if(L.name!=='transportation') continue;
       const ki=L.keys.indexOf('class'), si=L.keys.indexOf('subclass');
       for(const F of L.feats){ if(F.type!==2) continue; let cl='',sub='';
         for(let j=0;j<F.tags.length;j+=2){ if(F.tags[j]===ki) cl=L.vals[F.tags[j+1]]; else if(F.tags[j]===si) sub=L.vals[F.tags[j+1]]; }
@@ -199,7 +263,7 @@ function estat(pts){ const cd=[0],cu=[0],cn=[0]; let ref=pts[0][2];
   return {cd,cu,cn}; }
 function hA(st,i0,i1){ return hores((st.cd[i1]-st.cd[i0])/1000,st.cu[i1]-st.cu[i0],st.cn[i1]-st.cn[i0]); }
 
-function plansBDia(G,dia,trackNodes){
+function plansBDia(G,dia,trackNodes,extra={}){
   const pts=dia.pts, n=pts.length, st=estat(pts), fi=trackNodes[n-1], ini=trackNodes[0];
   // per cada punt de la ruta: el node del graf més proper (els nodes del track hi són sempre)
   const prop=i=>trackNodes[i];
@@ -208,7 +272,15 @@ function plansBDia(G,dia,trackNodes){
     for(let a=-1;a<=1;a++) for(let c=-1;c<=1;c++) for(const i of grid.get((ci+a)+','+(cj+c))||[]){ if(i<minI) continue; const d=hav(ll,pts[i]); if(d<bd){bd=d;b=i;} } return b; };
   const cands=[];
   const decisions=dia.wp.filter(w=>w.i>0&&w.i<n-1).map(w=>w.i);
+  for(const i of extra.cruilles||[]) if(!decisions.some(j=>Math.abs(st.cd[j]-st.cd[i])<150)) decisions.push(i);
+  decisions.sort((a,b)=>a-b);
   if(decisions.length<2){ for(let i=1;i<6;i++) decisions.push(Math.round(i*(n-1)/6)); }
+  // refugis a prop però fora del track: possibles destinacions de pla B (per fer-hi nit o protegir-se)
+  const refs=[]; { const C=0.0008, cell=new Map(); G.ll.forEach((p,i)=>{ if(!G.adj[i].length) return; const k=Math.floor(p[0]/C)+','+Math.floor(p[1]/C); (cell.get(k)||cell.set(k,[]).get(k)).push(i); });
+    for(const q of (extra.pois||[]).filter(q=>q.t==='hut')){ if(aprop([q.lat,q.lon],200)>=0) continue;
+      let b=-1,bd=80; const ci=Math.floor(q.lat/C), cj=Math.floor(q.lon/C);
+      for(let a=-1;a<=1;a++) for(let c=-1;c<=1;c++) for(const u of cell.get((ci+a)+','+(cj+c))||[]){ const d=hav([q.lat,q.lon],G.ll[u]); if(d<bd){bd=d;b=u;} }
+      if(b>=0&&!refs.some(r=>hav([r.q.lat,r.q.lon],[q.lat,q.lon])<300)) refs.push({q,node:b}); } }
   for(const i0 of decisions){
     const hRest=hA(st,i0,n-1); if(hRest<0.75) continue; // a menys de ~45 min del final no cal pla B
     // 1) cap al final de la ruta pel camí més ràpid · 2) cap a la carretera/pista asfaltada més propera (accés amb vehicle)
@@ -223,6 +295,8 @@ function plansBDia(G,dia,trackNodes){
       const pen=new Set(); if(fora.length) G.adj.forEach((ed,u)=>{ if(!aProp(G.ll[u])) return; for(const [v] of ed) if(aProp(G.ll[v])) pen.add(u<v?u+','+v:v+','+u); });
       const R1b=dijkstra(G,prop(i0),null,pen); if(R1b.D[fi]<Infinity) opcions.push({tipus:'final',nodes:cami(R1b,fi)}); }
     if(hav(pts[0],pts[n-1])>300&&R1.D[ini]<Infinity) opcions.push({tipus:'inici',nodes:cami(R1,ini)});
+    { const rr=refs.filter(r=>R1.D[r.node]<Infinity).sort((a,b)=>R1.D[a.node]-R1.D[b.node])[0];
+      if(rr) opcions.push({tipus:'refugi',nodes:cami(R1,rr.node),ref:rr.q.nom?(/refug|cabana|cabaña|xalet|abric/i.test(rr.q.nom)?rr.q.nom:'Refugi '+rr.q.nom):'Refugi'}); }
     const R2=dijkstra(G,prop(i0),u=>G.adj[u].some(([,,t])=>t<=1)&&aprop(G.ll[u],150)<0);
     if(R2.fi>=0) opcions.push({tipus:'vehicle',nodes:cami(R2,R2.fi)});
     for(const o of opcions){
@@ -243,30 +317,36 @@ function plansBDia(G,dia,trackNodes){
       DBG(`hB=${hB.toFixed(2)} hAr=${hAr.toFixed(2)} km=${km.toFixed(2)}`);
       if(o.tipus==='final'&&(ib==null||ib<=ia+3)) continue;
       if(o.tipus==='final'&&!(hAr-hB>=1/3||(hAr-hB>=0.2&&hB<hAr*0.88))) continue; // ha d'estalviar temps de veritat: ≥ 20 min, o ≥ 12 min i ≥ 12 %
-      if(o.tipus!=='final'&&!(hores(km,up,dn)<hAr*0.8)) continue;
+      if(o.tipus==='refugi'&&!(hores(km,up,dn)<hAr*0.9&&hores(km,up,dn)<3)) continue;
+      if(o.tipus!=='final'&&o.tipus!=='refugi'&&!(hores(km,up,dn)<hAr*0.8)) continue;
       if(o.tipus==='inici'&&onA.slice(s,e+1).filter(j=>j>=0).length/(e-s+1)>0.7) {DBG('tornada pel mateix camí');continue;}
       // composició del camí i pendent màxima
       const mix=[0,0,0,0,0,0]; let pmax=0;
       for(let k=s+1;k<=e;k++){ const a=o.nodes[k-1], b=o.nodes[k], ed=G.adj[a].find(x=>x[0]===b); const d=hav(G.ll[a],G.ll[b]); if(ed) mix[ed[2]]+=d; }
       for(let k=0,j=0;k<tram.length;k++){ while(j<tram.length-1&&S.cd[j]-S.cd[k]<60) j++; const d=S.cd[j]-S.cd[k]; if(d>40) pmax=Math.max(pmax,Math.abs(tram[j][2]-tram[k][2])/d*100); }
       const tot=mix.reduce((a,b)=>a+b,0)||1, mid=tram[Math.floor(tram.length/2)];
-      cands.push({tipus:o.tipus,ia,ib:o.tipus==='final'?ib:null,pts:tram.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),p[2]]),km:+km.toFixed(3),up:Math.round(up),dn:Math.round(dn),
+      cands.push({tipus:o.tipus,ref:o.ref,ia,ib:o.tipus==='final'?ib:null,pts:tram.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),p[2]]),km:+km.toFixed(3),up:Math.round(up),dn:Math.round(dn),
         estalvi:hAr-hB,q:{pista:Math.round((mix[1]+mix[2])/tot*100),corriol:Math.round((mix[3]+mix[4])/tot*100),carretera:Math.round(mix[0]/tot*100),plaA:Math.round(mix[5]/tot*100),pmax:Math.round(pmax),
         strava:`https://www.strava.com/maps/global-heatmap?sport=Run&style=standard#15/${mid[0].toFixed(5)}/${mid[1].toFixed(5)}`}});
     }
   }
   // treure repetits: mateix destí i traçat semblant → ens quedem el de la cruïlla més tardana
-  const sem=(a,b)=>{ if(a.tipus!==b.tipus) return false; let c=0; for(const p of a.pts){ if(b.pts.some(q=>hav(p,q)<30)) c++; } return c/a.pts.length>0.6; };
+  const sem=(a,b)=>{ if(a.tipus!==b.tipus||a.ref!==b.ref) return false; let c=0; for(const p of a.pts){ if(b.pts.some(q=>hav(p,q)<30)) c++; } return c/a.pts.length>0.6; };
   cands.sort((a,b)=>b.ia-a.ia);
   const tri=[]; for(const c of cands) if(!tri.some(t=>sem(c,t)||sem(t,c))) tri.push(c);
   tri.sort((a,b)=>a.ia-b.ia);
   const nomP=i=>{ const w=[...dia.wp].reverse().find(x=>x.i<=i); const d=st.cd[i]-st.cd[w.i]; return d<80?w.k:`${w.k} + ${(d/1000).toFixed(1).replace('.',',')} km`; };
-  return tri.slice(0,6).map((c,j)=>({id:'B'+(j+1),ia:c.ia,ib:c.ib,pts:c.pts,km:c.km,up:c.up,dn:c.dn,q:c.q,
-    fi:c.tipus==='final'?undefined:c.tipus==='inici'?'Inici':'Accés amb vehicle',
-    nom:c.tipus==='final'?`Drecera des de ${nomP(c.ia)}`:c.tipus==='inici'?`Tornada a l'inici des de ${nomP(c.ia)}`:`Sortida a pista o carretera des de ${nomP(c.ia)}`,
-    desc:c.tipus==='final'?`Camí més ràpid fins al final que surt del pla A a ${nomP(c.ia)} i hi torna a ${nomP(c.ib)}.`:
-      c.tipus==='inici'?`Camí més ràpid per tornar al punt d'inici des de ${nomP(c.ia)}.`:`Camí més ràpid fins a una carretera o camí asfaltat on pot arribar un vehicle (comprova'n l'accés).`}));
+  return nomenaPB(tri.slice(0,7).map((c,j)=>({id:'B'+(j+1),tipus:c.tipus,ia:c.ia,ib:c.ib,pts:c.pts,km:c.km,up:c.up,dn:c.dn,q:c.q,ref:c.ref})),dia);
 }
+function nomenaPB(L,dia){ const st=estat(dia.pts);
+  const nomP=i=>{ const w=[...dia.wp].reverse().find(x=>x.i<=i); const d=st.cd[i]-st.cd[w.i]; return d<80?w.k:`${w.k} + ${(d/1000).toFixed(1).replace('.',',')} km`; };
+  return L.map(c=>({...c,
+    fi:c.tipus==='final'?undefined:c.tipus==='inici'?'Inici':c.tipus==='refugi'?c.ref:'Accés amb vehicle',
+    nom:c.tipus==='final'?`Drecera des de ${nomP(c.ia)}`:c.tipus==='inici'?`Tornada a l'inici des de ${nomP(c.ia)}`:c.tipus==='refugi'?`Desviament al ${c.ref} des de ${nomP(c.ia)}`:`Sortida a pista o carretera des de ${nomP(c.ia)}`,
+    desc:c.tipus==='final'?`Camí més ràpid fins al final que surt del pla A a ${nomP(c.ia)} i hi torna a ${nomP(c.ib)}.`:
+      c.tipus==='inici'?`Camí més ràpid per tornar al punt d'inici des de ${nomP(c.ia)}.`:
+      c.tipus==='refugi'?`Camí fins al refugi per fer-hi nit o protegir-se si es fa fosc o es gira el temps. Comprova si és guardat i truca-hi per avisar.`:
+      `Camí més ràpid fins a una carretera o camí asfaltat on pot arribar un vehicle (comprova'n l'accés).`})); }
 
 // ---------- processar una ruta nova ----------
 async function creaRuta(nom,dies,opc,log){
@@ -282,9 +362,9 @@ async function creaRuta(nom,dies,opc,log){
     if(demOk&&(opc.dem||d.pts.some(p=>p[2]==null))) d.pts=d.pts.map(p=>{const z=alt(p[0],p[1]); return [p[0],p[1],isNaN(z)?p[2]:Math.round(z*10)/10];});
     if(d.pts.some(p=>p[2]==null)) throw new Error('El GPX no té alçades i no s\'ha pogut descarregar el model del terreny.');
     d.pts=d.pts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),+(+p[2]).toFixed(1)]);
-    d.wp=situaWaypoints(d.pts,d.wpts); delete d.wpts;
+    d.auto=!(d.wpts||[]).length; d.wp=situaWaypoints(d.pts,d.auto?puntsAuto(d.pts,[]):d.wpts); delete d.wpts;
     d.ves=demOk?vessantsDe(d.pts):[];
-    lg(`${d.titol}: ${(estat(d.pts).cd.at(-1)/1000).toFixed(1).replace('.',',')} km, ${d.wp.length} punts`);
+    lg(`${d.titol}: ${(estat(d.pts).cd.at(-1)/1000).toFixed(1).replace('.',',')} km, ${d.wp.length} punts${d.auto?' (automàtics: el GPX no en porta)':''}`);
   }
   if(opc.pb&&demOk){
     try{
@@ -308,7 +388,13 @@ async function creaRuta(nom,dies,opc,log){
         tn.forEach(v=>{ const p=G.ll[v], ci=Math.floor(p[0]/C), cj=Math.floor(p[1]/C); let b=-1,bd=20;
           for(let a=-1;a<=1;a++) for(let c=-1;c<=1;c++) for(const u of cell.get((ci+a)+','+(cj+c))||[]){ const dd=hav(p,G.ll[u]); if(dd<bd){bd=dd;b=u;} }
           if(b>=0) aresta(G,v,b,5); });
-        d.plansb=plansBDia(G,d,tn);
+        if(d.auto){ d.autoW=puntsAuto(d.pts,ways.pois); d.wp=situaWaypoints(d.pts,d.autoW); }
+        d.plansb=plansBDia(G,d,tn,{pois:ways.pois,cruilles:d.auto?cruillesTrack(G,tn,d.pts):[]});
+        if(d.auto&&d.plansb.length){ // un punt de pas a cada cruïlla de pla B
+          const cdA=estat(d.pts).cd, W=d.autoW.slice();
+          for(const b of d.plansb) if(!d.wp.some(w=>Math.abs(cdA[w.i]-cdA[b.ia])<150)) W.push({lat:d.pts[b.ia][0],lon:d.pts[b.ia][1],nom:'Cruïlla del '+b.id,desc:'Punt de decisió: '+(b.tipus==='refugi'?'desviament al '+b.ref:b.tipus==='final'?'drecera':b.tipus==='inici'?'tornada a l\'inici':'sortida a pista o carretera'),auto:true});
+          d.wp=situaWaypoints(d.pts,W); d.plansb=nomenaPB(d.plansb,d); }
+        delete d.autoW;
         lgu(`Plans B · ${d.titol}: ${d.plansb.length}`); await new Promise(r=>setTimeout(r,10));
       }
     }catch(e){ lg('Plans B: no s\'han pogut calcular ('+e.message+'). Torna-ho a provar amb connexió.'); dies.forEach(d=>d.plansb=d.plansb||[]); }
@@ -321,7 +407,7 @@ async function creaRuta(nom,dies,opc,log){
   if(metPts[1].e<=metPts[0].e) metPts[1].e=metPts[0].e+1; if(metPts[2].e<=metPts[1].e) metPts[2].e=metPts[1].e+1;
   const c=[(S+N)/2,(W+E)/2];
   const r={id:opc.id||('r'+Date.now().toString(36)),nom,creat:new Date().toISOString(),dem:demOk,catalunya:c[0]>40.4&&c[0]<42.95&&c[1]>0.1&&c[1]<3.4,metPts,
-    dies:dies.map(d=>({key:d.key,titol:d.titol,data:d.data,sortida:d.sortida,objectiu:d.objectiu,pts:d.pts,wp:d.wp,ves:d.ves,plansb:d.plansb})),info:{},tels:[]};
+    dies:dies.map(d=>({key:d.key,titol:d.titol,data:d.data,sortida:d.sortida,objectiu:d.objectiu,pts:d.pts,wp:d.wp,auto:!!d.auto,ves:d.ves,plansb:d.plansb})),info:{},tels:[]};
   desaRuta(r);
   lg(`Fet en ${Math.round((Date.now()-t0)/1000)} s.`);
   return r;
@@ -497,5 +583,5 @@ window.arrencaApp=function(){
   const s=document.createElement('script'); s.src='app.js'; document.body.appendChild(s);
 };
 // per a les proves
-window.__core={carregaDEM,alt,camins,nouGraf,node,aresta,dijkstra,cami,estat,hores,hav,unwpx,cost,preparaDies,sincronitzaPublicades,peticioClaude,aplicaResposta,llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
+window.__core={esborraRuta,puntsAuto,cruillesTrack,nomenaPB,camins,carregaDEM,alt,camins,nouGraf,node,aresta,dijkstra,cami,estat,hores,hav,unwpx,cost,preparaDies,sincronitzaPublicades,peticioClaude,aplicaResposta,llegeixGPX,situaWaypoints,vessantsDe,estat,creaRuta,generaGuio,carregaRuta,desaRuta};
 })();

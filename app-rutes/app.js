@@ -393,7 +393,7 @@ function sumaHora(hh,h){ const [a,b]=hh.split(':').map(Number), t=Math.round(a*6
 function pintaBriefing(){ const el=$('bri'); if(!el) return; const B=briDades(), E=B.fet||{};
   const guia=CONF.guiaNom||'el vostre guia', tel=(CONF.guiaTel||'').trim();
   const dies=DIES.map((k,j)=>({k,j,r:resumDia(k)}));
-  const nomW=w=>esc((w.n||w.k).split(' · ').pop());
+  const nomW=w=>{ const p=(w.n||w.k).split(' · '); return esc(p[1]||p[0]); };
   const sec=(n,id,tit,cos)=>`<section class="card${E[id]?' fet':''}" data-s="${id}"><h2><span><i>${n}</i>${tit}</span><label><input type="checkbox" ${E[id]?'checked':''}>fet</label></h2>${cos}</section>`;
   const ta=(id,ph,rows=3)=>`<textarea class="bri-t" data-f="${id}" rows="${rows}" placeholder="${ph}">${esc(B[id]||'')}</textarea>`;
   const r0=dies[0].r, p0=r0.ini;

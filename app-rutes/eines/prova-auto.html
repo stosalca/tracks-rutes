@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="ca"><head><meta charset="utf-8"><title>Prova · punts automàtics</title>
+<style>body{font:14px/1.45 system-ui,sans-serif;margin:12px}pre{white-space:pre-wrap;background:#f4efe5;padding:8px;border-radius:8px}</style></head><body>
+<h3>Prova de punts automàtics i plans B (track sense waypoints)</h3>
+<p>Paràmetre <code>?gpx=</code> amb la ruta d'un GPX del repositori (se'n treuen els waypoints).</p>
+<pre id="log">…</pre><pre id="out"></pre>
+<script src="../core.js"></script>
+<script>
+(async()=>{ const q=new URLSearchParams(location.search), u=q.get('gpx')||'../../catllaras/fitxa/Catllaras_Dia1_PlaA.gpx';
+  const log=m=>document.getElementById('log').textContent=m;
+  try{ const t=await (await fetch(u)).text(); const g=window.__core.llegeixGPX(t,'prova.gpx');
+    const tr=g.trks[0]; const dies=[{key:'dia1',titol:tr.nom||'Prova',data:'',sortida:'09:00',objectiu:'17:00',pts:tr.pts,wpts:[]}];
+    const r=await window.__core.creaRuta('Prova automàtica',dies,{pb:true,dem:false,id:'prova-auto'},log);
+    const d=r.dies[0];
+    document.getElementById('out').textContent='PUNTS ('+d.wp.length+')\n'+d.wp.map(w=>w.k+' · '+w.n).join('\n')+'\n\nPLANS B ('+d.plansb.length+')\n'+d.plansb.map(b=>b.id+' '+b.tipus+' · '+b.nom+' · '+b.km+' km · fi: '+(b.fi||'final')).join('\n');
+    try{ window.__core.esborraRuta&&window.__core.esborraRuta('prova-auto'); }catch(e){}
+  }catch(e){ document.getElementById('out').textContent='ERROR: '+e.message+'\n'+e.stack; } })();
+</script></body></html>
