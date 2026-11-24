@@ -66,6 +66,7 @@ svg{display:block;width:100%;height:auto}
 .btn{flex:1;min-width:130px;border:0;border-radius:12px;padding:13px 10px;font:700 15px inherit;font-family:inherit;background:var(--pis);color:var(--sor)}
 .btn.t{background:var(--ter)}
 .btn.s{background:#e7e1d4;color:var(--pis)}
+#av-map .btn{min-width:0;flex:0 0 auto;width:auto;padding:5px 10px;font-size:13px;box-shadow:0 1px 3px #0003}#av-map .btn.on{background:var(--pis);color:var(--sor)}
 table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 th{font-size:11px;text-align:right;color:var(--gris);font-weight:700;padding:4px 3px;border-bottom:1px solid #e4ddcf}
 td{text-align:right;padding:6px 3px;border-bottom:1px solid #f0ebe1}
@@ -1124,7 +1125,10 @@ function ventDir(g){ if(g==null||isNaN(g)) return null; const k=Math.round(((g%3
 function fletxa(g,mida){ return `<span class="fv" style="transform:rotate(${(g+180)%360}deg);${mida?'font-size:'+mida+'px':''}" title="bufa de ${Math.round(g)}°">↑</span>`; }
 function dirMitjana(a){ let x=0,y=0; a.forEach(([g,w])=>{ if(g==null) return; x+=Math.sin(g*Math.PI/180)*(w||1); y+=Math.cos(g*Math.PI/180)*(w||1); }); return (x||y)?(Math.atan2(x,y)*180/Math.PI+360)%360:null; }
 // ---------- Radar de pluja (RainViewer) sobre mapa base, amb la ruta ----------
-const RV={fr:null,ts:0,i:0,z:9,play:null};
+const RV={fr:null,ts:0,i:0,z:11,play:null,vista:'ruta'};
+// a Catalunya: «Amb la ruta» (RainViewer, hi dibuixem la ruta) o «Meteocat» (més precís, però no s'hi pot dibuixar)
+function rvSub(){ return esCat(...avisosCentre())?`<div style="position:absolute;left:8px;top:${RV.vista==='mc'?8:44}px;z-index:3;display:flex;gap:6px"><button class="btn s ${RV.vista==='ruta'?'on':''}" data-rv="ruta" style="padding:4px 10px">Amb la ruta</button><button class="btn s ${RV.vista==='mc'?'on':''}" data-rv="mc" style="padding:4px 10px">Meteocat</button></div>`:''; }
+function rvSubLliga(){ document.querySelectorAll('#av-map [data-rv]').forEach(b=>b.onclick=()=>{ RV.vista=b.dataset.rv; radarAtura(); const el=$('av-map'); el.dataset.k=''; pintaAvisos(); }); }
 async function radarFrames(){ if(RV.fr&&Date.now()-RV.ts<5*60e3) return RV.fr;
   const r=await fetchT('https://api.rainviewer.com/public/weather-maps.json',15000); const j=await r.json();
   RV.fr=(j.radar.past||[]).concat(j.radar.nowcast||[]).map(f=>({t:f.time*1000,u:j.host+f.path})); RV.ts=Date.now(); RV.i=RV.fr.length-1;
@@ -1145,7 +1149,7 @@ function rvTiles(z,W,H,f){ const {x0,y0}=rvGeo(z,W,H), base=[], rad=[];
 let RVPRE=0;
 async function radarPrecarrega(){
   if(!navigator.onLine||Date.now()-RVPRE<10*60e3||typeof caches==='undefined') return; RVPRE=Date.now();
-  try{ RV.ts=0; const fr=await radarFrames(), W=($('av-map')||{}).clientWidth||380, H=440, z=9, us=new Set();
+  try{ RV.ts=0; const fr=await radarFrames(), W=($('av-map')||{}).clientWidth||380, H=440, z=RV.z, us=new Set();
     fr.forEach(f=>{ const t=rvTiles(z,W,H,f); t.base.concat(t.rad).forEach(x=>us.add(x.u)); });
     for(const u of us){ try{ await fetch(u,{mode:'no-cors'}); }catch(e){} }
     const c=await caches.open(RV_CACHE), ks=await c.keys(), vius=fr.map(f=>f.u);
@@ -1158,15 +1162,19 @@ function radarPinta(){
   T.base.forEach(t=>{ h+=`<img src="${t.u}" style="position:absolute;left:${t.x}px;top:${t.y}px;width:256px;height:256px" alt="">`; });
   T.rad.forEach(t=>{ h+=`<img src="${t.u}" style="position:absolute;left:${t.x}px;top:${t.y}px;width:${t.s}px;height:${t.s}px;opacity:.8;image-rendering:auto" alt="">`; });
   const pts=p.map(q=>{const [x,y]=wpx(q[0],q[1],z); return (x-x0).toFixed(1)+','+(y-y0).toFixed(1);}).join(' ');
-  let g=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="6" opacity=".9"/><polyline points="${pts}" fill="none" stroke="#7a3cc8" stroke-width="3"/>`;
+  const [sx,sy]=wpx(p[0][0],p[0][1],z), [ex,ey]=wpx(p[p.length-1][0],p[p.length-1][1],z);
+  let g=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="8" opacity=".95" stroke-linejoin="round"/><polyline points="${pts}" fill="none" stroke="#7a3cc8" stroke-width="4" stroke-linejoin="round"/>`+
+    (()=>{ const la=p.reduce((a,q)=>a+q[0],0)/p.length, lo=p.reduce((a,q)=>a+q[1],0)/p.length, [cx,cy]=wpx(la,lo,z), [rx]=wpx(la,lo+5/(111.32*Math.cos(la*Math.PI/180)),z), r=rx-cx;
+      return `<circle cx="${cx-x0}" cy="${cy-y0}" r="${r}" fill="none" stroke="#7a3cc8" stroke-width="1.5" stroke-dasharray="6 5" opacity=".8"/><text x="${cx-x0+r*0.72+4}" y="${cy-y0-r*0.72}" font-size="11" font-weight="700" fill="#7a3cc8" stroke="#fff" stroke-width="3" paint-order="stroke">5 km</text>`; })()+
+    `<circle cx="${sx-x0}" cy="${sy-y0}" r="6" fill="#2e7d32" stroke="#fff" stroke-width="2"/><circle cx="${ex-x0}" cy="${ey-y0}" r="6" fill="#c0392b" stroke="#fff" stroke-width="2"/>`;
   if(lastFix&&!prova){ const [x,y]=wpx(lastFix.lat,lastFix.lon,z); g+=`<circle cx="${x-x0}" cy="${y-y0}" r="7" fill="#1f6fb2" stroke="#fff" stroke-width="3"/>`; }
   const bar=W/2-60;
   h+=`<svg width="${W}" height="${H}" style="position:absolute;left:0;top:0">${g}</svg>`+
     `<div style="position:absolute;left:8px;top:8px;background:#fffd;border-radius:8px;padding:4px 8px;font-weight:700;font-size:13px">${f?new Date(f.t).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})+(!navigator.onLine?' · fa '+fmtFa(Date.now()-f.t)+' · sense cobertura':RV.i===RV.fr.length-1?' · ara':' · fa '+Math.round((RV.fr[RV.fr.length-1].t-f.t)/60000)+' min'):'carregant radar…'}</div>`+
-    `<div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px"><button class="btn s" data-rz="1" style="width:36px;padding:4px">+</button><button class="btn s" data-rz="-1" style="width:36px;padding:4px">−</button></div>`+
-    `<div style="position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:8px;align-items:center;background:#fffd;border-radius:10px;padding:4px 8px"><button class="btn s" id="rv-play" style="padding:4px 10px">${RV.play?'❚❚':'▶'}</button><input type="range" id="rv-sl" min="0" max="${RV.fr?RV.fr.length-1:0}" value="${RV.i}" style="flex:1"></div>`+
+    `<div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px"><button class="btn s" data-rz="1" style="width:36px;flex:0 0 auto;padding:4px">+</button><button class="btn s" data-rz="-1" style="width:36px;flex:0 0 auto;padding:4px">−</button></div>`+
+    `<div style="position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:8px;align-items:center;background:#fffd;border-radius:10px;padding:4px 8px"><button class="btn s" id="rv-play" style="padding:4px 10px;width:auto;flex:0 0 auto">${RV.play?'❚❚':'▶'}</button><input type="range" id="rv-sl" min="0" max="${RV.fr?RV.fr.length-1:0}" value="${RV.i}" style="flex:1"></div>`+
     `<div style="position:absolute;right:4px;bottom:52px;font-size:10px;background:#fffc;padding:1px 4px;border-radius:4px">© RainViewer · © CARTO · © OSM</div>`;
-  el.innerHTML=h;
+  el.innerHTML=h+rvSub(); rvSubLliga();
   el.querySelectorAll('[data-rz]').forEach(b=>b.onclick=()=>{RV.z=Math.max(6,Math.min(11,RV.z+ +b.dataset.rz)); radarPinta();});
   const sl=$('rv-sl'); if(sl) sl.oninput=()=>{RV.i=+sl.value; radarAtura(); radarPinta();};
   const pl=$('rv-play'); if(pl) pl.onclick=()=>{ if(RV.play) radarAtura(); else { RV.play=setInterval(()=>{ if(avZ!=='radar'||$('vmet').hidden){radarAtura();return;} RV.i=(RV.i+1)%RV.fr.length; radarPinta(); },700); } radarPinta(); };
@@ -1270,20 +1278,20 @@ function pintaAvisos(){
   document.querySelectorAll('#av-sel button').forEach(b=>{ b.classList.toggle('on',b.dataset.z===avZ); b.onclick=()=>{avZ=b.dataset.z; el.dataset.k=''; pintaAvisos();}; });
   const z=avZ==='pen'?{lat:40.2,lon:-3.6,zoom:5}:{lat:cat?41.75:la,lon:cat?1.6:lo,zoom:8};
   const u=`https://embed.windy.com/embed2.html?lat=${z.lat}&lon=${z.lon}&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=${z.zoom}&level=surface&overlay=capAlerts&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
-  const MC={reg:['mapaAvisos','Mapa d\'avisos del Meteocat',640],radar:['mapaRadar','Última imatge de radar del Meteocat',430]}[avZ];
+  const MC={reg:['mapaAvisos','Mapa d\'avisos del Meteocat',640],radar:RV.vista==='mc'?['mapaRadar','Última imatge de radar del Meteocat',430]:null}[avZ];
   el.style.height=(cat&&MC?MC[2]:440)+'px';
   if(avZ==='fronts'){ frontsMostra(); }
   else if(cat&&MC){ radarAtura(); const um=`https://static-m.meteo.cat/ginys/${MC[0]}?language=ca&color=2c3e50&target=_blank`;
     if(!navigator.onLine){ el.dataset.k=''; if(avZ==='radar') radarMostra(); else avisosSenseCob(el); }
-    else if(el.dataset.k!==um){ el.dataset.k=um; el.innerHTML=`<iframe src="${um}" title="${MC[1]}" scrolling="no" style="border:0;width:100%;height:100%"></iframe>`; } }
-  else if(avZ==='radar'){ radarMostra(); }
+    else if(el.dataset.k!==um){ el.dataset.k=um; el.innerHTML=`<iframe src="${um}" title="${MC[1]}" scrolling="no" style="border:0;width:100%;height:100%"></iframe>`+(avZ==='radar'?rvSub():''); rvSubLliga(); } }
+  else if(avZ==='radar'){ el.style.height='440px'; radarMostra(); }
   else if(!navigator.onLine){ el.dataset.k=''; avisosSenseCob(el); }
   else if(el.dataset.k!==u){ radarAtura(); frontsAtura(); el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
   pintaAvTxt(); if(navigator.onLine) carregaAvisosTxt(false);
   if(avZ==='fronts'){ set('av-nota','<b>Com llegir-lo:</b> les línies són isòbares (pressió igual); com més juntes, més vent. <b>H</b> = anticicló (temps estable), <b>L</b> = borrasca (temps inestable). <b style="color:#1d4fd8">Front fred</b> (triangles blaus): arriba amb ruixats o tempestes, vent fort que gira i baixada de temperatura; després sol aclarir. <b style="color:#d6281e">Front càlid</b> (semicercles vermells): núvols que s\'espessen i pluja feble i llarga, boira a muntanya. <b style="color:#a13bb5">Front oclús</b> (lila): barreja dels dos, pluja persistent. Mira si algun front passa per Catalunya els dies de la sortida i a quina hora. Mapes del Met Office: anàlisi + previsió cada 12 h fins a 3-5 dies; s\'actualitzen cap a les 8:30 i les 20:30 i queden desats per consultar-los sense cobertura. «Pressió i vent» és Windy: toca ▶ a sota per veure l\'evolució dels propers dies.'); }
   else if(cat&&avZ==='reg'){ set('av-nota','Avisos de situació meteorològica de perill (SMP) del Meteocat per comarques: tria el dia (avui, demà, demà passat) i el fenomen (pluja, neu, vent, fred…). Verd = sense perill; groc = moderat; taronja = alt; vermell = molt alt. La ruta és al Berguedà (la Pobla de Lillet).'); }
-  else if(cat&&avZ==='radar'){ set('av-nota','Última imatge del radar del Meteocat: l\'app la refresca sola cada 6 min mentre la mires i quan tornes a obrir l\'app. Fes zoom amb + per acostar-te a la zona de la ruta. Per veure l\'animació de la darrera hora i la predicció a 1 hora, obre el radar del Meteocat amb el botó de sota.'); }
-  else if(avZ==='radar'){ set('av-nota','Radar de pluja de les últimes 2 hores (cada 10 min; es refresca sol mentre el mires) sobre la zona de la ruta, en lila; el punt blau és on ets. Toca ▶ per veure l\'animació i cap on es mou la pluja, o arrossega la barra. Blau clar = pluja feble; groc i vermell = forta; tons rosats = neu. A muntanya el radar pot no veure la pluja feble o la neu de les valls (les muntanyes li fan ombra).'); }
+  else if(cat&&avZ==='radar'&&RV.vista==='mc'){ set('av-nota','Última imatge del radar del Meteocat: l\'app la refresca sola cada 6 min mentre la mires i quan tornes a obrir l\'app. Fes zoom amb + per acostar-te a la zona de la ruta. Per veure l\'animació de la darrera hora i la predicció a 1 hora, obre el radar del Meteocat amb el botó de sota.'); }
+  else if(avZ==='radar'){ set('av-nota','Radar de pluja de les últimes 2 hores (cada 10 min; es refresca sol mentre el mires) amb la ruta en lila (punt verd = sortida, vermell = arribada); el punt blau és on ets. El cercle discontinu marca 5 km al voltant de la ruta: si una taca de pluja hi entra i es mou cap a la línia lila (mira-ho amb ▶), us passarà per sobre.'+(cat?' «Meteocat» mostra el radar del Meteocat, més precís, però sense la ruta.':'')+' Toca ▶ per veure l\'animació i cap on es mou la pluja, o arrossega la barra. Blau clar = pluja feble; groc i vermell = forta; tons rosats = neu. A muntanya el radar pot no veure la pluja feble o la neu de les valls (les muntanyes li fan ombra).'); }
   else set('av-nota',`Colors: <b style="color:#a8a800">moderat</b> · <b style="color:#d97a00">sever</b> · <b style="color:#c0392b">extrem</b>. Toca una zona per llegir l'avís; a sota pots triar «Today / Tomorrow / Later». El marcador és la ruta. `+
     (avZ==='reg'?'Windy dibuixa les zones d\'avís de l\'AEMET i els límits de comarca, però no n\'escriu els noms: ':' ')+(cat?'per veure les comarques amb el seu nom, mira el mapa del Meteocat.':'per al detall per zones, mira l\'AEMET.'));
   set('av-links',(cat?'<a href="https://www.meteo.cat/prediccio/general" target="_blank" rel="noopener">⚠ Avisos del Meteocat per comarques</a>':'')+
