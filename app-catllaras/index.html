@@ -1054,7 +1054,7 @@ function pintaResumVessants(){
 // ---------- Meteo (Open-Meteo), desada per anar sense cobertura ----------
 const tC=x=>String(Math.round(x)||0);
 const MET_KEY='petjada-meteo-v1';
-const MET_PTS=[{n:'Monestir',lat:42.2422,lon:1.9931,e:920},{n:'Xalet',lat:42.2240,lon:1.9713,e:1366},{n:'Roca J. Pilota',lat:42.2151,lon:1.9636,e:1615}];
+const MET_PTS=[{n:'Monestir',lat:42.2422,lon:1.9931,e:925},{n:'Xalet',lat:42.2240,lon:1.9713,e:1366},{n:'Roca J. Pilota',lat:42.2151,lon:1.9636,e:1615}];
 let MET=null; try{ MET=JSON.parse(localStorage.getItem(MET_KEY)); }catch(e){}
 let metDia=null;
 const WMO={0:'serè',1:'poc núvol',2:'mig núvol',3:'tapat',45:'boira',48:'boira gebradora',51:'plugim',53:'plugim',55:'plugim fort',56:'plugim gelant',57:'plugim gelant',61:'pluja feble',63:'pluja',65:'pluja forta',66:'pluja gelant',67:'pluja gelant',71:'neu feble',73:'neu',75:'neu forta',77:'neu granulada',80:'ruixats',81:'ruixats',82:'ruixats forts',85:'ruixats de neu',86:'ruixats de neu',95:'tempesta',96:'tempesta i calamarsa',99:'tempesta i calamarsa'};
@@ -1219,7 +1219,7 @@ function pintaMeteo(){
     ['AEMET · la Pobla de Lillet','https://www.aemet.es/ca/eltiempo/prediccion/municipios/pobla-de-lillet-la-id08166'],
     ['Avisos Meteocat','https://www.meteo.cat/prediccio/general']
   ].map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`).join(''));
-  set('met-nota','Previsió per hores d\'Open-Meteo a tres alçades de la ruta (monestir 920 m, Xalet 1.366 m, Roca del Joc de Pilota 1.615 m), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada hora els dies de la sortida i cada 3 hores la resta. Contrasta-la amb Meteocat i AEMET; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.');
+  set('met-nota','Previsió per hores d\'Open-Meteo a tres alçades de la ruta (monestir 925 m, Xalet 1.366 m, Roca del Joc de Pilota 1.615 m), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada hora els dies de la sortida i cada 3 hores la resta. Contrasta-la amb Meteocat i AEMET; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.');
   if(!MET){ set('met-act','sense dades'); set('met-dies',''); set('met-resum','<p class="nota">Toca «Actualitzar previsió» amb connexió.</p>'); set('met-hores',''); set('met-avisos',''); return; }
   const fa=Math.round((Date.now()-MET.ts)/60000);
   set('met-act', 'actualitzada '+(fa<60?`fa ${fa} min`:fa<1440?`fa ${Math.round(fa/60)} h`:new Date(MET.ts).toLocaleDateString('ca-ES')));
@@ -1233,7 +1233,7 @@ function pintaMeteo(){
   const hores=ix.filter(i=>{const h=+T[i].slice(11,13);return h>=finestra[0]&&h<=finestra[1];});
   // resum per alçades (en hores de marxa)
   const mn=(a)=>Math.min(...a), mx=(a)=>Math.max(...a);
-  let res='<div class="mres"><span></span><b>Monestir</b><b>Xalet</b><b>Roca J. Pilota</b>';
+  let res='<div class="mres"><span></span>'+MET_PTS.map(p=>`<b>${esc(p.n)}<br><small style="font-weight:400;opacity:.7">${mts(p.e)}</small></b>`).join('');
   const fila=(nom,f)=>{res+=`<span>${nom}</span>`+H.map(h=>`<span>${f(h)}</span>`).join('');};
   fila('Temp.',h=>`${tC(mn(hores.map(i=>h.temperature_2m[i])))} / ${tC(mx(hores.map(i=>h.temperature_2m[i])))} °C`);
   fila('Sensació mín.',h=>`${tC(mn(hores.map(i=>h.apparent_temperature[i])))} °C`);
@@ -1259,10 +1259,10 @@ function pintaMeteo(){
   if(!av.length) av.push(['ok','Sense avisos destacables en les hores de marxa.']);
   set('met-avisos',av.map(([c,t])=>`<div class="mav ${c}">${t}</div>`).join(''));
   // taula per hores: temperatura a dues alçades, vent i precipitació
-  let tb='<table><thead><tr><th>Hora</th><th>Cel</th><th>Monestir<br>T (sens.)</th><th>Xalet<br>T (sens.)</th><th>Roca J. Pilota<br>T (sens.)</th><th>Vent<br>km/h / ratxa</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>';
+  let tb=`<table><thead><tr><th>Hora</th><th>Cel</th><th>Monestir<br>${mts(MET_PTS[0].e)}</th><th>Xalet<br>${mts(MET_PTS[1].e)}</th><th>Roca J. Pilota<br>${mts(MET_PTS[2].e)}</th><th>Vent<br>km/h / ratxa</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>`;
   hores.forEach(i=>{ const x=H[1], m=H[2], pr=x.precipitation[i]||0, sn=x.snowfall?x.snowfall[i]||0:0;
     tb+=`<tr><td>${T[i].slice(11,16)}</td><td>${WMO[x.weather_code[i]]||''}</td><td>${tC(H[0].temperature_2m[i])} (${tC(H[0].apparent_temperature[i])})</td><td>${tC(x.temperature_2m[i])} (${tC(x.apparent_temperature[i])})</td><td>${tC(m.temperature_2m[i])} (${tC(m.apparent_temperature[i])})</td><td style="white-space:nowrap">${(d=>d?fletxa(d.g)+' '+d.c+' ':'')(ventDir(m.wind_direction_10m[i]))}${Math.round(x.wind_speed_10m[i])} / ${Math.round(m.wind_gusts_10m[i])}</td><td>${pr?pr.toFixed(1):'0'}${sn?' ❄':''} (${x.precipitation_probability[i]??0} %)</td></tr>`; });
-  tb+='</tbody></table><p class="nota">Temperatures en °C a tres alçades de la ruta. Vent: la fletxa indica cap on bufa i la lletra d\'on ve (N tramuntana, NE gregal, E llevant, SE xaloc, S migjorn, SO garbí, O ponent, NO mestral); direcció a la Roca del Joc de Pilota, vent mitjà al Xalet i ratxa màxima a la Roca (la més exposada). ❄ = previsió de neu.</p>';
+  tb+='</tbody></table><p class="nota">Temperatures en °C: temperatura (sensació tèrmica) a tres alçades de la ruta. Vent: la fletxa indica cap on bufa i la lletra d\'on ve (N tramuntana, NE gregal, E llevant, SE xaloc, S migjorn, SO garbí, O ponent, NO mestral); direcció a la Roca del Joc de Pilota, vent mitjà al Xalet i ratxa màxima a la Roca (la més exposada). ❄ = previsió de neu.</p>';
   set('met-hores',tb);
 }
 

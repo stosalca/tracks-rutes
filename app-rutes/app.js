@@ -766,7 +766,7 @@ function pintaMeteo(){
   const hores=ix.filter(i=>{const h=+T[i].slice(11,13);return h>=finestra[0]&&h<=finestra[1];});
   // resum per alçades (en hores de marxa)
   const mn=(a)=>Math.min(...a), mx=(a)=>Math.max(...a);
-  let res='<div class="mres"><span></span>'+MET_PTS.map(p=>`<b>${esc(p.n)}</b>`).join('');
+  let res='<div class="mres"><span></span>'+MET_PTS.map(p=>`<b>${esc(p.n)}<br><small style="font-weight:400;opacity:.7">${mts(p.e)}</small></b>`).join('');
   const fila=(nom,f)=>{res+=`<span>${nom}</span>`+H.map(h=>`<span>${f(h)}</span>`).join('');};
   fila('Temp.',h=>`${tC(mn(hores.map(i=>h.temperature_2m[i])))} / ${tC(mx(hores.map(i=>h.temperature_2m[i])))} °C`);
   fila('Sensació mín.',h=>`${tC(mn(hores.map(i=>h.apparent_temperature[i])))} °C`);
@@ -792,10 +792,10 @@ function pintaMeteo(){
   if(!av.length) av.push(['ok','Sense avisos destacables en les hores de marxa.']);
   set('met-avisos',av.map(([c,t])=>`<div class="mav ${c}">${t}</div>`).join(''));
   // taula per hores: temperatura a dues alçades, vent i precipitació
-  let tb=`<table><thead><tr><th>Hora</th><th>Cel</th><th>${esc(MET_PTS[0].n)}<br>T (sens.)</th><th>${esc(MET_PTS[1].n)}<br>T (sens.)</th><th>${esc(MET_PTS[2].n)}<br>T (sens.)</th><th>Vent<br>km/h / ratxa</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>`;
+  let tb=`<table><thead><tr><th>Hora</th><th>Cel</th><th>${esc(MET_PTS[0].n)}<br>${mts(MET_PTS[0].e)}</th><th>${esc(MET_PTS[1].n)}<br>${mts(MET_PTS[1].e)}</th><th>${esc(MET_PTS[2].n)}<br>${mts(MET_PTS[2].e)}</th><th>Vent<br>km/h / ratxa</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>`;
   hores.forEach(i=>{ const x=H[1], m=H[2], pr=x.precipitation[i]||0, sn=x.snowfall?x.snowfall[i]||0:0;
     tb+=`<tr><td>${T[i].slice(11,16)}</td><td>${WMO[x.weather_code[i]]||''}</td><td>${tC(H[0].temperature_2m[i])} (${tC(H[0].apparent_temperature[i])})</td><td>${tC(x.temperature_2m[i])} (${tC(x.apparent_temperature[i])})</td><td>${tC(m.temperature_2m[i])} (${tC(m.apparent_temperature[i])})</td><td style="white-space:nowrap">${(d=>d?fletxa(d.g)+' '+d.c+' ':'')(ventDir(m.wind_direction_10m[i]))}${Math.round(x.wind_speed_10m[i])} / ${Math.round(m.wind_gusts_10m[i])}</td><td>${pr?pr.toFixed(1):'0'}${sn?' ❄':''} (${x.precipitation_probability[i]??0} %)</td></tr>`; });
-  tb+='</tbody></table><p class="nota">Temperatures en °C a tres alçades de la ruta. Vent: la fletxa indica cap on bufa i la lletra d\'on ve (N tramuntana, NE gregal, E llevant, SE xaloc, S migjorn, SO garbí, O ponent, NO mestral); direcció i ratxa al punt més alt, vent mitjà a l\'alçada mitjana. ❄ = previsió de neu.</p>';
+  tb+='</tbody></table><p class="nota">Temperatures en °C: temperatura (sensació tèrmica) a tres alçades de la ruta. Vent: la fletxa indica cap on bufa i la lletra d\'on ve (N tramuntana, NE gregal, E llevant, SE xaloc, S migjorn, SO garbí, O ponent, NO mestral); direcció i ratxa al punt més alt, vent mitjà a l\'alçada mitjana. ❄ = previsió de neu.</p>';
   set('met-hores',tb);
 }
 
