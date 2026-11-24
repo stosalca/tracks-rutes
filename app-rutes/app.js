@@ -214,6 +214,26 @@ function pintaFinsA(E,now,PB){ const el=$('fa-sel'); if(!el||!E) return; const s
 
 $('trams').addEventListener('click',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const k=[...$('trams').children].indexOf(tr); if(k<0||k>=R.trams.length) return;
   ds().fa=R.wp[k+1].k; save(); render(); $('fa').scrollIntoView({behavior:'smooth',block:'center'}); });
+// ---------- Heatmap de Strava (capa per sobre del mapa) ----------
+// Sense compte: fins al zoom 12. Amb les claus del teu compte (CloudFront), fins al 16. Les claus caduquen (≈ 1-2 setmanes).
+const STRAVA_KEY='petjada-strava';
+function stravaAcc(){ try{ const o=JSON.parse(localStorage.getItem(STRAVA_KEY)); return o&&o.k&&o.p&&o.s?o:null; }catch(e){ return null; } }
+function stravaLlegeix(t){ const g=re=>{ const m=t.match(re); return m?m[1]:''; };
+  const k=g(/Key-Pair-Id["'\s:=]+([A-Za-z0-9]+)/i), p=g(/Policy["'\s:=]+([A-Za-z0-9_\-~=]+)/i), s=g(/Signature["'\s:=]+([A-Za-z0-9_\-~=]+)/i);
+  return k&&p&&s?{k,p,s}:null; }
+function capaStrava(L){ const a=stravaAcc();
+  return {...L,zmax:a?16:12,url:a?`https://heatmap-external-a.strava.com/tiles-auth/all/hot/{z}/{x}/{y}.png?px=256&Key-Pair-Id=${a.k}&Policy=${a.p}&Signature=${a.s}`:'https://heatmap-external-a.strava.com/tiles/all/hot/{z}/{x}/{y}.png?px=256'}; }
+function pintaStrava(){ const el=$('c-strava'); if(!el) return; const a=stravaAcc();
+  el.innerHTML=`<details><summary>Strava amb tot el detall ${a?'<b style="color:var(--ok)">✓ activat</b>':'(opcional)'}</summary>
+    <p class="nota">Sense compte, Strava només deixa veure el heatmap fins al zoom 12 (es veu, però gruixut). Per veure'l de prop: a l'ordinador, entra a strava.com, obre <b>heatmap-external-a.strava.com/auth</b> i, a les eines del navegador (F12 → Aplicació → Galetes), copia els valors de <b>CloudFront-Key-Pair-Id</b>, <b>CloudFront-Policy</b> i <b>CloudFront-Signature</b>. Enganxa'ls aquí (tal com surtin, amb els noms). Caduquen al cap d'una o dues setmanes: llavors, torna-ho a fer.</p>
+    <textarea id="sv-t" rows="3" placeholder="CloudFront-Key-Pair-Id=… CloudFront-Policy=… CloudFront-Signature=…" style="width:100%;font:13px/1.35 inherit;font-family:inherit;border:1px solid #d9d3c6;border-radius:8px;padding:6px"></textarea>
+    <div class="botons" style="margin-top:6px"><button class="btn s" id="sv-ok">Desar</button>${a?'<button class="btn s" id="sv-x">Treure les claus</button>':''}</div><p class="nota" id="sv-msg"></p></details>`;
+  const refresca=()=>{ for(const [k,img] of M.imgs) img.remove(); M.imgs.clear(); dibuixaMapa(); try{estatMapes()}catch(e){} };
+  $('sv-ok').onclick=()=>{ const o=stravaLlegeix($('sv-t').value); if(!o){ set('sv-msg','No hi trobo les tres claus (Key-Pair-Id, Policy i Signature).'); return; }
+    try{localStorage.setItem(STRAVA_KEY,JSON.stringify(o))}catch(e){} pintaStrava(); refresca(); };
+  if($('sv-x')) $('sv-x').onclick=()=>{ try{localStorage.removeItem(STRAVA_KEY)}catch(e){} pintaStrava(); refresca(); };
+}
+
 // ---------- Plans B i hores límit ----------
 // quan caminem per un pla B: següent punt = enllaç amb el pla A (o final), fet i fins al final pel pla B
 function nomEnllac(i){ const w=R.wp.find(x=>x.i>=i)||R.wp[R.wp.length-1], d=R.cd[w.i]-R.cd[i];
@@ -710,14 +730,15 @@ const MAPES=[
   {id:'pnoa',nom:'Ortofoto PNOA (Espanya)',curt:'Ortofoto',url:IGN('pnoa-ma','OI.OrthoimageCoverage','image/jpeg'),zmax:17,attr:'© IGN · PNOA'},
   {id:'ignbase',nom:'Mapa base IGN (Espanya)',curt:'IGN base',url:IGN('ign-base','IGNBaseTodo','image/png'),zmax:17,attr:'© IGN'},
   {id:'mtn',nom:'Topogràfic IGN · MTN (Espanya)',curt:'IGN MTN',url:IGN('mapa-raster','MTN','image/jpeg'),zmax:16,attr:'© IGN · MTN'},
-  {id:'icgc',nom:'Topogràfic ICGC (Catalunya)',curt:'ICGC',url:'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png',zmax:16,attr:'© ICGC CC BY 4.0'}];
+  {id:'icgc',nom:'Topogràfic ICGC (Catalunya)',curt:'ICGC',url:'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png',zmax:16,attr:'© ICGC CC BY 4.0'},
+  {id:'strava',nom:'Heatmap de Strava (per on passa la gent)',curt:'Strava',attr:'© Strava (heatmap)',url:'',zmax:12}];
 const TZMAX=16, ZMIN=12, ZMAX=18;
 const MAPES_KEY='petjada-rutes-mapes-on';
 // a Catalunya, l'ICGC; a la resta, el topogràfic de l'IGN
 function aCatalunya(lat,lon){ return lat>40.5&&lat<42.9&&lon>0.15&&lon<3.35&&!(lat<41.0&&lon<0.6); }
 function mapesOn(){ let m=null; try{ m=JSON.parse(localStorage.getItem(MAPES_KEY)); }catch(e){}
   if(!Array.isArray(m)||!m.length){ const p=RUTES[DIES[0]].pts[0]; m=[aCatalunya(p[0],p[1])?'icgc':'mtn']; }
-  return MAPES.filter(x=>m.includes(x.id)); }
+  return MAPES.filter(x=>m.includes(x.id)).map(x=>x.id==='strava'?capaStrava(x):x); }
 function desaMapes(ids){ try{localStorage.setItem(MAPES_KEY,JSON.stringify(ids))}catch(e){} }
 const M={z:15,cx:null,cy:null,follow:true,imgs:new Map(),E:null,ptrs:new Map(),pinch:null};
 function wpx(lat,lon,z){const s=256*2**z, la=rad(lat); return [(lon+180)/360*s,(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*s];}
@@ -733,7 +754,7 @@ function dibuixaMapa(E){
     const key=L.id+'/'+tz+'/'+tx+'/'+ty; keep.add(key);
     let img=M.imgs.get(key);
     if(!img){ img=new Image(); img.alt=''; img.decoding='async'; img.onerror=()=>{img.style.visibility='hidden'}; img.src=tileUrl(tz,tx,ty,L); cont.appendChild(img); M.imgs.set(key,img); }
-    img.style.zIndex=li+1; if(li>0) img.style.opacity=.85;
+    img.style.zIndex=li+1; if(L.id==='strava'){ img.style.mixBlendMode='multiply'; } else if(li>0) img.style.opacity=.85;
     img.style.left=(tx*ts-x0)+'px'; img.style.top=(ty*ts-y0)+'px'; img.style.width=img.style.height=ts+'px';
   } });
   if($('m-attr')) $('m-attr').textContent=[...ON.map(L=>L.attr),'© OpenStreetMap ODbL'].join(' · ');
@@ -952,7 +973,7 @@ function dibuixaOSM(x0,y0,W,H){
     el.innerHTML=MAPES.slice().reverse().map(L=>`<label><input type="checkbox" value="${L.id}" ${on.includes(L.id)?'checked':''}> ${esc(L.nom)}</label>`).join('');
     el.querySelectorAll('input').forEach(i=>i.onchange=()=>{ let ids=[...el.querySelectorAll('input:checked')].map(x=>x.value);
       if(!ids.length){ i.checked=true; ids=[i.value]; }
-      desaMapes(ids); for(const [k,img] of M.imgs){ img.remove(); } M.imgs.clear(); dibuixaMapa(); estatMapes(); }); }
+      desaMapes(ids); for(const [k,img] of M.imgs){ img.remove(); } M.imgs.clear(); dibuixaMapa(); estatMapes(); }); } pintaStrava();
   try{ const c=JSON.parse(localStorage.getItem('petjada-rutes-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.pb===false) M.pb=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
   const desa=()=>{try{localStorage.setItem('petjada-rutes-capes',JSON.stringify({osm:OSM.on,pb:M.pb!==false,op:+$('c-op').value}))}catch(e){}};
   const op=()=>{ $('tiles').style.opacity=$('c-op').value/100; $('c-opv').textContent=$('c-op').value+' %'; };
