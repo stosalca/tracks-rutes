@@ -1141,7 +1141,7 @@ function pintaAvisos(){
   document.querySelectorAll('#av-sel button').forEach(b=>{ b.classList.toggle('on',b.dataset.z===avZ); b.onclick=()=>{avZ=b.dataset.z; el.dataset.k=''; pintaAvisos();}; });
   const z=avZ==='pen'?{lat:40.2,lon:-3.6,zoom:5}:{lat:cat?41.75:la,lon:cat?1.6:lo,zoom:8};
   const u=`https://embed.windy.com/embed2.html?lat=${z.lat}&lon=${z.lon}&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=${z.zoom}&level=surface&overlay=capAlerts&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
-  const MC={reg:['mapaAvisos','Mapa d\'avisos del Meteocat',540],radar:['mapaRadar','Última imatge de radar del Meteocat',430]}[avZ];
+  const MC={reg:['mapaAvisos','Mapa d\'avisos del Meteocat',640],radar:['mapaRadar','Última imatge de radar del Meteocat',430]}[avZ];
   el.style.height=(cat&&MC?MC[2]:440)+'px';
   if(cat&&MC){ radarAtura(); const um=`https://static-m.meteo.cat/ginys/${MC[0]}?language=ca&color=2c3e50&target=_blank`;
     if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: aquest mapa només funciona amb cobertura.</p>'; }
