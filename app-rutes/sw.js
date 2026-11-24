@@ -1,4 +1,4 @@
-const CACHE='petjada-rutes-v37';
+const CACHE='petjada-rutes-v38';
 const RADAR='petjada-rutes-radar-v1';
 const TILES='petjada-rutes-mapes-v1';
 const FILES=['./','index.html','core.js','app.js','manifest.webmanifest','icon-192.png','icon-512.png'];
@@ -14,8 +14,8 @@ self.addEventListener('fetch',e=>{
       return res;}).catch(()=>new Response('',{status:504})))));
     return;
   }
-  // radar (RainViewer) i mapa de fons (CARTO): es desen per veure l'últim radar sense cobertura
-  if(url.hostname==='tilecache.rainviewer.com'||/^[abcd]\.basemaps\.cartocdn\.com$/.test(url.hostname)){
+  // radar (RainViewer) i mapa de fons (Esri): es desen per veure l'últim radar sense cobertura
+  if(url.hostname==='tilecache.rainviewer.com'||url.hostname==='server.arcgisonline.com'){
     e.respondWith(caches.open(RADAR).then(c=>c.match(e.request.url).then(r=>r||fetch(e.request.url,{mode:'no-cors'}).then(res=>{ if(res.ok||res.type==='opaque') c.put(e.request.url,res.clone()); return res; }).catch(()=>new Response('',{status:504})))));
     return;
   }

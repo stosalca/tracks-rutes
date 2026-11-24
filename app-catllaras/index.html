@@ -1138,19 +1138,19 @@ const RV_KEY='radar-rainviewer-ultim', RV_CACHE='catllaras-radar-v1';
 function radarDesat(){ try{ const d=JSON.parse(localStorage.getItem(RV_KEY)); if(d&&d.fr&&d.fr.length){ RV.fr=d.fr; RV.i=d.fr.length-1; RV.desat=d.ts; return true; } }catch(e){} return false; }
 function rvGeo(z,W,H){ let a=[1e9,-1e9,1e9,-1e9]; R.p.forEach(q=>{const [x,y]=wpx(q[0],q[1],z); a=[Math.min(a[0],x),Math.max(a[1],x),Math.min(a[2],y),Math.max(a[3],y)];});
   const cx=(a[0]+a[1])/2, cy=(a[2]+a[3])/2; return {x0:cx-W/2,y0:cy-H/2}; }
-function rvTiles(z,W,H,f){ const {x0,y0}=rvGeo(z,W,H), base=[], rad=[];
+function rvTiles(z,W,H,f){ const {x0,y0}=rvGeo(z,W,H), base=[], rad=[], noms=[];
   for(let tx=Math.floor(x0/256);tx<=Math.floor((x0+W)/256);tx++) for(let ty=Math.floor(y0/256);ty<=Math.floor((y0+H)/256);ty++)
-    base.push({u:`https://a.basemaps.cartocdn.com/rastertiles/voyager/${z}/${tx}/${ty}.png`,x:tx*256-x0,y:ty*256-y0,s:256});
+    { const E='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_'; base.push({u:`${E}Base/MapServer/tile/${z}/${ty}/${tx}`,x:tx*256-x0,y:ty*256-y0,s:256}); noms.push({u:`${E}Reference/MapServer/tile/${z}/${ty}/${tx}`,x:tx*256-x0,y:ty*256-y0,s:256}); }
   if(f){ const rz=Math.min(z,7), k=2**(z-rz), sz=256*k;
     for(let tx=Math.floor(x0/sz);tx<=Math.floor((x0+W)/sz);tx++) for(let ty=Math.floor(y0/sz);ty<=Math.floor((y0+H)/sz);ty++)
       rad.push({u:`${f.u}/256/${rz}/${tx}/${ty}/2/1_1.png`,x:tx*sz-x0,y:ty*sz-y0,s:sz}); }
-  return {x0,y0,base,rad}; }
+  return {x0,y0,base,rad,noms}; }
 // amb cobertura, en segon pla: es descarreguen els fotogrames de la zona perquè quedin desats
 let RVPRE=0;
 async function radarPrecarrega(){
   if(!navigator.onLine||Date.now()-RVPRE<10*60e3||typeof caches==='undefined') return; RVPRE=Date.now();
   try{ RV.ts=0; const fr=await radarFrames(), W=($('av-map')||{}).clientWidth||380, H=440, z=RV.z, us=new Set();
-    fr.forEach(f=>{ const t=rvTiles(z,W,H,f); t.base.concat(t.rad).forEach(x=>us.add(x.u)); });
+    fr.forEach(f=>{ const t=rvTiles(z,W,H,f); t.base.concat(t.rad,t.noms).forEach(x=>us.add(x.u)); });
     for(const u of us){ try{ await fetch(u,{mode:'no-cors'}); }catch(e){} }
     const c=await caches.open(RV_CACHE), ks=await c.keys(), vius=fr.map(f=>f.u);
     for(const k of ks){ if(k.url.includes('rainviewer')&&!vius.some(v=>k.url.startsWith(v))) c.delete(k); }
@@ -1161,6 +1161,7 @@ function radarPinta(){
   let h='';
   T.base.forEach(t=>{ h+=`<img src="${t.u}" style="position:absolute;left:${t.x}px;top:${t.y}px;width:256px;height:256px" alt="">`; });
   T.rad.forEach(t=>{ h+=`<img src="${t.u}" style="position:absolute;left:${t.x}px;top:${t.y}px;width:${t.s}px;height:${t.s}px;opacity:.8;image-rendering:auto" alt="">`; });
+  T.noms.forEach(t=>{ h+=`<img src="${t.u}" style="position:absolute;left:${t.x}px;top:${t.y}px;width:256px;height:256px" alt="">`; });
   const pts=p.map(q=>{const [x,y]=wpx(q[0],q[1],z); return (x-x0).toFixed(1)+','+(y-y0).toFixed(1);}).join(' ');
   const [sx,sy]=wpx(p[0][0],p[0][1],z), [ex,ey]=wpx(p[p.length-1][0],p[p.length-1][1],z);
   let g=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="8" opacity=".95" stroke-linejoin="round"/><polyline points="${pts}" fill="none" stroke="#7a3cc8" stroke-width="4" stroke-linejoin="round"/>`+
@@ -1173,7 +1174,7 @@ function radarPinta(){
     `<div style="position:absolute;left:8px;top:8px;background:#fffd;border-radius:8px;padding:4px 8px;font-weight:700;font-size:13px">${f?new Date(f.t).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})+(!navigator.onLine?' · fa '+fmtFa(Date.now()-f.t)+' · sense cobertura':RV.i===RV.fr.length-1?' · ara':' · fa '+Math.round((RV.fr[RV.fr.length-1].t-f.t)/60000)+' min'):'carregant radar…'}</div>`+
     `<div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px"><button class="btn s" data-rz="1" style="width:36px;flex:0 0 auto;padding:4px">+</button><button class="btn s" data-rz="-1" style="width:36px;flex:0 0 auto;padding:4px">−</button></div>`+
     `<div style="position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:8px;align-items:center;background:#fffd;border-radius:10px;padding:4px 8px"><button class="btn s" id="rv-play" style="padding:4px 10px;width:auto;flex:0 0 auto">${RV.play?'❚❚':'▶'}</button><input type="range" id="rv-sl" min="0" max="${RV.fr?RV.fr.length-1:0}" value="${RV.i}" style="flex:1"></div>`+
-    `<div style="position:absolute;right:4px;bottom:52px;font-size:10px;background:#fffc;padding:1px 4px;border-radius:4px">© RainViewer · © CARTO · © OSM</div>`;
+    `<div style="position:absolute;right:4px;bottom:52px;font-size:10px;background:#fffc;padding:1px 4px;border-radius:4px">© RainViewer · © Esri, HERE, Garmin, © OSM</div>`;
   el.innerHTML=h+rvSub(); rvSubLliga();
   el.querySelectorAll('[data-rz]').forEach(b=>b.onclick=()=>{RV.z=Math.max(6,Math.min(11,RV.z+ +b.dataset.rz)); radarPinta();});
   const sl=$('rv-sl'); if(sl) sl.oninput=()=>{RV.i=+sl.value; radarAtura(); radarPinta();};
