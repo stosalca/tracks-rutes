@@ -178,6 +178,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 .pbchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px 22px}.pbchips[hidden]{display:none}
 .pbchip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#C55A11;border:1.5px solid #C55A11;border-radius:99px;padding:2px 9px}
 .pbchip input{margin:0}.pbchip.off{color:#9a948a;border-color:#cfc8bb}.pbtots{font:inherit;font-size:12px;border:0;background:#e7e1d4;border-radius:99px;padding:3px 10px}
+.calc{margin-top:8px}.calc summary{font-size:13px;font-weight:700;cursor:pointer;color:var(--pis)}.calc p{margin-top:6px}
 </style>
 </head>
 <body>
@@ -276,7 +277,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
   <section class="card">
     <h2>Trams <b id="sortida"></b></h2>
     <table><thead><tr><th>Punt</th><th>km<br><small class="acu">acum.</small></th><th>D+<br><small class="acu">acum.</small></th><th>D−<br><small class="acu">acum.</small></th><th>Temps<br><small class="acu">acum.</small></th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
-    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, amb les parades previstes (+min = parada en aquell punt). "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a la posta el dia 1 / les 15:30 al pàrquing el dia 2); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
+    <details class="calc"><summary>Detalls dels càlculs</summary><p class="nota">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, amb les parades previstes (+min = parada en aquell punt). "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a la posta el dia 1 / les 15:30 al pàrquing el dia 2); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p></details>
   </section>
 
   <section class="card vess" id="vess">

@@ -184,6 +184,7 @@ details.det.act summary{color:var(--ter)}
 .acu{color:#8a8478;font-weight:600;font-size:11px}
 .fasel{width:100%;font:inherit;font-size:15px;font-weight:600;padding:8px;border:1px solid #cfc8bb;border-radius:10px;margin:2px 0 8px;background:#fff}
 #trams tr{cursor:pointer}
+.calc{margin-top:8px}.calc summary{font-size:13px;font-weight:700;cursor:pointer;color:var(--pis)}.calc p{margin-top:6px}
 </style>
 </head>
 <body>
@@ -284,7 +285,7 @@ details.det.act summary{color:var(--ter)}
     <table><thead><tr><th>Punt</th><th>km<br><small class="acu">acum.</small></th><th>D+<br><small class="acu">acum.</small></th><th>D−<br><small class="acu">acum.</small></th><th>Temps<br><small class="acu">acum.</small></th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
     <details style="margin-top:8px"><summary class="nota" style="font-weight:700;cursor:pointer">Parades previstes (toca per editar)</summary><div id="par-ed"></div>
     <p class="nota">Minuts de parada a cada punt. Compten a les hores previstes, a les hores límit, a «Fins al final» i als plans B. Per defecte, primera parada de 10 min al primer punt (aigua i capes).</p></details>
-    <p class="nota" style="margin-top:8px">Temps de marxa per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. «Previst»: hora d'arribada des de la sortida prevista, amb les parades previstes (+min = parada en aquell punt). "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat. «Límit»: hora per poder fer tot el pla A = previst + el marge fins a l'hora objectiu (màx. 1 h 30). Si es passa, encara podeu seguir fins al pla B que toqui (vegeu l'hora de decisió de cada pla B). En vermell, si hi heu passat després del límit.</p>
+    <details class="calc"><summary>Detalls dels càlculs</summary><p class="nota">Temps de marxa per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. «Previst»: hora d'arribada des de la sortida prevista, amb les parades previstes (+min = parada en aquell punt). "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat. «Límit»: hora per poder fer tot el pla A = previst + el marge fins a l'hora objectiu (màx. 1 h 30). Si es passa, encara podeu seguir fins al pla B que toqui (vegeu l'hora de decisió de cada pla B). En vermell, si hi heu passat després del límit.</p></details>
   </section>
 
   <section class="card vess" id="vess">
