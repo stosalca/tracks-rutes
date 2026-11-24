@@ -1,4 +1,4 @@
-const CACHE='catllaras-v50';
+const CACHE='catllaras-v52';
 const TILES='catllaras-mapes-v1';
 const FILES=['./','index.html','rutes.js','info.js','vessants.js','plansb.js','aplus.js','mapa-aplus.jpg','mapa-c1.jpg','mapa-cable.jpg','mapa-cobertura.jpg','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
@@ -11,6 +11,12 @@ self.addEventListener('fetch',e=>{
     e.respondWith(caches.open(TILES).then(c=>c.match(e.request.url).then(r=>r||fetch(e.request).then(res=>{
       if(res.ok||res.type==='opaque') c.put(e.request.url,res.clone());
       return res;}).catch(()=>new Response('',{status:504})))));
+    return;
+  }
+  // mapes de fronts del Met Office: els GIF no canvien mai (cada passada té la seva URL) → primer el desat; l'índex, primer la xarxa
+  if(url.hostname==='data.consumer-digital.api.metoffice.gov.uk'){
+    if(url.pathname.endsWith('.gif')) e.respondWith(caches.open(TILES).then(c=>c.match(e.request.url).then(r=>r||fetch(e.request).then(res=>{ if(res.ok||res.type==='opaque') c.put(e.request.url,res.clone()); return res; }).catch(()=>new Response('',{status:504})))));
+    else e.respondWith(fetch(e.request).then(res=>{ if(res.ok){const cp=res.clone(); caches.open(TILES).then(c=>c.put(e.request.url,cp));} return res; }).catch(()=>caches.open(TILES).then(c=>c.match(e.request.url)).then(r=>r||new Response('',{status:504}))));
     return;
   }
   // fitxers de l'app: primer la xarxa (així s'actualitza sola); sense cobertura, la còpia desada

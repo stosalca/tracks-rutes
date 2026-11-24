@@ -415,7 +415,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
   </section>
   <section class="card" id="avisos-card">
     <h2>Avisos i radar <b id="av-font">Windy · Meteocat</b></h2>
-    <div class="dies" id="av-sel"><button data-z="pen" class="on">Península</button><button data-z="reg">Zona de la ruta</button><button data-z="radar">Radar de pluja</button></div>
+    <div class="dies" id="av-sel"><button data-z="pen" class="on">Península</button><button data-z="reg">Zona de la ruta</button><button data-z="radar">Radar de pluja</button><button data-z="fronts">Fronts</button></div>
     <div id="av-map" style="position:relative;width:100%;height:440px;border-radius:12px;overflow:hidden;background:#e9e6df"></div>
     <p class="nota" id="av-nota" style="margin-top:6px"></p>
     <div class="enllacos" id="av-links"></div>
@@ -663,7 +663,7 @@ function render(){
   let acc=0, rows='';
   const PAR=PARADES_PA[dia]||{};
   R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k], salt=(s.salt||{})[k], pm=PAR[R.wp[k+1].k]||0, arrP=+base+(acc+paradesEntre(0,x.ib))*3600e3;
-    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}<br><small class="acu">${(R.cd[x.ib]/1000).toFixed(2).replace('.',',')}</small></td><td>${Math.round(x.up)}<br><small class="acu">${Math.round(R.cu[x.ib])}</small></td><td>${Math.round(x.dn)}<br><small class="acu">${Math.round(R.cn[x.ib])}</small></td><td>${hm(x.h)}<br><small class="acu">${hm(acc)}</small></td><td>${rel(new Date(arrP))}${pm&&k<R.trams.length-1?`<br><small>+${pm} min</small>`:''}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
+    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}<br><small class="acu">(${mts(R.p[x.ib][2])})</small></td><td>${x.km.toFixed(2).replace('.',',')}<br><small class="acu">${(R.cd[x.ib]/1000).toFixed(2).replace('.',',')}</small></td><td>${Math.round(x.up)}<br><small class="acu">${Math.round(R.cu[x.ib])}</small></td><td>${Math.round(x.dn)}<br><small class="acu">${Math.round(R.cn[x.ib])}</small></td><td>${hm(x.h)}<br><small class="acu">${hm(acc)}</small></td><td>${rel(new Date(arrP))}${pm&&k<R.trams.length-1?`<br><small>+${pm} min</small>`:''}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
   let H=R.trams.reduce((a,x)=>a+x.h,0), HP=paradesEntre(0,R.n-1);
   rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td><b>${rel(new Date(+base+(H+HP)*3600e3))}</b></td><td></td><td></td></tr>`+
     `<tr><td colspan="8" class="nota">Marxa ${hm(H)} + parades ${hm(HP)} = <b>${hm(H+HP)}</b>.</td></tr>`;
@@ -1136,6 +1136,40 @@ function radarAtura(){ if(RV.play){ clearInterval(RV.play); RV.play=null; } }
 async function radarMostra(){ const el=$('av-map'); el.dataset.k='radar';
   if(!navigator.onLine){ el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: el radar només funciona amb cobertura.</p>'; return; }
   radarPinta(); try{ await radarFrames(); radarPinta(); }catch(e){ el.innerHTML='<p class="nota" style="padding:14px">No s\'ha pogut carregar el radar. Torna-ho a provar amb cobertura.</p>'; } }
+// ---------- Mapes de fronts (Met Office: anàlisi + previsió fins a 5 dies) ----------
+const FR={k:'fronts-metoffice',i:0,play:null,vista:'mo'};
+async function frontsIndex(){
+  let idx=null; try{ idx=JSON.parse(localStorage.getItem(FR.k)); }catch(e){}
+  if(navigator.onLine){ try{ const r=await fetchT('https://data.consumer-digital.api.metoffice.gov.uk/v1/surface-pressure/colour',12000);
+      if(r.ok){ const j=await r.json(); const p=(j.products||[]).map(x=>({t:Date.parse(x.data_date),u:x.uri})).sort((a,b)=>a.t-b.t);
+        if(p.length){ idx={issued:j.issued,p}; try{ localStorage.setItem(FR.k,JSON.stringify(idx)); }catch(e){} } } }catch(e){} }
+  return idx; }
+function frontsAtura(){ if(FR.play){ clearInterval(FR.play); FR.play=null; } }
+function frontsTxt(t,base){ const d=new Date(t), h=Math.round((t-base)/3600e3);
+  return d.toLocaleDateString('ca-ES',{weekday:'short',day:'numeric',month:'short'})+' '+d.toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})+(h<=0?' · anàlisi':' · previsió +'+h+' h'); }
+async function frontsMostra(){
+  const el=$('av-map'); el.dataset.k='fronts'+FR.vista; radarAtura();
+  const sub=`<div style="position:absolute;left:8px;top:8px;z-index:2;display:flex;gap:6px"><button class="btn s ${FR.vista==='mo'?'on':''}" data-fv="mo" style="padding:4px 10px">Fronts</button><button class="btn s ${FR.vista==='wi'?'on':''}" data-fv="wi" style="padding:4px 10px">Pressió i vent</button></div>`;
+  const lliga=()=>el.querySelectorAll('[data-fv]').forEach(b=>b.onclick=()=>{FR.vista=b.dataset.fv; frontsAtura(); frontsMostra();});
+  if(FR.vista==='wi'){ el.style.height='440px';
+    if(!navigator.onLine){ el.innerHTML=sub+'<p class="nota" style="padding:50px 14px">Sense connexió: aquest mapa només funciona amb cobertura.</p>'; lliga(); return; }
+    const [la,lo]=avisosCentre();
+    el.innerHTML=sub+`<iframe src="https://embed.windy.com/embed2.html?lat=41&lon=-4&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=4&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates&metricWind=km%2Fh&metricTemp=%C2%B0C" title="Pressió i vent (Windy)" style="border:0;width:100%;height:100%"></iframe>`; lliga(); return; }
+  el.style.height='auto'; el.innerHTML=sub+'<p class="nota" style="padding:50px 14px">Carregant mapes de fronts…</p>'; lliga();
+  const idx=await frontsIndex();
+  if(!idx){ el.innerHTML=sub+'<p class="nota" style="padding:50px 14px">No hi ha mapes de fronts desats: obre aquesta pestanya amb cobertura abans de sortir.</p>'; lliga(); return; }
+  const P=idx.p, base=P[0].t; if(FR.i>=P.length) FR.i=0;
+  const pinta=()=>{ const f=P[FR.i];
+    el.innerHTML=sub+`<div style="padding-top:44px;background:#fff"><img src="${f.u}" alt="Mapa de fronts ${frontsTxt(f.t,base)}" style="width:100%;display:block" onerror="this.replaceWith(Object.assign(document.createElement('p'),{className:'nota',style:'padding:20px 14px',textContent:'Aquest mapa no s\\'ha pogut carregar (sense cobertura i no desat).'}))"></div>`+
+      `<div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:#f4f1ea"><button class="btn s" id="fr-play" style="padding:4px 10px">${FR.play?'❚❚':'▶'}</button><input type="range" id="fr-sl" min="0" max="${P.length-1}" value="${FR.i}" style="flex:1"><b style="font-size:13px;white-space:nowrap">${frontsTxt(f.t,base)}</b></div>`+
+      `<div style="font-size:10px;text-align:right;padding:2px 6px;color:#6b7478">© Crown Copyright, Met Office · emès ${new Date(idx.issued).toLocaleString('ca-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`;
+    lliga();
+    $('fr-sl').oninput=e=>{ FR.i=+e.target.value; frontsAtura(); pinta(); };
+    $('fr-play').onclick=()=>{ if(FR.play) frontsAtura(); else FR.play=setInterval(()=>{ if(avZ!=='fronts'||$('vmet').hidden||FR.vista!=='mo'){frontsAtura();return;} FR.i=(FR.i+1)%P.length; pinta(); },1200); pinta(); }; };
+  pinta();
+  // desa tots els mapes per consultar-los sense cobertura (el service worker els guarda)
+  if(navigator.onLine) P.forEach(f=>{ const im=new Image(); im.src=f.u; });
+}
 // ---------- Avisos meteorològics (Windy, capa CAP) ----------
 let avZ='pen';
 function avisosCentre(){ return [42.224,1.971]; }
@@ -1147,13 +1181,15 @@ function pintaAvisos(){
   const u=`https://embed.windy.com/embed2.html?lat=${z.lat}&lon=${z.lon}&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=${z.zoom}&level=surface&overlay=capAlerts&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
   const MC={reg:['mapaAvisos','Mapa d\'avisos del Meteocat',640],radar:['mapaRadar','Última imatge de radar del Meteocat',430]}[avZ];
   el.style.height=(cat&&MC?MC[2]:440)+'px';
-  if(cat&&MC){ radarAtura(); const um=`https://static-m.meteo.cat/ginys/${MC[0]}?language=ca&color=2c3e50&target=_blank`;
+  if(avZ==='fronts'){ frontsMostra(); }
+  else if(cat&&MC){ radarAtura(); const um=`https://static-m.meteo.cat/ginys/${MC[0]}?language=ca&color=2c3e50&target=_blank`;
     if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: aquest mapa només funciona amb cobertura.</p>'; }
     else if(el.dataset.k!==um){ el.dataset.k=um; el.innerHTML=`<iframe src="${um}" title="${MC[1]}" scrolling="no" style="border:0;width:100%;height:100%"></iframe>`; } }
   else if(avZ==='radar'){ radarMostra(); }
   else if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: els mapes d\'avisos només funcionen amb cobertura.</p>'; }
-  else if(el.dataset.k!==u){ radarAtura(); el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
-  if(cat&&avZ==='reg'){ set('av-nota','Avisos de situació meteorològica de perill (SMP) del Meteocat per comarques: tria el dia (avui, demà, demà passat) i el fenomen (pluja, neu, vent, fred…). Verd = sense perill; groc = moderat; taronja = alt; vermell = molt alt. La ruta és al Berguedà (la Pobla de Lillet).'); }
+  else if(el.dataset.k!==u){ radarAtura(); frontsAtura(); el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
+  if(avZ==='fronts'){ set('av-nota','<b>Com llegir-lo:</b> les línies són isòbares (pressió igual); com més juntes, més vent. <b>H</b> = anticicló (temps estable), <b>L</b> = borrasca (temps inestable). <b style="color:#1d4fd8">Front fred</b> (triangles blaus): arriba amb ruixats o tempestes, vent fort que gira i baixada de temperatura; després sol aclarir. <b style="color:#d6281e">Front càlid</b> (semicercles vermells): núvols que s\'espessen i pluja feble i llarga, boira a muntanya. <b style="color:#a13bb5">Front oclús</b> (lila): barreja dels dos, pluja persistent. Mira si algun front passa per Catalunya els dies de la sortida i a quina hora. Mapes del Met Office: anàlisi + previsió cada 12 h fins a 3-5 dies; s\'actualitzen cap a les 8:30 i les 20:30 i queden desats per consultar-los sense cobertura. «Pressió i vent» és Windy: toca ▶ a sota per veure l\'evolució dels propers dies.'); }
+  else if(cat&&avZ==='reg'){ set('av-nota','Avisos de situació meteorològica de perill (SMP) del Meteocat per comarques: tria el dia (avui, demà, demà passat) i el fenomen (pluja, neu, vent, fred…). Verd = sense perill; groc = moderat; taronja = alt; vermell = molt alt. La ruta és al Berguedà (la Pobla de Lillet).'); }
   else if(cat&&avZ==='radar'){ set('av-nota','Última imatge del radar del Meteocat: l\'app la refresca sola cada 6 min mentre la mires i quan tornes a obrir l\'app. Fes zoom amb + per acostar-te a la zona de la ruta. Per veure l\'animació de la darrera hora i la predicció a 1 hora, obre el radar del Meteocat amb el botó de sota.'); }
   else if(avZ==='radar'){ set('av-nota','Radar de pluja de les últimes 2 hores (cada 10 min; es refresca sol mentre el mires) sobre la zona de la ruta, en lila; el punt blau és on ets. Toca ▶ per veure l\'animació i cap on es mou la pluja, o arrossega la barra. Blau clar = pluja feble; groc i vermell = forta; tons rosats = neu. A muntanya el radar pot no veure la pluja feble o la neu de les valls (les muntanyes li fan ombra).'); }
   else set('av-nota',`Colors: <b style="color:#a8a800">moderat</b> · <b style="color:#d97a00">sever</b> · <b style="color:#c0392b">extrem</b>. Toca una zona per llegir l'avís; a sota pots triar «Today / Tomorrow / Later». El marcador és la ruta. `+
