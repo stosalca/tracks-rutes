@@ -776,7 +776,7 @@ function pintaPlansB(E,seg,now){
   const tPlaA=i=>({km:(R.cd[fiA]-R.cd[i])/1000,up:R.cu[fiA]-R.cu[i],dn:R.cn[fiA]-R.cn[i],h:horesEntre(i,fiA)+paradesEntre(R.cd[i],fiA)});
   const tAmbB=b=>{ const hB=hores(b.km,b.up,b.dn); if(b.ib==null) return {km:b.km,up:b.up,dn:b.dn,h:hB};
     const t=tPlaA(b.ib); return {km:b.km+t.km,up:b.up+t.up,dn:b.dn+t.dn,h:hB+t.h}; };
-  // cadena de decisions: plans B que acaben al mateix final (no el B4 de Falgars)
+  // cadena de decisions: plans B que acaben al mateix final (no el B5 de Falgars)
   const chain=L.filter(b=>!b.limitPropi&&(!b.fi||b.fi===fiNom)).sort((x,y)=>x.ia-y.ia);
   const trajecte=(i,j)=>horesEntre(i,j)+paradesEntre(R.cd[i],j);
   // millor opció si ens saltem la cruïlla i: pla A o un pla B posterior
