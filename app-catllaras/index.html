@@ -175,6 +175,9 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 .acu{color:#8a8478;font-weight:600;font-size:11px}
 .fasel{width:100%;font:inherit;font-size:15px;font-weight:600;padding:8px;border:1px solid #cfc8bb;border-radius:10px;margin:2px 0 8px;background:#fff}
 #trams tr{cursor:pointer}
+.pbchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px 22px}.pbchips[hidden]{display:none}
+.pbchip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#C55A11;border:1.5px solid #C55A11;border-radius:99px;padding:2px 9px}
+.pbchip input{margin:0}.pbchip.off{color:#9a948a;border-color:#cfc8bb}.pbtots{font:inherit;font-size:12px;border:0;background:#e7e1d4;border-radius:99px;padding:3px 10px}
 </style>
 </head>
 <body>
@@ -253,6 +256,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
     </div>
     <div class="capes">
       <label><input type="checkbox" id="c-pb" checked> Plans B <span class="lleg"><i style="border-color:#C55A11"></i>taronja discontinu</span></label>
+      <div class="pbchips" id="c-pbs"></div>
       <label><input type="checkbox" id="c-osm" checked> Camins OSM <span class="lleg"><i style="border-color:#d0342c"></i>corriol <i style="border-color:#8b5a2b"></i>pista</span></label>
       <details class="mapes"><summary>Mapes base (toca per triar)</summary><div id="c-mapes"></div><p class="nota">Pots activar-ne més d'un: s'apilen (el de dalt de la llista, a sobre). La descàrrega sense cobertura baixa els mapes activats.</p></details>
       <label>Opacitat del mapa <input type="range" id="c-op" min="0" max="100" step="10" value="100"> <span id="c-opv">100 %</span></label>
@@ -670,6 +674,17 @@ function pintaFinsA(E,now,PB){ const el=$('fa-sel'); if(!el||!E) return; const s
 
 $('trams').addEventListener('click',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const k=[...$('trams').children].indexOf(tr); if(k<0||k>=R.trams.length) return;
   ds().fa=R.wp[k+1].k; save(); render(); $('fa').scrollIntoView({behavior:'smooth',block:'center'}); });
+// ---------- plans B visibles al mapa (un a un; es desa per dia) ----------
+const PBOFF_KEY='catllaras-pboff';
+function pbOff(){ try{ return (JSON.parse(localStorage.getItem(PBOFF_KEY))||{})[dia]||[]; }catch(e){ return []; } }
+function pintaPbChips(){ const el=$('c-pbs'); if(!el) return; const L=plansB().filter(b=>b.pts.length>1), off=pbOff();
+  el.hidden=M.pb===false||!L.length;
+  el.innerHTML=L.map(b=>`<label class="pbchip${off.includes(b.id)?' off':''}"><input type="checkbox" value="${b.id}" ${off.includes(b.id)?'':'checked'}>${b.id}</label>`).join('')+
+    (L.length>1?`<button class="pbtots" type="button">${off.length?'Tots':'Cap'}</button>`:'');
+  const desa=o=>{ let all={}; try{ all=JSON.parse(localStorage.getItem(PBOFF_KEY))||{}; }catch(e){} all[dia]=o; try{localStorage.setItem(PBOFF_KEY,JSON.stringify(all))}catch(e){} pintaPbChips(); dibuixaMapa(); };
+  el.querySelectorAll('input').forEach(i=>i.onchange=()=>desa([...el.querySelectorAll('input:not(:checked)')].map(x=>x.value)));
+  const bt=el.querySelector('.pbtots'); if(bt) bt.onclick=()=>desa(off.length?[]:L.map(b=>b.id)); }
+
 // ---------- Plans B i hores límit ----------
 // quan caminem per un pla B: següent punt = enllaç amb el pla A (o final), fet i fins al final pel pla B
 function nomEnllac(i){ const w=R.wp.find(x=>x.i>=i)||R.wp[R.wp.length-1], d=R.cd[w.i]-R.cd[i];
@@ -1186,7 +1201,7 @@ function dibuixaMapa(E){
     const m=a.pts[Math.floor(a.pts.length*(a.id==='A+1'?0.72:0.45))], [x,y]=P(m[0],m[1]);
     g+=`<text x="${x+8}" y="${y+5}" font-size="18" font-weight="800" fill="${a.col}" paint-order="stroke" stroke="#fff" stroke-width="4">${a.id}</text>`;
     a.wp.slice(1,-1).forEach(([i,n,c])=>{ const [x2,y2]=P(a.pts[i][0],a.pts[i][1]); g+=`<circle cx="${x2}" cy="${y2}" r="5.5" fill="${a.col}" stroke="#fff" stroke-width="2"/><text x="${x2+9}" y="${y2-7}" font-size="13" font-weight="700" fill="${a.col}" paint-order="stroke" stroke="#fff" stroke-width="3.5">${c||''}</text>`; }); });
-  if(!PRINT_AP&&(M.pb!==false||PRINT)) plansB().forEach(b=>{ if(b.pts.length<2) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
+  const PBOFF=PRINT?[]:pbOff(); if(!PRINT_AP&&(M.pb!==false||PRINT)) plansB().forEach(b=>{ if(b.pts.length<2||PBOFF.includes(b.id)) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
     g+=`<polyline points="${ps}" fill="none" stroke="#fff" stroke-width="6" opacity=".7"/><polyline points="${ps}" fill="none" stroke="#C55A11" stroke-width="3.5" stroke-dasharray="8 6"/>`;
     const m=b.pts[Math.floor(b.pts.length*(PRINT?0.35:0.5))], [a,c]=P(m[0],m[1]);
     g+=`<text x="${a+6}" y="${c+14}" font-size="${PRINT?17:13}" font-weight="800" fill="#C55A11" paint-order="stroke" stroke="#fff" stroke-width="4">${b.id}</text>`; });
@@ -1399,7 +1414,8 @@ function dibuixaOSM(x0,y0,W,H){
       try{localStorage.setItem(MAPES_KEY,JSON.stringify(ids))}catch(e){} for(const [k,img] of M.imgs) img.remove(); M.imgs.clear(); dibuixaMapa(); estatMapes(); }); }
   try{ const c=JSON.parse(localStorage.getItem('petjada-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.pb===false) M.pb=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
   const desa=()=>{try{localStorage.setItem('petjada-capes',JSON.stringify({osm:OSM.on,pb:M.pb!==false,op:+$('c-op').value}))}catch(e){}};
-  $('c-pb').checked=M.pb!==false; $('c-pb').onchange=()=>{M.pb=$('c-pb').checked; desa(); dibuixaMapa();};
+  $('c-pb').checked=M.pb!==false; $('c-pb').onchange=()=>{M.pb=$('c-pb').checked; desa(); pintaPbChips(); dibuixaMapa();};
+  pintaPbChips();
   const op=()=>{ $('tiles').style.opacity=$('c-op').value/100; $('c-opv').textContent=$('c-op').value+' %'; };
   $('c-osm').checked=OSM.on; op();
   $('c-osm').onchange=()=>{OSM.on=$('c-osm').checked; desa(); dibuixaMapa();};
@@ -1514,7 +1530,7 @@ function gpsOn(){
 }
 
 // ---------- Controls ----------
-function canviaDia(d){dia=d; st.dia=d; save(); R=prepara(d); pos=null; pintaGuioTots(); metDia=null; if(MET) pintaMeteo(); if($('resum-vess')) set('resum-vess',pintaResumVessants()); if(lastFix&&!prova) aplica(locate(lastFix.lat,lastFix.lon)); else render(); if(prova) mouProva(); }
+function canviaDia(d){dia=d; st.dia=d; save(); R=prepara(d); pos=null; pintaPbChips(); pintaGuioTots(); metDia=null; if(MET) pintaMeteo(); if($('resum-vess')) set('resum-vess',pintaResumVessants()); if(lastFix&&!prova) aplica(locate(lastFix.lat,lastFix.lon)); else render(); if(prova) mouProva(); }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>canviaDia(b.dataset.d));
 $('b-gps').onclick=gpsOn;
 $('b-inici').onclick=()=>{const s=ds();
