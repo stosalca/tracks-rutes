@@ -120,7 +120,7 @@ details.det.act summary{color:var(--ter)}
 #flora h3{font-size:15px;margin:10px 0 4px}
 #flora p{font-size:15px;line-height:1.45}
 .tmap{position:relative;height:400px;overflow:hidden;border-radius:10px;background:#eef2e8;touch-action:none;user-select:none;-webkit-user-select:none}
-#tiles img{position:absolute;pointer-events:none;max-width:none}
+#tiles{isolation:isolate}#tiles img{position:absolute;pointer-events:none;max-width:none}
 #tover{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .mbtn{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
 .mbtn button{width:42px;height:42px;border-radius:10px;border:0;background:#fff;color:var(--pis);font:700 22px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.25)}
@@ -177,6 +177,7 @@ details.det.act summary{color:var(--ter)}
 .bri .xif div{background:#f4efe5;border-radius:10px;padding:8px}.bri .xif strong{display:block;font-size:13px;margin-bottom:4px}.bri .xif span{display:block;font-size:13px;line-height:1.5}
 .bri .bri-s{font-size:13px;font-weight:700;margin:8px 0 4px}
 .bri .bri-t{width:100%;margin-top:6px;font:14px/1.4 inherit;font-family:inherit;border:1px solid #d9d1c2;border-radius:8px;padding:7px}
+.mapes summary{font-size:13px;font-weight:700;cursor:pointer;margin:4px 0}.mapes label{display:flex;gap:6px;align-items:center;font-size:14px;margin:4px 0}
 </style>
 </head>
 <body>
@@ -231,23 +232,24 @@ details.det.act summary{color:var(--ter)}
   </section>
 
   <section class="card">
-    <h2>Mapa topogràfic <b id="mapa-estat">ICGC</b></h2>
+    <h2>Mapa topogràfic <b id="mapa-estat"></b></h2>
     <div class="tmap" id="tmap">
       <div id="tiles"></div>
       <svg id="tosm"></svg>
       <svg id="tover"></svg>
       <div class="mbtn"><button id="m-in" aria-label="Apropar">+</button><button id="m-out" aria-label="Allunyar">−</button><button id="m-seg" class="on" aria-label="Seguir la posició">⦿</button></div>
-      <div class="attr">© ICGC CC BY 4.0 · © OpenStreetMap ODbL</div>
+      <div class="attr" id="m-attr">© OpenStreetMap ODbL</div>
     </div>
     <div class="capes">
       <label><input type="checkbox" id="c-osm" checked> Camins OSM <span class="lleg"><i style="border-color:#d0342c"></i>corriol <i style="border-color:#8b5a2b"></i>pista</span></label>
-      <label>Mapa ICGC <input type="range" id="c-op" min="0" max="100" step="10" value="100"> <span id="c-opv">100 %</span></label>
+ <details class="mapes"><summary>Mapes base (toca per triar)</summary><div id="c-mapes"></div><p class="nota">Pots activar-ne més d'un: s'apilen (el de dalt de la llista, a sobre). La descàrrega sense cobertura baixa els mapes activats.</p></details>
+      <label>Opacitat del mapa <input type="range" id="c-op" min="0" max="100" step="10" value="100"> <span id="c-opv">100 %</span></label>
       <span class="nota" id="osm-estat"></span>
     </div>
     <div class="botons" style="margin-top:8px"><button class="btn s" id="b-desc">Descarregar mapes per anar sense cobertura</button></div>
     <div class="barra" id="desc-barra" hidden><i id="desc-i"></i></div>
     <div id="trk-dia"></div>
-    <p class="nota" id="desc-txt" style="margin-top:6px">Descarrega'ls amb wifi abans de la sortida (unes 190 teselles, totes dues rutes). Arrossega el mapa per moure'l; ⦿ el torna a centrar on ets.</p>
+    <p class="nota" id="desc-txt" style="margin-top:6px">Descarrega'ls amb wifi abans de la sortida (tots els dies de la ruta i els mapes activats). Arrossega el mapa per moure'l; ⦿ el torna a centrar on ets.</p>
   </section>
 
   <section class="card">

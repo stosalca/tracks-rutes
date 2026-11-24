@@ -1,4 +1,4 @@
-const CACHE='petjada-rutes-v4';
+const CACHE='petjada-rutes-v5';
 const TILES='petjada-rutes-mapes-v1';
 const FILES=['./','index.html','core.js','app.js','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
@@ -6,8 +6,8 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.a
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const url=new URL(e.request.url);
-  // teselles del mapa ICGC: primer les desades; si no, xarxa i es desen
-  if(url.hostname==='geoserveis.icgc.cat'){
+  // teselles dels mapes (ICGC, IGN): primer les desades; si no, xarxa i es desen
+  if(url.hostname==='geoserveis.icgc.cat'||(url.hostname==='www.ign.es'&&url.pathname.startsWith('/wmts/'))){
     e.respondWith(caches.open(TILES).then(c=>c.match(e.request.url).then(r=>r||fetch(e.request).then(res=>{
       if(res.ok||res.type==='opaque') c.put(e.request.url,res.clone());
       return res;}).catch(()=>new Response('',{status:504})))));

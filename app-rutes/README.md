@@ -3,6 +3,7 @@
 App web per guiar rutes de senderisme amb clients. Carregues el GPX de la ruta (track i waypoints del roadbook) i l'app calcula al mòbil:
 
 - km, desnivells i temps per trams (3,5 km/h · 300 m/h de pujada · 400 m/h de baixada · +20 %), hores de pas i hores límit a partir de l'hora de sortida i l'hora objectiu d'arribada de cada dia;
+- mapa base a triar (es poden activar diversos): topogràfic ICGC (Catalunya), topogràfic IGN MTN, mapa base IGN i ortofoto PNOA (tot Espanya); per defecte l'ICGC a Catalunya i l'IGN fora;
 - alçades, pendents i obagues/solells amb el model del terreny (teselles Terrarium a AWS);
 - plans B sobre els camins d'OpenStreetMap (OpenFreeMap): cap al final, de tornada a l'inici o cap a un accés amb vehicle, només si estalvien temps; amb tipus de camí, pendent màxima i enllaç al heatmap de Strava;
 - parades previstes editables per punt (per defecte, primera parada de 10 min al primer punt): compten a les hores previstes, als límits, a «Fins al final» i als plans B;

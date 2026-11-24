@@ -669,24 +669,39 @@ function dibuixaPerfil(E){
   $('perfil').innerHTML=g;
 }
 // ---------- Mapa topogràfic ICGC (teselles) ----------
-const TILE_URL='https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png';
+// Mapes base: es poden activar i desactivar; s'apilen en aquest ordre (el primer, a sota). Per afegir-ne un, una línia aquí.
+const IGN=(srv,capa,fmt)=>`https://www.ign.es/wmts/${srv}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${capa}&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=${fmt}`;
+const MAPES=[
+  {id:'pnoa',nom:'Ortofoto PNOA (Espanya)',curt:'Ortofoto',url:IGN('pnoa-ma','OI.OrthoimageCoverage','image/jpeg'),zmax:17,attr:'© IGN · PNOA'},
+  {id:'ignbase',nom:'Mapa base IGN (Espanya)',curt:'IGN base',url:IGN('ign-base','IGNBaseTodo','image/png'),zmax:17,attr:'© IGN'},
+  {id:'mtn',nom:'Topogràfic IGN · MTN (Espanya)',curt:'IGN MTN',url:IGN('mapa-raster','MTN','image/jpeg'),zmax:16,attr:'© IGN · MTN'},
+  {id:'icgc',nom:'Topogràfic ICGC (Catalunya)',curt:'ICGC',url:'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png',zmax:16,attr:'© ICGC CC BY 4.0'}];
 const TZMAX=16, ZMIN=12, ZMAX=18;
+const MAPES_KEY='petjada-rutes-mapes-on';
+// a Catalunya, l'ICGC; a la resta, el topogràfic de l'IGN
+function aCatalunya(lat,lon){ return lat>40.5&&lat<42.9&&lon>0.15&&lon<3.35&&!(lat<41.0&&lon<0.6); }
+function mapesOn(){ let m=null; try{ m=JSON.parse(localStorage.getItem(MAPES_KEY)); }catch(e){}
+  if(!Array.isArray(m)||!m.length){ const p=RUTES[DIES[0]].pts[0]; m=[aCatalunya(p[0],p[1])?'icgc':'mtn']; }
+  return MAPES.filter(x=>m.includes(x.id)); }
+function desaMapes(ids){ try{localStorage.setItem(MAPES_KEY,JSON.stringify(ids))}catch(e){} }
 const M={z:15,cx:null,cy:null,follow:true,imgs:new Map(),E:null,ptrs:new Map(),pinch:null};
 function wpx(lat,lon,z){const s=256*2**z, la=rad(lat); return [(lon+180)/360*s,(1-Math.log(Math.tan(la)+1/Math.cos(la))/Math.PI)/2*s];}
-function tileUrl(z,x,y){return TILE_URL.replace('{z}',z).replace('{x}',x).replace('{y}',y);}
+function tileUrl(z,x,y,L){return (L||mapesOn()[0]||MAPES[3]).url.replace('{z}',z).replace('{x}',x).replace('{y}',y);}
 function dibuixaMapa(E){
   if(E) M.E=E; E=M.E; if(!E) return;
   const el=$('tmap'), W=el.clientWidth, H=el.clientHeight; if(!W) return;
   if(M.follow||M.cx==null) [M.cx,M.cy]=wpx(E.lat,E.lon,M.z);
-  const tz=Math.min(M.z,TZMAX), ts=256*2**(M.z-tz), x0=M.cx-W/2, y0=M.cy-H/2;
-  const keep=new Set(), cont=$('tiles'), n=2**tz;
+  const x0=M.cx-W/2, y0=M.cy-H/2, keep=new Set(), cont=$('tiles'), ON=mapesOn();
+  ON.forEach((L,li)=>{ const tz=Math.min(M.z,L.zmax), ts=256*2**(M.z-tz), n=2**tz;
   for(let tx=Math.floor(x0/ts);tx<=Math.floor((x0+W)/ts);tx++) for(let ty=Math.floor(y0/ts);ty<=Math.floor((y0+H)/ts);ty++){
     if(ty<0||ty>=n) continue;
-    const key=tz+'/'+tx+'/'+ty; keep.add(key);
+    const key=L.id+'/'+tz+'/'+tx+'/'+ty; keep.add(key);
     let img=M.imgs.get(key);
-    if(!img){ img=new Image(); img.alt=''; img.decoding='async'; img.onerror=()=>{img.style.visibility='hidden'}; img.src=tileUrl(tz,tx,ty); cont.appendChild(img); M.imgs.set(key,img); }
+    if(!img){ img=new Image(); img.alt=''; img.decoding='async'; img.onerror=()=>{img.style.visibility='hidden'}; img.src=tileUrl(tz,tx,ty,L); cont.appendChild(img); M.imgs.set(key,img); }
+    img.style.zIndex=li+1; if(li>0) img.style.opacity=.85;
     img.style.left=(tx*ts-x0)+'px'; img.style.top=(ty*ts-y0)+'px'; img.style.width=img.style.height=ts+'px';
-  }
+  } });
+  if($('m-attr')) $('m-attr').textContent=[...ON.map(L=>L.attr),'© OpenStreetMap ODbL'].join(' · ');
   for(const [k,img] of M.imgs) if(!keep.has(k)){ img.remove(); M.imgs.delete(k); }
   dibuixaOSM(x0,y0,W,H);
   // capa del track
@@ -898,6 +913,11 @@ function dibuixaOSM(x0,y0,W,H){
   sv.innerHTML=g;
 }
 (function(){
+  { const el=$('c-mapes'), on=mapesOn().map(L=>L.id);
+    el.innerHTML=MAPES.slice().reverse().map(L=>`<label><input type="checkbox" value="${L.id}" ${on.includes(L.id)?'checked':''}> ${esc(L.nom)}</label>`).join('');
+    el.querySelectorAll('input').forEach(i=>i.onchange=()=>{ let ids=[...el.querySelectorAll('input:checked')].map(x=>x.value);
+      if(!ids.length){ i.checked=true; ids=[i.value]; }
+      desaMapes(ids); for(const [k,img] of M.imgs){ img.remove(); } M.imgs.clear(); dibuixaMapa(); estatMapes(); }); }
   try{ const c=JSON.parse(localStorage.getItem('petjada-rutes-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
   const desa=()=>{try{localStorage.setItem('petjada-rutes-capes',JSON.stringify({osm:OSM.on,op:+$('c-op').value}))}catch(e){}};
   const op=()=>{ $('tiles').style.opacity=$('c-op').value/100; $('c-opv').textContent=$('c-op').value+' %'; };
@@ -909,20 +929,21 @@ function dibuixaOSM(x0,y0,W,H){
 // ---------- Descàrrega de mapes per anar sense cobertura ----------
 const TILE_CACHE='petjada-rutes-mapes-v1';
 function llistaTeselles(){
-  const BUF={12:1500,13:1500,14:1200,15:800,16:500}, set=new Set();
+  const BUF={12:1500,13:1500,14:1200,15:800,16:500,17:400}, set=new Set(), ON=mapesOn(), zmaxOn=Math.max(...ON.map(L=>L.zmax),ZMIN);
   for(const k of DIES){ const p=RUTES[k].pts;
     for(let i=0;i<p.length;i+=2){ const [lat,lon]=p[i];
-      for(let z=ZMIN;z<=TZMAX;z++){ const b=BUF[z], dl=b/110540, dn=b/(111320*Math.cos(rad(lat))), s=256*2**z;
+      for(let z=ZMIN;z<=TZMAX;z++){ if(z>zmaxOn) continue; const b=BUF[z], dl=b/110540, dn=b/(111320*Math.cos(rad(lat))), s=256*2**z;
         const [xa,ya]=wpx(lat+dl,lon-dn,z), [xb,yb]=wpx(lat-dl,lon+dn,z);
         for(let x=Math.floor(xa/256);x<=Math.floor(xb/256);x++) for(let y=Math.floor(ya/256);y<=Math.floor(yb/256);y++) set.add(z+'/'+x+'/'+y);
       }}}
-  return [...set].map(k=>{const [z,x,y]=k.split('/');return tileUrl(z,x,y)});
+  const out=[]; for(const k of set){ const [z,x,y]=k.split('/'); for(const L of ON) if(+z<=L.zmax) out.push(tileUrl(z,x,y,L)); } return out;
 }
 async function estatMapes(){
   try{ if(!('caches' in window)) return; const c=await caches.open(TILE_CACHE), ks=await c.keys(), tot=llistaTeselles().length;
     const n=Math.min(ks.length,tot);
-    $('mapa-estat').textContent= n>=tot?'✓ disponible sense cobertura':(n?`${n}/${tot} teselles desades`:'ICGC · cal cobertura');
-    if(n>=tot) $('b-desc').textContent='Mapes descarregats ✓ (tornar a descarregar)';
+    const ks2=new Set(ks.map(r=>r.url)), fet=llistaTeselles().filter(u=>ks2.has(u)).length, nm=mapesOn().map(L=>L.curt).join(' + ');
+    $('mapa-estat').textContent= fet>=tot?'✓ '+nm+' sense cobertura':(fet?`${nm} · ${fet}/${tot} desades`:nm+' · cal cobertura');
+    $('b-desc').textContent=fet>=tot?'Mapes descarregats ✓ (tornar a descarregar)':'Descarregar mapes per anar sense cobertura';
   }catch(e){}
 }
 $('b-desc').onclick=async()=>{
