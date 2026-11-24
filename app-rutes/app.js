@@ -195,7 +195,7 @@ function render(){
   rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td><b>${rel(new Date(+base+(H+HP)*3600e3))}</b></td><td></td><td></td></tr>`+
     `<tr><td colspan="8" class="nota">Marxa ${hm(H)} + parades ${hm(HP)} = <b>${hm(H+HP)}</b>. Parades: ${esc(textParades())}.</td></tr>`;
   set('trams',rows);
-  dibuixaPerfil(E); dibuixaMapa(E);
+  LASTE=E; dibuixaPerfil(E); dibuixaMapa(E); pintaPasTots();
   pintaGuio(E,w); pintaVessant(E); pintaPlansB(E,seg,now); pintaFinsA(E,now,PB);
 }
 
@@ -425,7 +425,7 @@ document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
   if(v==='vlib') return; for(const id of ['vruta','vbri','vmet','v112','vlib']) $(id).hidden=id!==v;
   document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
-  window.scrollTo(0,0); if(v==='vbri') pintaBriefing(); if(v==='v112'){ pinta112(); pintaCob(); } if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} } });
+  window.scrollTo(0,0); if(v==='vbri') pintaBriefing(); if(v==='v112'){ pinta112(); pintaCob(); } if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} pintaPasTots(); if(!MPAS&&navigator.onLine) carregaPas().then(()=>{pintaPasTots();try{pintaMeteo()}catch(e){}}); } });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }
   try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
@@ -608,6 +608,7 @@ async function carregaMeteo(manual){
   $('met-act').textContent='actualitzant…';
   try{ const r=await fetchT(u,25000); if(!r.ok) throw 0; const j=await r.json(); const arr=Array.isArray(j)?j:[j];
     MET={ts:Date.now(),pts:arr.map(x=>({h:x.hourly,d:x.daily}))};
+    await carregaPas();
     try{ localStorage.setItem(MET_KEY,JSON.stringify(MET)); }catch(e){}
   }catch(e){ $('met-act').textContent='no s\'ha pogut actualitzar'; }
   pintaMeteo(); render();
@@ -743,6 +744,67 @@ function pintaAvisos(){
     '<a href="https://www.aemet.es/es/eltiempo/prediccion/avisos" target="_blank" rel="noopener">⚠ Avisos de l\'AEMET</a>'+
     `<a href="https://www.windy.com/-Weather-warnings-capAlerts?capAlerts,${la.toFixed(3)},${lo.toFixed(3)},8" target="_blank" rel="noopener">Obrir a Windy</a>`+(cat?'<a href="https://www.meteo.cat/observacions/radar" target="_blank" rel="noopener">Radar del Meteocat</a>':'')+'<a href="https://www.aemet.es/es/eltiempo/observacion/radar" target="_blank" rel="noopener">Radar de l\'AEMET</a>');
 }
+
+// ---------- Meteo al vostre pas: previsió a cada punt de la ruta a l'hora prevista de pas ----------
+const MPAS_KEY='petjada-ruta-meteo-pas-'+RUTA.id, DATA_DIA=DATES;
+let MPAS=null; try{ MPAS=JSON.parse(localStorage.getItem(MPAS_KEY)); }catch(e){}
+let pasDia=null, LASTE=null;
+const RPREP={}; function rDia(d){ if(d===dia) return R; return RPREP[d]||(RPREP[d]=prepara(d)); }
+function puntsPas(){ const o=[]; for(const d of DIES){ const RR=rDia(d); RR.wp.forEach(w=>{ const q=RR.p[w.i]; o.push({id:d+':'+w.k,lat:+q[0].toFixed(4),lon:+q[1].toFixed(4),e:Math.round(q[2])}); }); } return o; }
+async function carregaPas(){
+  if(!navigator.onLine) return;
+  const P=puntsPas(), v='temperature_2m,apparent_temperature,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,weather_code,freezing_level_height';
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+P.map(p=>p.lat).join(',')+'&longitude='+P.map(p=>p.lon).join(',')+'&elevation='+P.map(p=>p.e).join(',')+'&hourly='+v+'&timezone=Europe%2FMadrid&forecast_days=16&wind_speed_unit=kmh';
+  try{ const r=await fetchT(u,30000); if(!r.ok) return; const j=await r.json(); const a=Array.isArray(j)?j:[j];
+    const pts={}; P.forEach((p,i)=>{ if(a[i]) pts[p.id]={...p,h:a[i].hourly}; });
+    MPAS={ts:Date.now(),pts}; try{ localStorage.setItem(MPAS_KEY,JSON.stringify(MPAS)); }catch(e){}
+  }catch(e){}
+}
+function hKey(t){ const d=new Date(t+30*60e3); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+':00'; }
+// hores de pas: planificades (com la taula de trams) o, si la ruta d'avui està en marxa, recalculades des d'on sou
+function horesPas(d){
+  const RR=rDia(d), PA=(st.par&&st.par[d])||{}, dd=DATA_DIA[d]||(()=>{const x=new Date();return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');})(), base=new Date(dd+'T'+RR.r.sortida+':00');
+  let acc=0, stop=0;
+  const rows=RR.wp.map((w,k)=>{ if(k>0) acc+=RR.trams[k-1].h; const r={w,k,t:+base+(acc+stop)*3600e3,alt:RR.p[w.i][2],estat:'prev'}; stop+=(PA[w.k]&&PA[w.k].m?+PA[w.k].m:0)/60; return r; });
+  const s=st[d]||{}, viu=d===dia&&INI&&LASTE;
+  if(viu){ const now=prova&&provaHora?+provaHora:Date.now(); let idx=0; while(idx<R.n-1&&R.cd[idx+1]<=LASTE.d) idx++;
+    rows.forEach(r=>{ if(LASTE.d>=R.cd[r.w.i]-30){ r.estat='fet'; const real=r.k>0?(s.pas||{})[r.k-1]:INI; if(real) r.t=+real; }
+      else { r.t=now+(horesEntre(idx,r.w.i)+paradesEntre(LASTE.d,r.w.i))*3600e3; r.estat='viu'; } });
+    const nx=rows.find(r=>r.estat==='viu'); if(nx) nx.estat='ara'; }
+  return {rows,viu};
+}
+function metPunt(d,k,t){ const p=MPAS&&MPAS.pts[d+':'+k]; if(!p) return null; const i=p.h.time.indexOf(hKey(t)); if(i<0) return null;
+  const g=n=>p.h[n]?p.h[n][i]:null; return {t:g('temperature_2m'),at:g('apparent_temperature'),pp:g('precipitation_probability'),pr:g('precipitation'),sn:g('snowfall'),ws:g('wind_speed_10m'),wg:g('wind_gusts_10m'),wd:g('wind_direction_10m'),code:g('weather_code')}; }
+function nomCurt(w){ const n=(w.n||'').split(' · ').slice(1).join(' · ')||w.k; return w.k+' '+(n.length>18?n.slice(0,17)+'…':n); }
+function pintaPas(id,d){
+  const el=$(id+'-t'); if(!el) return;
+  if(!MPAS){ set(id+'-t','<p class="nota">Encara no hi ha previsió per punts: obre la pestanya Meteo amb cobertura.</p>'); set(id+'-st',''); set(id+'-n',''); return; }
+  const {rows,viu}=horesPas(d); let n=0;
+  let h='<table class="tpas"><thead><tr><th>Punt</th><th>Pas</th><th>Cel</th><th>T (sens.)</th><th>Vent / ratxa</th><th>Pluja</th></tr></thead><tbody>';
+  rows.forEach(r=>{ const m=metPunt(d,r.w.k,r.t); const hh=new Date(r.t).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'});
+    if(!m){ h+=`<tr class="${r.estat==='fet'?'fet':r.estat==='ara'?'ara':''}"><td><b>${esc(nomCurt(r.w))}</b><br><small>${mts(r.alt)}</small></td><td>${hh}</td><td colspan="4"><small>sense previsió per a aquesta hora</small></td></tr>`; return; }
+    n++; const c=(v,a,b)=>v>=b?'al':v>=a?'av':'', ct=(v)=>v<=-5?'al':v<=0?'av':'';
+    const dir=ventDir(m.wd);
+    h+=`<tr class="${r.estat==='fet'?'fet':r.estat==='ara'?'ara':''}"><td><b>${esc(nomCurt(r.w))}</b><br><small>${mts(r.alt)}</small></td><td><b>${hh}</b>${r.estat==='fet'?'<br><small>passat</small>':''}</td>`+
+      `<td>${WMO[m.code]||''}${m.sn?' ❄':''}</td><td>${tC(m.t)} <span class="${ct(m.at)}">(${tC(m.at)})</span></td>`+
+      `<td>${dir?fletxa(dir.g)+' '+dir.c+' ':''}${Math.round(m.ws)} / <span class="${c(m.wg,40,60)}">${Math.round(m.wg)}</span></td>`+
+      `<td><span class="${c(m.pp??0,30,60)}">${m.pp??0} %</span>${m.pr>=0.1?'<br><small>'+m.pr.toFixed(1)+' mm</small>':''}</td></tr>`; });
+  h+='</tbody></table>'; set(id+'-t',h);
+  const fa=Math.round((Date.now()-MPAS.ts)/60000);
+  set(id+'-st',(DIES.length>1?'dia '+(DIES.indexOf(d)+1)+' · ':'')+(viu?'hores recalculades en ruta':'hores planificades'));
+  set(id+'-n',(viu?'Hores de pas recalculades amb el vostre ritme i posició: la previsió es mou amb vosaltres. ':'Hores de pas planificades (taula de trams, amb les parades). Quan toqueu «Iniciar ruta», es recalculen amb el ritme real. ')+
+    `Previsió a la coordenada i l'alçada de cada punt, per a l'hora de pas (Open-Meteo, actualitzada ${fa<60?'fa '+fa+' min':fa<1440?'fa '+Math.round(fa/60)+' h':new Date(MPAS.ts).toLocaleDateString('ca-ES')}). Vent: fletxa = cap on bufa, lletra = d'on ve. En taronja i vermell: ratxes de més de 40/60 km/h, sensació sota 0/−5 °C, pluja de més del 30/60 %.`+(n?'':' Encara massa lluny: la previsió per hores arriba a uns 15 dies.'));
+}
+function pintaPasTots(){ try{ pintaPas('rpas',dia); }catch(e){} try{ if(!pasDia) pasDia=dia; const bd=$('mpas-d'); if(bd&&!bd.children.length&&DIES.length>1) bd.innerHTML=DIES.map((d,j)=>`<button data-d="${d}">Dia ${j+1}</button>`).join(''); document.querySelectorAll('#mpas-d button').forEach(b=>{ b.classList.toggle('on',b.dataset.d===pasDia); b.onclick=()=>{pasDia=b.dataset.d; pintaPasTots();}; }); pintaPas('mpas',pasDia); }catch(e){} }
+// columnes de la taula per hores segons el dia: punt més baix, Xalet i punt més alt d'aquell dia
+function colsMeteo(){
+  const d=Object.keys(DATA_DIA).find(k=>DATA_DIA[k]===metDia);
+  if(d&&MPAS){ const RR=rDia(d); const ws=RR.wp.map(w=>({w,e:RR.p[w.i][2]}));
+    const lo=ws.reduce((a,b)=>b.e<a.e?b:a), hi=ws.reduce((a,b)=>b.e>a.e?b:a), mE=(lo.e+hi.e)/2, mid=ws.filter(x=>x!==lo&&x!==hi).reduce((a,b)=>!a||Math.abs(b.e-mE)<Math.abs(a.e-mE)?b:a,null)||lo;
+    const tr=[lo,mid,hi].map(x=>MPAS.pts[d+':'+x.w.k]);
+    if(tr.every(Boolean)&&tr[0].h.time[0]===MET.pts[0].h.time[0]) return {H:tr.map(p=>p.h),p:[lo,mid,hi].map(x=>({n:nomCurt(x.w),e:Math.round(x.e)}))}; }
+  return {H:MET.pts.map(p=>p.h),p:MET_PTS};
+}
 function pintaMeteo(){
   const A=MET_PTS[2], c=`${A.lat.toFixed(3)}N${A.lon.toFixed(3)}E${Math.round(A.e)}`, cat=RUTA.catalunya;
   set('met-links',[
@@ -760,13 +822,13 @@ function pintaMeteo(){
   if(!metDia||!dies.find(x=>x.k===metDia)) metDia=(dies.find(x=>x.k===DATES[dia])||dies[0]).k;
   set('met-dies',dies.map(x=>`<button data-k="${x.k}" class="${x.k===metDia?'on':''}">${x.n}</button>`).join(''));
   document.querySelectorAll('#met-dies button').forEach(b=>b.onclick=()=>{metDia=b.dataset.k;pintaMeteo();});
-  const H=MET.pts.map(p=>p.h), T=H[0].time;
+  const CC=colsMeteo(), H=CC.H, T=H[0].time;
   const ix=T.map((t,i)=>t.startsWith(metDia)?i:-1).filter(i=>i>=0);
   const dM=DIES.find(d=>DATES[d]===metDia), finestra=dM?[+RUTES[dM].sortida.slice(0,2),Math.min(23,+LIMIT[dM].h.slice(0,2)+1)]:[7,19];
   const hores=ix.filter(i=>{const h=+T[i].slice(11,13);return h>=finestra[0]&&h<=finestra[1];});
   // resum per alçades (en hores de marxa)
   const mn=(a)=>Math.min(...a), mx=(a)=>Math.max(...a);
-  let res='<div class="mres"><span></span>'+MET_PTS.map(p=>`<b>${esc(p.n)}<br><small style="font-weight:400;opacity:.7">${mts(p.e)}</small></b>`).join('');
+  let res='<div class="mres"><span></span>'+CC.p.map(p=>`<b>${esc(p.n)}<br><small style="font-weight:400;opacity:.7">${mts(p.e)}</small></b>`).join('');
   const fila=(nom,f)=>{res+=`<span>${nom}</span>`+H.map(h=>`<span>${f(h)}</span>`).join('');};
   fila('Temp.',h=>`${tC(mn(hores.map(i=>h.temperature_2m[i])))} / ${tC(mx(hores.map(i=>h.temperature_2m[i])))} °C`);
   fila('Sensació mín.',h=>`${tC(mn(hores.map(i=>h.apparent_temperature[i])))} °C`);
@@ -792,7 +854,7 @@ function pintaMeteo(){
   if(!av.length) av.push(['ok','Sense avisos destacables en les hores de marxa.']);
   set('met-avisos',av.map(([c,t])=>`<div class="mav ${c}">${t}</div>`).join(''));
   // taula per hores: temperatura a dues alçades, vent i precipitació
-  let tb=`<table><thead><tr><th>Hora</th><th>Cel</th><th>${esc(MET_PTS[0].n)}<br>${mts(MET_PTS[0].e)}</th><th>${esc(MET_PTS[1].n)}<br>${mts(MET_PTS[1].e)}</th><th>${esc(MET_PTS[2].n)}<br>${mts(MET_PTS[2].e)}</th><th>Vent a ${esc(MET_PTS[2].n)}<br>${mts(MET_PTS[2].e)} · km/h<br>mitjà / ratxa</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>`;
+  let tb=`<table><thead><tr><th>Hora</th><th>Cel</th><th>${esc(CC.p[0].n)}<br>${mts(CC.p[0].e)}</th><th>${esc(CC.p[1].n)}<br>${mts(CC.p[1].e)}</th><th>${esc(CC.p[2].n)}<br>${mts(CC.p[2].e)}</th><th>Vent a ${esc(CC.p[2].n)}<br>${mts(CC.p[2].e)} · km/h<br>mitjà / ratxa</th><th>Precip.<br>mm (prob.)</th></tr></thead><tbody>`;
   hores.forEach(i=>{ const x=H[1], m=H[2], pr=x.precipitation[i]||0, sn=x.snowfall?x.snowfall[i]||0:0;
     tb+=`<tr><td>${T[i].slice(11,16)}</td><td>${WMO[x.weather_code[i]]||''}</td><td>${tC(H[0].temperature_2m[i])} (${tC(H[0].apparent_temperature[i])})</td><td>${tC(x.temperature_2m[i])} (${tC(x.apparent_temperature[i])})</td><td>${tC(m.temperature_2m[i])} (${tC(m.apparent_temperature[i])})</td><td style="white-space:nowrap">${(d=>d?fletxa(d.g)+' '+d.c+' ':'')(ventDir(m.wind_direction_10m[i]))}${Math.round(m.wind_speed_10m[i])} / ${Math.round(m.wind_gusts_10m[i])}</td><td>${pr?pr.toFixed(1):'0'}${sn?' ❄':''} (${x.precipitation_probability[i]??0} %)</td></tr>`; });
   tb+='</tbody></table><p class="nota">Temperatures en °C: temperatura (sensació tèrmica) a tres alçades de la ruta. Vent: la fletxa indica cap on bufa i la lletra d\'on ve (N tramuntana, NE gregal, E llevant, SE xaloc, S migjorn, SO garbí, O ponent, NO mestral). Vent (direcció, mitjà i ratxa) tot al punt més alt i exposat, on n\'hi ha més. ❄ = previsió de neu.</p>';
@@ -1257,7 +1319,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 setInterval(()=>{$('rellotge').textContent=rel(new Date()); if(R) render();},20000);
 $('rellotge').textContent=rel(new Date());
 
-R=prepara(dia); pintaParades(); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false); carregaMeteo(false);
+R=prepara(dia); pintaParades(); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false); carregaMeteo(false); if(!MPAS||Date.now()-MPAS.ts>maxEdat()) carregaPas().then(()=>{ render(); try{pintaMeteo()}catch(e){} });
 $('b-met').onclick=()=>carregaMeteo(true);
 if(st.gps) gpsOn();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});

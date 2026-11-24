@@ -184,6 +184,8 @@ details.det.act summary{color:var(--ter)}
 .acu{color:#8a8478;font-weight:600;font-size:11px}
 .fasel{width:100%;font:inherit;font-size:15px;font-weight:600;padding:8px;border:1px solid #cfc8bb;border-radius:10px;margin:2px 0 8px;background:#fff}
 #trams tr{cursor:pointer}
+.tpas{width:100%;border-collapse:collapse;font-size:13px}.tpas th{font-size:11px;color:#5c6266;text-align:right;padding:3px 4px;border-bottom:1px solid #e2dccf;font-weight:700}.tpas th:first-child,.tpas td:first-child{text-align:left}.tpas td{text-align:right;padding:4px;border-bottom:1px solid #eee7da;white-space:nowrap}.tpas tr.fet td{opacity:.45}.tpas tr.ara td{background:#fbf3e3}.tpas .al{color:#c0392b;font-weight:800}.tpas .av{color:#b86e00;font-weight:800}.tpas small{color:#6b7478}
+
 .calc{margin-top:8px}.calc summary{font-size:13px;font-weight:700;cursor:pointer;color:var(--pis)}.calc p{margin-top:6px}
 </style>
 </head>
@@ -251,6 +253,11 @@ details.det.act summary{color:var(--ter)}
     <p class="nota" style="margin-top:4px">També pots tocar un punt a la taula de trams. Si tries un punt que ja heu passat, calcula la tornada enrere pel mateix camí.</p>
   </section>
 
+  <section class="card" id="rpas">
+    <h2>Meteo al vostre pas <b id="rpas-st"></b></h2>
+    <div class="taula-h" id="rpas-t"></div>
+    <p class="nota" id="rpas-n"></p>
+  </section>
 
   <section class="card">
     <h2>Mapa topogràfic <b id="mapa-estat"></b></h2>
@@ -368,6 +375,11 @@ details.det.act summary{color:var(--ter)}
 <main id="vbri" class="bri" hidden><div id="bri"></div></main>
 
 <main id="vmet" hidden>
+  <section class="card" id="mpas">
+    <h2>Meteo al vostre pas <b id="mpas-st"></b></h2>
+    <div class="dies" id="mpas-d"></div><div class="taula-h" id="mpas-t"></div>
+    <p class="nota" id="mpas-n"></p>
+  </section>
   <section class="card" id="meteo">
     <h2>Meteo de la zona <b id="met-act"></b></h2>
     <div class="dies" id="met-dies"></div>
