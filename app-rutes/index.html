@@ -161,6 +161,22 @@ details.det.act summary{color:var(--ter)}
 .enllacos a{font-size:13px;font-weight:600;color:var(--pis);background:#e7e1d4;border-radius:99px;padding:6px 10px;text-decoration:none}
 .vrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:3px 0}
 .vrow i{width:14px;height:14px;border-radius:4px;display:inline-block;flex:none}
+.pbrec.ok{background:#2e7d4f}.pbrec{background:#b02a1a;color:#fff;border-radius:10px;padding:9px 11px;font-size:14px;line-height:1.45;margin-bottom:8px}
+.lim{color:var(--ter)}
+.phora{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:14px;font-weight:600}.phora input{font:inherit;padding:5px 6px;border:1px solid #cfc8bb;border-radius:8px}.phora .btn{padding:6px 10px;font-size:13px}
+.trk{display:inline-block;margin-top:6px;font-size:13px;font-weight:700;color:var(--pis);border:1.5px solid var(--pis);border-radius:8px;padding:4px 10px;text-decoration:none}
+.pared{display:grid;grid-template-columns:1fr 58px auto;gap:4px 6px;align-items:center;font-size:13px;margin:5px 0}
+.pared input{font:inherit;padding:5px 6px;border:1px solid #cfc8bb;border-radius:8px;width:100%}.pared input[data-f=t]{grid-column:1/-1}
+.bri .card h2 i{font-style:normal;background:var(--pis);color:var(--sor);border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-right:8px}
+.bri .card h2 label{font-size:12px;text-transform:none;letter-spacing:0;font-weight:600;display:flex;align-items:center;gap:4px}
+.bri .card.fet{opacity:.55}
+.bri ul{padding-left:18px;font-size:15px;line-height:1.5}.bri li{margin-bottom:3px}
+.bri .rosa{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:15px;line-height:1.45;align-items:center}
+.bri .rosa b{color:var(--ter)}
+.bri .xif{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:6px 0}
+.bri .xif div{background:#f4efe5;border-radius:10px;padding:8px}.bri .xif strong{display:block;font-size:13px;margin-bottom:4px}.bri .xif span{display:block;font-size:13px;line-height:1.5}
+.bri .bri-s{font-size:13px;font-weight:700;margin:8px 0 4px}
+.bri .bri-t{width:100%;margin-top:6px;font:14px/1.4 inherit;font-family:inherit;border:1px solid #d9d1c2;border-radius:8px;padding:7px}
 </style>
 </head>
 <body>
@@ -168,6 +184,7 @@ details.det.act summary{color:var(--ter)}
   <div class="marca"><h1>Petjada <span>·</span> <i id="nom-ruta" style="font-style:normal">Rutes de senderisme</i></h1><small id="rellotge">--:--</small></div>
   <nav class="vistes">
     <button data-v="vruta" class="on"><b>🧭</b>Ruta</button>
+    <button data-v="vbri"><b>📣</b>Briefing</button>
     <button data-v="vmet"><b>⛅</b>Meteo</button>
     <button data-v="v112" class="e112"><b>✚</b>112</button>
     <button data-v="vlib"><b>📚</b>Rutes</button>
@@ -229,6 +246,7 @@ details.det.act summary{color:var(--ter)}
     </div>
     <div class="botons" style="margin-top:8px"><button class="btn s" id="b-desc">Descarregar mapes per anar sense cobertura</button></div>
     <div class="barra" id="desc-barra" hidden><i id="desc-i"></i></div>
+    <div id="trk-dia"></div>
     <p class="nota" id="desc-txt" style="margin-top:6px">Descarrega'ls amb wifi abans de la sortida (unes 190 teselles, totes dues rutes). Arrossega el mapa per moure'l; ⦿ el torna a centrar on ets.</p>
   </section>
 
@@ -240,7 +258,9 @@ details.det.act summary{color:var(--ter)}
   <section class="card">
     <h2>Trams <b id="sortida"></b></h2>
     <table><thead><tr><th>Punt</th><th>km</th><th>D+</th><th>D−</th><th>Temps</th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
-    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a l'hora objectiu d'arribada); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Alçades del model del terreny (si s'ha triat en crear la ruta).</p>
+    <details style="margin-top:8px"><summary class="nota" style="font-weight:700;cursor:pointer">Parades previstes (toca per editar)</summary><div id="par-ed"></div>
+    <p class="nota">Minuts de parada a cada punt. Compten a les hores previstes, a les hores límit, a «Fins al final» i als plans B. Per defecte, primera parada de 10 min al primer punt (aigua i capes).</p></details>
+    <p class="nota" style="margin-top:8px">Temps de marxa per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. «Previst»: hora d'arribada des de la sortida prevista, amb les parades previstes (+min = parada en aquell punt). "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat. «Límit»: hora per poder fer tot el pla A = previst + el marge fins a l'hora objectiu (màx. 1 h 30). Si es passa, encara podeu seguir fins al pla B que toqui (vegeu l'hora de decisió de cada pla B). En vermell, si hi heu passat després del límit.</p>
   </section>
 
   <section class="card vess" id="vess">
@@ -254,7 +274,7 @@ details.det.act summary{color:var(--ter)}
   <section class="card pbs" id="plansb">
     <h2>Plans B <b id="pb-obj"></b></h2>
     <div id="pb-llista"></div>
-    <p class="nota" style="margin-top:6px">Hora límit a la cruïlla = hora de pas prevista (des de la sortida prevista, sense parades) + 1 h 30, o el marge que quedi fins a l'hora objectiu. Distàncies, desnivells i temps fins al final del dia, comptant el tros de pla A que queda després del pla B. Plans B calculats sobre els camins d'OpenStreetMap: comprova'ls al terreny i amb el heatmap. Al mapa, en taronja discontinu.</p>
+    <p class="nota" style="margin-top:6px">Plans B calculats sobre els camins d'OpenStreetMap: comprova'ls al terreny i amb el heatmap. Al mapa, en taronja discontinu.</p>
   </section>
 
 
@@ -282,6 +302,8 @@ details.det.act summary{color:var(--ter)}
     <div class="prova" id="prova">
       <p class="nota" style="margin:10px 0 4px">Mou el punt pel track per provar l'app a casa (no fa servir el GPS).</p>
       <input type="range" id="slider" min="0" max="1000" value="0">
+      <div class="phora"><label for="prova-h">Hora simulada</label><input type="time" id="prova-h"><button class="btn s" id="prova-ara">Ara</button><button class="btn s" id="prova-prev">Hora prevista</button></div>
+      <p class="nota" style="margin:4px 0 0">Sense hora simulada, l'app suposa que passeu per cada punt a l'hora prevista. Posa una hora (o toca «Ara») per veure com aniríeu de temps i quins plans B toquen.</p>
     </div>
     <div class="botons" style="margin-top:8px">
       <button class="btn s" id="b-reset">Reiniciar aquest dia</button>
@@ -318,6 +340,8 @@ details.det.act summary{color:var(--ter)}
   </section>
 </main>
 
+<main id="vbri" class="bri" hidden><div id="bri"></div></main>
+
 <main id="vmet" hidden>
   <section class="card" id="meteo">
     <h2>Meteo de la zona <b id="met-act"></b></h2>
@@ -343,6 +367,11 @@ details.det.act summary{color:var(--ter)}
       <a id="e-sms" class="btn s" style="text-decoration:none;display:inline-block;text-align:center">Enviar per SMS</a>
     </div>
     <p class="nota" style="margin-top:6px">Un SMS de vegades surt amb molt poca cobertura, quan una trucada no es pot fer. L'SMS s'obre amb les coordenades escrites: tu tries a qui l'envies.</p>
+  </section>
+
+  <section class="card">
+    <h2>Cobertura del 112</h2>
+    <div id="cob"></div>
   </section>
 
   <section class="card">
