@@ -6,6 +6,7 @@ const ST_KEY='petjada-ruta-st-'+RUTA.id;
 let st=load();
 let dia=DIES.includes(st.dia)?st.dia:DIES[0];
 let provaHora=null, INI=null, provaManual=null;
+const PRINT=null;
 let R=null, pos=null, gpsWatch=null, lastFix=null, wake=null, prova=false;
 
 function load(){try{return JSON.parse(localStorage.getItem(ST_KEY))||{}}catch(e){return {}}}
@@ -122,6 +123,12 @@ const $=id=>document.getElementById(id);
 function set(id,html){$(id).innerHTML=html}
 
 // ---------- Pintar ----------
+// ---------- posició real i fora de ruta ----------
+const FORA_M=45;
+function gpsBo(){ return lastFix&&!prova&&lastFix.acc<=100&&Date.now()-lastFix.ts<3*60e3; }
+function rumb(a,b){ const y=Math.sin(rad(b[1]-a[1]))*Math.cos(rad(b[0])), x=Math.cos(rad(a[0]))*Math.sin(rad(b[0]))-Math.sin(rad(a[0]))*Math.cos(rad(b[0]))*Math.cos(rad(b[1]-a[1])); return (Math.atan2(y,x)*180/Math.PI+360)%360; }
+function foraRuta(E){ if(!gpsBo()||!E) return null; const a=[lastFix.lat,lastFix.lon], b=[E.lat,E.lon], d=hav(a,b);
+  if(d<=FORA_M) return null; return {d, cap:ventDir(rumb(a,b)).c, h:hores(d/1000,0,0)}; }
 function render(){
   const s=ds(), now=prova&&provaHora?+provaHora:Date.now();
   INI=prova&&provaHora?+sortidaPrevista(provaHora):s.inici; // en mode prova, sortida a l'hora prevista del dia
@@ -139,9 +146,9 @@ function render(){
   if(w<0) w=R.wp.length-1;
   const nx=R.wp[w], trIdx=Math.max(0,w-1), tr=R.trams[trIdx];
   const dSeg=Math.max(0,R.cd[nx.i]-E.d), uSeg=Math.max(0,R.cu[nx.i]-E.u), nSeg=Math.max(0,R.cn[nx.i]-E.n);
-  const hSeg=hores(dSeg/1000,uSeg,nSeg);
+  const F=foraRuta(E), hSeg=hores(dSeg/1000,uSeg,nSeg)+(F?F.h:0);
   set('seg-nom',nx.n); set('tram',`tram ${tr.de.split(' ·')[0]} → ${tr.a.split(' ·')[0]}`);
-  set('seg-km',km(dSeg)+'<small>km</small>'); set('seg-t',hm(hSeg));
+  set('seg-km',km(dSeg+(F?F.d:0))+'<small>km</small>'); set('seg-t',hm(hSeg));
   set('seg-up','+'+mts(uSeg)); set('seg-dn','−'+mts(nSeg));
   set('seg-hora',`Arribada prevista: <b>${rel(new Date(now+hSeg*3600e3))}</b> · ${nx.n.split(' · ')[0]} a ${mts(R.p[nx.i][2])}`);
   // fet
@@ -151,7 +158,7 @@ function render(){
   const pct=E.d/tot*100; $('barra').style.width=pct.toFixed(1)+'%'; set('pct',Math.round(pct)+' %');
   // fins al final
   let hRest=hSeg; for(let k=w;k<R.trams.length;k++) hRest+=R.trams[k].h;
-  const dR=tot-E.d, uR=R.cu[R.n-1]-E.u, nR=R.cn[R.n-1]-E.n;
+  const dR=tot-E.d+(F?F.d:0), uR=R.cu[R.n-1]-E.u, nR=R.cn[R.n-1]-E.n;
   const pRest=paradesEntre(E.d,R.n-1);
   set('r-km',km(dR)+'<small>km</small>'); set('r-t',hm(hRest+pRest));
   set('r-up','+'+mts(uR)); set('r-dn','−'+mts(nR));
@@ -176,6 +183,8 @@ function render(){
       set('ritme',`Segons la fitxa (amb el pla ${DV.id}) hauries trigat ${hm(hf)} (amb les parades previstes): `+
         (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b>`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
   }
+  { const av=$('avis'); av.classList.toggle('on',!!F);
+    if(F) av.innerHTML=`Fora de ruta: el camí és a <b>${F.d<1000?Math.round(F.d)+' m':km(F.d)+' km'} cap al ${F.cap}</b> · uns ${Math.max(1,Math.round(F.h*60))} min per tornar-hi (la línia discontínua del mapa). Els temps ja ho inclouen.`; }
   // trams
   const base=INI?new Date(INI):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows=''; const PAR=paradesDia();
@@ -746,7 +755,7 @@ function tileUrl(z,x,y,L){return (L||mapesOn()[0]||MAPES[3]).url.replace('{z}',z
 function dibuixaMapa(E){
   if(E) M.E=E; E=M.E; if(!E) return;
   const el=$('tmap'), W=el.clientWidth, H=el.clientHeight; if(!W) return;
-  if(M.follow||M.cx==null) [M.cx,M.cy]=wpx(E.lat,E.lon,M.z);
+  if(M.follow||M.cx==null) [M.cx,M.cy]=(gpsBo()&&!PRINT)?wpx(lastFix.lat,lastFix.lon,M.z):wpx(E.lat,E.lon,M.z);
   const x0=M.cx-W/2, y0=M.cy-H/2, keep=new Set(), cont=$('tiles'), ON=mapesOn();
   ON.forEach((L,li)=>{ const tz=Math.min(M.z,L.zmax), ts=256*2**(M.z-tz), n=2**tz;
   for(let tx=Math.floor(x0/ts);tx<=Math.floor((x0+W)/ts);tx++) for(let ty=Math.floor(y0/ts);ty<=Math.floor((y0+H)/ts);ty++){
@@ -778,8 +787,10 @@ function dibuixaMapa(E){
     if(ja){ if(!ja.l.includes(lab)) ja.l.push(lab); } else etq.push({a,b,l:[lab]}); });
   etq.forEach(e=>{ g+=`<circle cx="${e.a}" cy="${e.b}" r="6" fill="#fff" stroke="#1E2A2E" stroke-width="2.5"/><text x="${e.a+9}" y="${e.b-7}" font-size="14" font-weight="800" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="4">${e.l.join(' / ')}</text>`; });
   const mpp=156543.03*Math.cos(rad(E.lat))/2**M.z;
-  if(lastFix&&!prova){const [a,b]=P(lastFix.lat,lastFix.lon); g+=`<circle cx="${a}" cy="${b}" r="${Math.max(8,Math.min(150,lastFix.acc/mpp))}" fill="#3d6c86" opacity=".18"/><circle cx="${a}" cy="${b}" r="6" fill="#3d6c86" stroke="#fff" stroke-width="2.5"/>`;}
-  g+=`<circle cx="${cx}" cy="${cy}" r="9" fill="#C8553D" stroke="#fff" stroke-width="3"/>`;
+  const real=!PRINT&&gpsBo(), Fm=real?foraRuta(E):null;
+  if(Fm){ const [a,b]=P(lastFix.lat,lastFix.lon); g+=`<line x1="${a}" y1="${b}" x2="${cx}" y2="${cy}" stroke="#fff" stroke-width="6" opacity=".8"/><line x1="${a}" y1="${b}" x2="${cx}" y2="${cy}" stroke="#1f6fb2" stroke-width="3" stroke-dasharray="7 5"/>`; }
+  if(!PRINT&&(!real||Fm)) g+=`<circle cx="${cx}" cy="${cy}" r="${real?6:9}" fill="#C8553D" stroke="#fff" stroke-width="${real?2.5:3}"/>`;
+  if(lastFix&&!prova&&!PRINT){const [a,b]=P(lastFix.lat,lastFix.lon), vell=!gpsBo(); g+=`<circle cx="${a}" cy="${b}" r="${Math.max(10,Math.min(150,lastFix.acc/mpp))}" fill="#1f6fb2" opacity="${vell?.08:.18}"/><circle cx="${a}" cy="${b}" r="9" fill="${vell?'#8da9c0':'#1f6fb2'}" stroke="#fff" stroke-width="3.5"/>`;}
   const bar=[50,100,200,500,1000,2000].find(m=>m/mpp>=70)||2000;
   g+=`<line x1="10" x2="${10+bar/mpp}" y1="${H-24}" y2="${H-24}" stroke="#1E2A2E" stroke-width="3"/><text x="10" y="${H-29}" font-size="12" font-weight="700" fill="#1E2A2E" paint-order="stroke" stroke="#fff" stroke-width="3">${bar>=1000?bar/1000+' km':bar+' m'}</text>`;
   const sv=$('tover'); sv.setAttribute('viewBox',`0 0 ${W} ${H}`); sv.innerHTML=g;
@@ -1045,7 +1056,6 @@ function aplica(b){
   pos={seg:b.i,t:b.t,d:b.d};
   const fora=b.d>60;
   $('track').className='pill '+(fora?'ko':'ok'); $('track').textContent=fora?`Fora del track ${Math.round(b.d)} m`:'Sobre el track';
-  const av=$('avis'); av.classList.toggle('on',b.d>120); av.textContent=`Atenció: ets a ${Math.round(b.d)} m del track. Les dades es calculen des del punt del track més proper.`;
   if(!fora){
     const now=Date.now(); let prevSeg=s.seg||0; const prevTs=s.lastTs||now;
     s.pas=s.pas||{}; s.est=s.est||{}; s.salt=s.salt||{};
