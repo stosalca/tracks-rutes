@@ -640,15 +640,16 @@ function esCat(la,lo){ return la>40.5&&la<42.9&&lo>0.15&&lo<3.35; }
 function pintaAvisos(){
   const el=$('av-map'); if(!el) return; const [la,lo]=avisosCentre(), cat=esCat(la,lo);
   document.querySelectorAll('#av-sel button').forEach(b=>{ b.classList.toggle('on',b.dataset.z===avZ); b.onclick=()=>{avZ=b.dataset.z; el.dataset.k=''; pintaAvisos();}; });
-  const z=avZ==='pen'?{lat:40.2,lon:-3.6,zoom:5}:{lat:cat?41.75:la,lon:cat?1.6:lo,zoom:8};
-  const u=`https://embed.windy.com/embed2.html?lat=${z.lat}&lon=${z.lon}&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=${z.zoom}&level=surface&overlay=capAlerts&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+  const z=avZ==='pen'?{lat:40.2,lon:-3.6,zoom:5}:avZ==='radar'?{lat:la,lon:lo,zoom:9}:{lat:cat?41.75:la,lon:cat?1.6:lo,zoom:8};
+  const u=`https://embed.windy.com/embed2.html?lat=${z.lat}&lon=${z.lon}&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=${z.zoom}&level=surface&overlay=${avZ==='radar'?'radar':'capAlerts'}&product=${avZ==='radar'?'radar':'ecmwf'}&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
   if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: els mapes d\'avisos només funcionen amb cobertura.</p>'; }
   else if(el.dataset.k!==u){ el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
-  set('av-nota',`Colors: <b style="color:#a8a800">moderat</b> · <b style="color:#d97a00">sever</b> · <b style="color:#c0392b">extrem</b>. Toca una zona per llegir l'avís; a sota pots triar «Today / Tomorrow / Later». El marcador és la ruta. `+
+  if(avZ==='radar'){ set('av-nota','Radar de pluja en directe de la zona de la ruta (el marcador és la ruta). Mostra la pluja que cau ara i les últimes hores: toca ▶ a sota per veure l\'animació i cap on es mou. Més blau/verd = pluja feble; groc, vermell i lila = forta. Neu i pluja feble en zones de muntanya poden no sortir bé (ombra del radar).'); }
+  else set('av-nota',`Colors: <b style="color:#a8a800">moderat</b> · <b style="color:#d97a00">sever</b> · <b style="color:#c0392b">extrem</b>. Toca una zona per llegir l'avís; a sota pots triar «Today / Tomorrow / Later». El marcador és la ruta. `+
     (avZ==='reg'?'Windy dibuixa les zones d\'avís de l\'AEMET i els límits de comarca, però no n\'escriu els noms: ':' ')+(cat?'per veure les comarques amb el seu nom, mira el mapa del Meteocat.':'per al detall per zones, mira l\'AEMET.'));
   set('av-links',(cat?'<a href="https://www.meteo.cat/prediccio/general" target="_blank" rel="noopener">⚠ Avisos del Meteocat per comarques</a>':'')+
     '<a href="https://www.aemet.es/es/eltiempo/prediccion/avisos" target="_blank" rel="noopener">⚠ Avisos de l\'AEMET</a>'+
-    `<a href="https://www.windy.com/-Weather-warnings-capAlerts?capAlerts,${la.toFixed(3)},${lo.toFixed(3)},8" target="_blank" rel="noopener">Obrir a Windy</a>`);
+    `<a href="https://www.windy.com/-Weather-warnings-capAlerts?capAlerts,${la.toFixed(3)},${lo.toFixed(3)},8" target="_blank" rel="noopener">Obrir a Windy</a>`+(cat?'<a href="https://www.meteo.cat/observacions/radar" target="_blank" rel="noopener">Radar del Meteocat</a>':'')+'<a href="https://www.aemet.es/es/eltiempo/observacion/radar" target="_blank" rel="noopener">Radar de l\'AEMET</a>');
 }
 function pintaMeteo(){
   const A=MET_PTS[2], c=`${A.lat.toFixed(3)}N${A.lon.toFixed(3)}E${Math.round(A.e)}`, cat=RUTA.catalunya;
