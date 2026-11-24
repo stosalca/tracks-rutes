@@ -872,7 +872,7 @@ function pintaPas(id,d){
   set(id+'-n',(viu?'Hores de pas recalculades amb el vostre ritme i posició: la previsió es mou amb vosaltres. ':'Hores de pas planificades (taula de trams, amb les parades). Quan toqueu «Iniciar ruta», es recalculen amb el ritme real. ')+
     `Previsió a la coordenada i l'alçada de cada punt, per a l'hora de pas (Open-Meteo, actualitzada ${fa<60?'fa '+fa+' min':fa<1440?'fa '+Math.round(fa/60)+' h':new Date(MPAS.ts).toLocaleDateString('ca-ES')}). Vent: fletxa = cap on bufa, lletra = d'on ve. En taronja i vermell: ratxes de més de 40/60 km/h, sensació sota 0/−5 °C, pluja de més del 30/60 %.`+(n?'':' Encara massa lluny: la previsió per hores arriba a uns 15 dies.'));
 }
-function pintaPasTots(){ try{ pintaPas('rpas',dia); }catch(e){} try{ if(!pasDia) pasDia=dia; const bd=$('mpas-d'); if(bd&&!bd.children.length&&DIES.length>1) bd.innerHTML=DIES.map((d,j)=>`<button data-d="${d}">Dia ${j+1}</button>`).join(''); document.querySelectorAll('#mpas-d button').forEach(b=>{ b.classList.toggle('on',b.dataset.d===pasDia); b.onclick=()=>{pasDia=b.dataset.d; pintaPasTots();}; }); pintaPas('mpas',pasDia); }catch(e){} }
+function pintaPasTots(){ try{ if(!pasDia) pasDia=dia; const bd=$('mpas-d'); if(bd&&!bd.children.length&&DIES.length>1) bd.innerHTML=DIES.map((d,j)=>`<button data-d="${d}">Dia ${j+1}</button>`).join(''); document.querySelectorAll('#mpas-d button').forEach(b=>{ b.classList.toggle('on',b.dataset.d===pasDia); b.onclick=()=>{pasDia=b.dataset.d; pintaPasTots();}; }); pintaPas('mpas',pasDia); }catch(e){} }
 // columnes de la taula per hores segons el dia: punt més baix, Xalet i punt més alt d'aquell dia
 function colsMeteo(){
   const d=Object.keys(DATA_DIA).find(k=>DATA_DIA[k]===metDia);
