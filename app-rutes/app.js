@@ -198,8 +198,12 @@ function pintaFinsA(E,now,PB){ const el=$('fa-sel'); if(!el||!E) return; const s
   if(!w){ w=R.wp.find(x=>R.cd[x.i]>E.d+20)||R.wp[R.wp.length-1]; }
   el.value=w.k;
   const passat=R.cd[w.i]<=E.d+20;
-  if(passat){ ['fa-km','fa-t','fa-up','fa-dn'].forEach(id=>set(id,'–'));
-    set('fa-hora',`Ja hi heu passat${(s.pas||{})[R.wp.indexOf(w)-1]?' a les <b>'+rel(new Date(s.pas[R.wp.indexOf(w)-1]))+'</b>':''}. Tria un punt de més endavant.`); return; }
+  if(passat){ // tornant enrere pel mateix camí: la pujada feta es baixa i al revés
+    const d=E.d-R.cd[w.i], up=Math.max(0,E.n-R.cn[w.i]), dn=Math.max(0,E.u-R.cu[w.i]), h=hores(d/1000,up,dn);
+    set('fa-km',km(d)+'<small>km</small>'); set('fa-t',hm(h)); set('fa-up','+'+mts(up)); set('fa-dn','−'+mts(dn));
+    set('fa-hora',`<b style="color:#C55A11">Tornant enrere</b> pel mateix camí: arribada prevista <b>${rel(new Date(now+h*3600e3))}</b> (${hm(h)} de marxa, sense parades) · ${esc(w.k)} a ${mts(R.p[w.i][2])}`+
+      ((s.pas||{})[R.wp.indexOf(w)-1]?` · hi vau passar a les ${rel(new Date(s.pas[R.wp.indexOf(w)-1]))}`:'')+
+      (PB?'<br><span class="nota">Calculat sobre el pla A des de la cruïlla del pla B.</span>':'')); return; }
   const d=R.cd[w.i]-E.d, up=Math.max(0,R.cu[w.i]-E.u), dn=Math.max(0,R.cn[w.i]-E.n), h=horesDesE(E,w.i), p=paradesEntre(E.d,w.i);
   set('fa-km',km(d)+'<small>km</small>'); set('fa-t',hm(h+p)); set('fa-up','+'+mts(up)); set('fa-dn','−'+mts(dn));
   const arr=new Date(now+(h+p)*3600e3), lim=limitEn(w.i,now);
