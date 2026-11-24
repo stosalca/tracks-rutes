@@ -233,6 +233,17 @@ const nomPunt=k=>k;
 function nomCruilla(i){ if(i>=R.n-1) return nomPunt(R.wp[R.wp.length-1].k);
   const w=[...R.wp].reverse().find(x=>x.i<=i), d=R.cd[i]-R.cd[w.i], nm=nomPunt(w.k);
   return d<60?nm:`${nm} + ${km(d)} km`; }
+// ---------- plans B visibles al mapa (un a un; es desa per ruta i dia) ----------
+const PBOFF_KEY='petjada-rutes-pboff-'+RUTA.id;
+function pbOff(){ try{ return (JSON.parse(localStorage.getItem(PBOFF_KEY))||{})[dia]||[]; }catch(e){ return []; } }
+function pintaPbChips(){ const el=$('c-pbs'); if(!el) return; const L=plansB(), off=pbOff();
+  el.hidden=M.pb===false||!L.length;
+  el.innerHTML=L.map(b=>`<label class="pbchip${off.includes(b.id)?' off':''}"><input type="checkbox" value="${b.id}" ${off.includes(b.id)?'':'checked'}>${b.id}</label>`).join('')+
+    (L.length>1?`<button class="pbtots" type="button">${off.length?'Tots':'Cap'}</button>`:'');
+  const desa=o=>{ let all={}; try{ all=JSON.parse(localStorage.getItem(PBOFF_KEY))||{}; }catch(e){} all[dia]=o; try{localStorage.setItem(PBOFF_KEY,JSON.stringify(all))}catch(e){} pintaPbChips(); dibuixaMapa(); };
+  el.querySelectorAll('input').forEach(i=>i.onchange=()=>desa([...el.querySelectorAll('input:not(:checked)')].map(x=>x.value)));
+  const bt=el.querySelector('.pbtots'); if(bt) bt.onclick=()=>desa(off.length?[]:L.map(b=>b.id)); }
+
 // ---------- GPX per descarregar ----------
 function gpxURL(nom,pts){ const x=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Petjada" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${esc(nom)}</name><trkseg>`+
   pts.map(p=>`<trkpt lat="${p[0]}" lon="${p[1]}">${p[2]!=null?`<ele>${Math.round(p[2])}</ele>`:''}</trkpt>`).join('')+`</trkseg></trk></gpx>`;
@@ -712,7 +723,7 @@ function dibuixaMapa(E){
   let g=`<polyline points="${all}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" opacity=".8"/>`+
         `<polyline points="${all}" fill="none" stroke="#7a3cc8" stroke-width="4" stroke-linejoin="round"/>`+
         `<polyline points="${done}" fill="none" stroke="#C8553D" stroke-width="5" stroke-linejoin="round"/>`;
-  if(M.pb!==false) plansB().forEach(b=>{ if(b.pts.length<2) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
+  const PBOFF=pbOff(); if(M.pb!==false) plansB().forEach(b=>{ if(b.pts.length<2||PBOFF.includes(b.id)) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
     g+=`<polyline points="${ps}" fill="none" stroke="#fff" stroke-width="6" opacity=".7"/><polyline points="${ps}" fill="none" stroke="#C55A11" stroke-width="3.5" stroke-dasharray="8 6"/>`;
     const m=b.pts[Math.floor(b.pts.length/2)], [a,c]=P(m[0],m[1]);
     g+=`<text x="${a+6}" y="${c+14}" font-size="13" font-weight="800" fill="#C55A11" paint-order="stroke" stroke="#fff" stroke-width="4">${b.id}</text>`; });
@@ -922,7 +933,8 @@ function dibuixaOSM(x0,y0,W,H){
   const desa=()=>{try{localStorage.setItem('petjada-rutes-capes',JSON.stringify({osm:OSM.on,pb:M.pb!==false,op:+$('c-op').value}))}catch(e){}};
   const op=()=>{ $('tiles').style.opacity=$('c-op').value/100; $('c-opv').textContent=$('c-op').value+' %'; };
   $('c-osm').checked=OSM.on; op();
-  $('c-pb').checked=M.pb!==false; $('c-pb').onchange=()=>{M.pb=$('c-pb').checked; desa(); dibuixaMapa();};
+  $('c-pb').checked=M.pb!==false; $('c-pb').onchange=()=>{M.pb=$('c-pb').checked; desa(); pintaPbChips(); dibuixaMapa();};
+  pintaPbChips();
   $('c-osm').onchange=()=>{OSM.on=$('c-osm').checked; desa(); dibuixaMapa();};
   $('c-op').oninput=()=>{op(); desa();};
 })();
@@ -1036,7 +1048,7 @@ function gpsOn(){
 }
 
 // ---------- Controls ----------
-function canviaDia(d){dia=d; st.dia=d; save(); R=prepara(d); pos=null; pintaParades(); pintaGuioTots(); metDia=null; if(MET) pintaMeteo(); if($('resum-vess')) set('resum-vess',pintaResumVessants()); if(lastFix&&!prova) aplica(locate(lastFix.lat,lastFix.lon)); else render(); if(prova) mouProva(); }
+function canviaDia(d){dia=d; st.dia=d; save(); R=prepara(d); pos=null; pintaParades(); pintaPbChips(); pintaGuioTots(); metDia=null; if(MET) pintaMeteo(); if($('resum-vess')) set('resum-vess',pintaResumVessants()); if(lastFix&&!prova) aplica(locate(lastFix.lat,lastFix.lon)); else render(); if(prova) mouProva(); }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>canviaDia(b.dataset.d));
 $('b-gps').onclick=gpsOn;
 $('b-inici').onclick=()=>{const s=ds();

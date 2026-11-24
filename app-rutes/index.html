@@ -178,6 +178,9 @@ details.det.act summary{color:var(--ter)}
 .bri .bri-s{font-size:13px;font-weight:700;margin:8px 0 4px}
 .bri .bri-t{width:100%;margin-top:6px;font:14px/1.4 inherit;font-family:inherit;border:1px solid #d9d1c2;border-radius:8px;padding:7px}
 .mapes summary{font-size:13px;font-weight:700;cursor:pointer;margin:4px 0}.mapes label{display:flex;gap:6px;align-items:center;font-size:14px;margin:4px 0}
+.pbchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px 22px}.pbchips[hidden]{display:none}
+.pbchip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#C55A11;border:1.5px solid #C55A11;border-radius:99px;padding:2px 9px}
+.pbchip input{margin:0}.pbchip.off{color:#9a948a;border-color:#cfc8bb}.pbtots{font:inherit;font-size:12px;border:0;background:#e7e1d4;border-radius:99px;padding:3px 10px}
 </style>
 </head>
 <body>
@@ -242,6 +245,7 @@ details.det.act summary{color:var(--ter)}
     </div>
     <div class="capes">
       <label><input type="checkbox" id="c-pb" checked> Plans B <span class="lleg"><i style="border-color:#C55A11;border-top-style:dashed"></i>taronja discontinu</span></label>
+      <div class="pbchips" id="c-pbs"></div>
       <label><input type="checkbox" id="c-osm" checked> Camins OSM <span class="lleg"><i style="border-color:#d0342c"></i>corriol <i style="border-color:#8b5a2b"></i>pista</span></label>
  <details class="mapes"><summary>Mapes base (toca per triar)</summary><div id="c-mapes"></div><p class="nota">Pots activar-ne més d'un: s'apilen (el de dalt de la llista, a sobre). La descàrrega sense cobertura baixa els mapes activats.</p></details>
       <label>Opacitat del mapa <input type="range" id="c-op" min="0" max="100" step="10" value="100"> <span id="c-opv">100 %</span></label>
