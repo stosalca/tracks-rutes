@@ -1,8 +1,9 @@
-const CACHE='catllaras-v59';
+const CACHE='catllaras-v60';
+const RADAR='catllaras-radar-v1';
 const TILES='catllaras-mapes-v1';
 const FILES=['./','index.html','rutes.js','info.js','vessants.js','plansb.js','aplus.js','mapa-aplus.jpg','mapa-c1.jpg','mapa-cable.jpg','mapa-cobertura.jpg','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE&&x!==TILES).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE&&x!==TILES&&x!==RADAR).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const url=new URL(e.request.url);
@@ -11,6 +12,11 @@ self.addEventListener('fetch',e=>{
     e.respondWith(caches.open(TILES).then(c=>c.match(e.request.url).then(r=>r||fetch(e.request).then(res=>{
       if(res.ok||res.type==='opaque') c.put(e.request.url,res.clone());
       return res;}).catch(()=>new Response('',{status:504})))));
+    return;
+  }
+  // radar (RainViewer) i mapa de fons (CARTO): es desen per veure l'últim radar sense cobertura
+  if(url.hostname==='tilecache.rainviewer.com'||/^[abcd]\.basemaps\.cartocdn\.com$/.test(url.hostname)){
+    e.respondWith(caches.open(RADAR).then(c=>c.match(e.request.url).then(r=>r||fetch(e.request.url,{mode:'no-cors'}).then(res=>{ if(res.ok||res.type==='opaque') c.put(e.request.url,res.clone()); return res; }).catch(()=>new Response('',{status:504})))));
     return;
   }
   // mapes de fronts del Met Office: els GIF no canvien mai (cada passada té la seva URL) → primer el desat; l'índex, primer la xarxa
