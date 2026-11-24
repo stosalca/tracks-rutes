@@ -3,7 +3,7 @@
 <h3>Prova de punts automàtics i plans B (track sense waypoints)</h3>
 <p>Paràmetre <code>?gpx=</code> amb la ruta d'un GPX del repositori (se'n treuen els waypoints).</p>
 <pre id="log">…</pre><pre id="out"></pre>
-<script src="../core.js"></script>
+<script>document.write(`<script src="../core.js?t=${Date.now()}"><\/script>`)</script>
 <script>
 (async()=>{ const q=new URLSearchParams(location.search), u=q.get('gpx')||'../../catllaras/fitxa/Catllaras_Dia1_PlaA.gpx';
   const log=m=>document.getElementById('log').textContent=m;
