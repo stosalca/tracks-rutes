@@ -425,7 +425,7 @@ document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
   if(v==='vlib') return; for(const id of ['vruta','vbri','vmet','v112','vlib']) $(id).hidden=id!==v;
   document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
-  window.scrollTo(0,0); if(v==='vbri') pintaBriefing(); if(v==='v112'){ pinta112(); pintaCob(); } if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} pintaPasTots(); if(!MPAS&&navigator.onLine) carregaPas().then(()=>{pintaPasTots();try{pintaMeteo()}catch(e){}}); } });
+  window.scrollTo(0,0); if(v==='vbri') pintaBriefing(); if(v==='v112'){ pinta112(); pintaCob(); } if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} pintaPasTots(); if(!MPAS&&navigator.onLine) carregaMeteo(false); } });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }
   try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
@@ -594,25 +594,34 @@ let MET=null; try{ MET=JSON.parse(localStorage.getItem(MET_KEY)); }catch(e){}
 let metDia=null;
 const WMO={0:'serè',1:'poc núvol',2:'mig núvol',3:'tapat',45:'boira',48:'boira gebradora',51:'plugim',53:'plugim',55:'plugim fort',56:'plugim gelant',57:'plugim gelant',61:'pluja feble',63:'pluja',65:'pluja forta',66:'pluja gelant',67:'pluja gelant',71:'neu feble',73:'neu',75:'neu forta',77:'neu granulada',80:'ruixats',81:'ruixats',82:'ruixats forts',85:'ruixats de neu',86:'ruixats de neu',95:'tempesta',96:'tempesta i calamarsa',99:'tempesta i calamarsa'};
 function diaSortida(){ const d=new Date(), k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return Object.values(DATES).includes(k); }
-function maxEdat(){ return (diaSortida()?1:3)*3600e3; }
-setInterval(()=>{ if(navigator.onLine) carregaMeteo(false); }, 10*60e3);
+function maxEdat(){ return diaSortida()?20*60e3:3*3600e3; }
+// els dies de sortida es demanen pocs dies (resposta ~10 vegades més petita: entra amb cobertura feble)
+function fDies(){ if(!diaSortida()) return 16; const last=Math.max(...Object.values(DATES).map(x=>+new Date(x+'T12:00'))); return Math.min(16,Math.max(2,Math.ceil((last-Date.now())/864e5)+2)); }
+// es prova cada 2 min (si les dades són velles i hi ha xarxa); amb el mòbil bloquejat es prova en desbloquejar-lo
+setInterval(()=>{ if(navigator.onLine&&!document.hidden) carregaMeteo(false); }, 2*60e3);
+let METBUSY=false;
 window.addEventListener('online',()=>carregaMeteo(false));
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') carregaMeteo(false); });
 async function carregaMeteo(manual){
-  const vell=!MET||Date.now()-MET.ts>maxEdat();
-  if(!manual&&!vell) return pintaMeteo();
-  if(!navigator.onLine){ pintaMeteo(); return; }
+  const vM=!MET||Date.now()-MET.ts>maxEdat(), vP=typeof MPAS==='undefined'||!MPAS||Date.now()-MPAS.ts>maxEdat();
+  if(!manual&&!vM&&!vP) return pintaMeteo();
+  if(!navigator.onLine||METBUSY){ pintaMeteo(); if(!navigator.onLine) metSenseCob(); return; }
+  METBUSY=true; let ok=true;
+  try{
   const v='temperature_2m,apparent_temperature,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,weather_code,freezing_level_height';
   const u='https://api.open-meteo.com/v1/forecast?latitude='+MET_PTS.map(p=>p.lat).join(',')+'&longitude='+MET_PTS.map(p=>p.lon).join(',')+'&elevation='+MET_PTS.map(p=>p.e).join(',')+
-    '&hourly='+v+'&daily=sunrise,sunset&timezone=Europe%2FMadrid&forecast_days=16&wind_speed_unit=kmh';
+    '&hourly='+v+'&daily=sunrise,sunset&timezone=Europe%2FMadrid&forecast_days='+fDies()+'&wind_speed_unit=kmh';
   $('met-act').textContent='actualitzant…';
-  try{ const r=await fetchT(u,25000); if(!r.ok) throw 0; const j=await r.json(); const arr=Array.isArray(j)?j:[j];
+  // primer la previsió per punts (la que fareu servir a la ruta), després la de la zona
+  if(manual||vP){ if(!(await carregaPas())) ok=false; try{ pintaPasTots(); }catch(e){} }
+  if(manual||vM){ try{ const r=await fetchT(u,20000); if(!r.ok) throw 0; const j=await r.json(); const arr=Array.isArray(j)?j:[j];
     MET={ts:Date.now(),pts:arr.map(x=>({h:x.hourly,d:x.daily}))};
-    await carregaPas();
     try{ localStorage.setItem(MET_KEY,JSON.stringify(MET)); }catch(e){}
-  }catch(e){ $('met-act').textContent='no s\'ha pogut actualitzar'; }
-  pintaMeteo(); render();
+  }catch(e){ ok=false; } }
+  } finally { METBUSY=false; }
+  pintaMeteo(); render(); if(!ok) metSenseCob();
 }
+function metSenseCob(){ const el=$('met-act'); if(el&&!/^sense cobertura/.test(el.textContent)) el.textContent='sense cobertura ara · '+el.textContent+' · es torna a provar sol'; }
 function hIdx(date){ if(!MET) return -1; const h=MET.pts[0].h.time; const k=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0')+'T'+String(date.getHours()).padStart(2,'0')+':00'; return h.indexOf(k); }
 // condicions a una hora i alçada (interpolades entre els tres punts de previsió)
 function meteoEn(date,alt){
@@ -752,13 +761,14 @@ let pasDia=null, LASTE=null;
 const RPREP={}; function rDia(d){ if(d===dia) return R; return RPREP[d]||(RPREP[d]=prepara(d)); }
 function puntsPas(){ const o=[]; for(const d of DIES){ const RR=rDia(d); RR.wp.forEach(w=>{ const q=RR.p[w.i]; o.push({id:d+':'+w.k,lat:+q[0].toFixed(4),lon:+q[1].toFixed(4),e:Math.round(q[2])}); }); } return o; }
 async function carregaPas(){
-  if(!navigator.onLine) return;
+  if(!navigator.onLine) return false;
   const P=puntsPas(), v='temperature_2m,apparent_temperature,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,weather_code,freezing_level_height';
-  const u='https://api.open-meteo.com/v1/forecast?latitude='+P.map(p=>p.lat).join(',')+'&longitude='+P.map(p=>p.lon).join(',')+'&elevation='+P.map(p=>p.e).join(',')+'&hourly='+v+'&timezone=Europe%2FMadrid&forecast_days=16&wind_speed_unit=kmh';
-  try{ const r=await fetchT(u,30000); if(!r.ok) return; const j=await r.json(); const a=Array.isArray(j)?j:[j];
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+P.map(p=>p.lat).join(',')+'&longitude='+P.map(p=>p.lon).join(',')+'&elevation='+P.map(p=>p.e).join(',')+'&hourly='+v+'&timezone=Europe%2FMadrid&forecast_days='+fDies()+'&wind_speed_unit=kmh';
+  try{ const r=await fetchT(u,20000); if(!r.ok) return false; const j=await r.json(); const a=Array.isArray(j)?j:[j];
     const pts={}; P.forEach((p,i)=>{ if(a[i]) pts[p.id]={...p,h:a[i].hourly}; });
     MPAS={ts:Date.now(),pts}; try{ localStorage.setItem(MPAS_KEY,JSON.stringify(MPAS)); }catch(e){}
-  }catch(e){}
+    return true;
+  }catch(e){ return false; }
 }
 function hKey(t){ const d=new Date(t+30*60e3); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+':00'; }
 // hores de pas: planificades (com la taula de trams) o, si la ruta d'avui està en marxa, recalculades des d'on sou
@@ -1319,7 +1329,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 setInterval(()=>{$('rellotge').textContent=rel(new Date()); if(R) render();},20000);
 $('rellotge').textContent=rel(new Date());
 
-R=prepara(dia); pintaParades(); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false); carregaMeteo(false); if(!MPAS||Date.now()-MPAS.ts>maxEdat()) carregaPas().then(()=>{ render(); try{pintaMeteo()}catch(e){} });
+R=prepara(dia); pintaParades(); pintaGuioTots(); pintaFlora(); render(); estatMapes(); carregaOSM(false); carregaMeteo(false);
 $('b-met').onclick=()=>carregaMeteo(true);
 if(st.gps) gpsOn();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
