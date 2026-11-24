@@ -1,0 +1,62 @@
+name: Avisos AEMET per a les apps
+# Cada 30 min llegeix els avisos de l'AEMET (via Meteoalarm), es queda amb els grocs, taronges i vermells
+# vigents o previstos i els publica, petits, a la branca «avisos» (avisos.json).
+# Les apps el llegeixen de raw.githubusercontent.com, que sí que deixa llegir-lo des del mòbil.
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: avisos
+jobs:
+  avisos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Descarregar i resumir els avisos
+        run: |
+          python3 - <<'EOF'
+          import json, urllib.request, time
+          from datetime import datetime
+          req = urllib.request.Request('https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain', headers={'User-Agent': 'petjada-avisos'})
+          j = json.load(urllib.request.urlopen(req, timeout=60))
+          ara = time.time() * 1000
+          ms = lambda s: datetime.fromisoformat(s).timestamp() * 1000
+          z, vist = {}, set()
+          for w in j.get('warnings', []):
+              a = w.get('alert', {})
+              if a.get('status', 'Actual') != 'Actual' or a.get('msgType') == 'Cancel':
+                  continue
+              for i in a.get('info', []):
+                  if not i.get('language', '').startswith('es'):
+                      continue
+                  p = {x.get('valueName'): x.get('value', '') for x in i.get('parameter', [])}
+                  try:
+                      lv = int(p.get('awareness_level', '0').split(';')[0])
+                      tp = int(p.get('awareness_type', '0').split(';')[0])
+                      on = ms(i.get('onset') or i.get('effective'))
+                      ex = ms(i['expires'])
+                  except Exception:
+                      continue
+                  if lv < 2 or ex <= ara:
+                      continue
+                  for ar in i.get('area', []):
+                      for g in ar.get('geocode', []):
+                          k = (g.get('value'), tp, lv, on, ex)
+                          if k in vist:
+                              continue
+                          vist.add(k)
+                          z.setdefault(g.get('value'), []).append({'lv': lv, 'tp': tp, 'on': int(on), 'ex': int(ex), 'd': (i.get('description') or '').strip()})
+          for v in z.values():
+              v.sort(key=lambda x: (x['on'], -x['lv']))
+          json.dump({'ts': int(ara), 'font': 'AEMET via Meteoalarm', 'z': z}, open('avisos.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+          print(len(z), 'zones amb avisos')
+          EOF
+      - name: Publicar a la branca avisos
+        run: |
+          git init -q pub && mv avisos.json pub/ && cd pub
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b avisos && git add avisos.json && git commit -q -m "Avisos $(date -u +%FT%RZ)"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" avisos
