@@ -755,7 +755,7 @@ const AV_ZONES=[['ES178','Prepirineu de Barcelona',42.10,1.85],['ES179','Depress
 function zonaAvisos(){ const [la,lo]=avisosCentre(); let b=null,bd=1e9; AV_ZONES.forEach(z=>{ const d=Math.hypot((z[2]-la)*111,(z[3]-lo)*82); if(d<bd){bd=d;b=z;} }); return bd<70?{id:b[0],n:b[1]}:null; }
 const AVT_KEY='avisos-aemet-resum';
 let AVT=null; try{ AVT=JSON.parse(localStorage.getItem(AVT_KEY)); }catch(e){}
-let AVTBUSY=false, AVTERR=0;
+let AVTBUSY=false, AVTERR=0, AVTMSG='';
 const AV_TIPUS={1:'vent',2:'neu i gel',3:'tempestes',4:'boira',5:'calor',6:'fred',7:'fenòmens costaners',8:'incendis',9:'allaus',10:'pluja',12:'inundacions',13:'pluja i inundacions'};
 const AV_NIV={2:['groc','#c9a400'],3:['taronja','#d97a00'],4:['vermell','#c0392b']};
 async function carregaAvisosTxt(forca){
@@ -773,12 +773,12 @@ async function carregaAvisosTxt(forca){
         it.push({lv,tp,on,ex,d:(i.description||'').trim()}); }); });
     it.sort((a,b)=>a.on-b.on||b.lv-a.lv);
     AVT={ts:now,zona:z.id,nom:z.n,it}; try{ localStorage.setItem(AVT_KEY,JSON.stringify(AVT)); }catch(e){}
-  }catch(e){ AVTERR=Date.now(); }
+  }catch(e){ AVTERR=Date.now(); AVTMSG=String(e&&e.message||e); }
   AVTBUSY=false; pintaAvTxt();
 }
 function pintaAvTxt(){
   const el=$('av-txt'); if(!el) return; const z=zonaAvisos(); if(!z){ el.innerHTML=''; return; }
-  if(!AVT||AVT.zona!==z.id){ el.innerHTML=`<p class="nota">⚠ Avisos de l'AEMET · ${esc(z.n)}: ${navigator.onLine?'consultant…':'encara no n\'hi ha cap resum desat (cal obrir-ho una vegada amb cobertura).'}</p>`; return; }
+  if(!AVT||AVT.zona!==z.id){ el.innerHTML=`<p class="nota">⚠ Avisos de l'AEMET · ${esc(z.n)}: ${navigator.onLine?(AVTERR&&!AVTBUSY?'no s\'ha pogut consultar ara; es torna a provar sol.':'consultant…'):'encara no n\'hi ha cap resum desat (cal obrir-ho una vegada amb cobertura).'}</p>`; return; }
   const dh=t=>new Date(t).toLocaleString('ca-ES',{weekday:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   const cap=`<b>⚠ Avisos de l'AEMET · ${esc(AVT.nom)}</b> <small>(consultat ${fmtFa(Date.now()-AVT.ts)==='0 min'?'ara':'fa '+fmtFa(Date.now()-AVT.ts)}, a les ${new Date(AVT.ts).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})}${navigator.onLine?'':' · sense cobertura'})</small>`;
   const ll=AVT.it.length?'<ul style="margin:4px 0 0 18px;padding:0">'+AVT.it.map(a=>{ const n=AV_NIV[a.lv]||AV_NIV[4]; return `<li><b style="color:${n[1]}">${n[0]}</b> per ${AV_TIPUS[a.tp]||'fenomen '+a.tp}: ${dh(a.on)} → ${dh(a.ex)}${a.d?'<br><small>'+esc(a.d)+'</small>':''}</li>`; }).join('')+'</ul>'
@@ -787,6 +787,7 @@ function pintaAvTxt(){
 }
 function avisosSenseCob(el){ el.style.height='auto'; el.innerHTML=`<p class="nota" style="padding:14px">Sense cobertura: aquest mapa no es pot guardar (és una pàgina de ${esCat(...avisosCentre())&&avZ==='reg'?'Meteocat':'Windy'} incrustada). A dalt tens l'últim resum d'avisos de l'AEMET per a la vostra zona, amb l'hora de la consulta. El radar i els fronts sí que queden desats.</p>`; }
 setInterval(()=>{ if(navigator.onLine&&!document.hidden){ carregaAvisosTxt(false); radarPrecarrega(); } }, 3*60e3);
+setTimeout(()=>{ try{ if(navigator.onLine){ carregaAvisosTxt(false); radarPrecarrega(); } }catch(e){} }, 8000);
 window.addEventListener('online',()=>{ carregaAvisosTxt(false); radarPrecarrega(); pintaAvTxt(); });
 window.addEventListener('offline',()=>{ try{ if(!$('vmet').hidden){ $('av-map').dataset.k=''; pintaAvisos(); } }catch(e){} });
 function avisosCentre(){ return (()=>{ const p=(typeof R!=='undefined'&&R&&R.p)?R.p:null; if(!p) return [41.7,1.8]; const m=p[Math.floor(p.length/2)]; return [m[0],m[1]]; })(); }
@@ -805,7 +806,7 @@ function pintaAvisos(){
   else if(avZ==='radar'){ radarMostra(); }
   else if(!navigator.onLine){ el.dataset.k=''; avisosSenseCob(el); }
   else if(el.dataset.k!==u){ radarAtura(); frontsAtura(); el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
-  pintaAvTxt();
+  pintaAvTxt(); if(navigator.onLine) carregaAvisosTxt(false);
   if(avZ==='fronts'){ set('av-nota','<b>Com llegir-lo:</b> les línies són isòbares (pressió igual); com més juntes, més vent. <b>H</b> = anticicló (temps estable), <b>L</b> = borrasca (temps inestable). <b style="color:#1d4fd8">Front fred</b> (triangles blaus): arriba amb ruixats o tempestes, vent fort que gira i baixada de temperatura; després sol aclarir. <b style="color:#d6281e">Front càlid</b> (semicercles vermells): núvols que s\'espessen i pluja feble i llarga, boira a muntanya. <b style="color:#a13bb5">Front oclús</b> (lila): barreja dels dos, pluja persistent. Mira si algun front passa per Catalunya els dies de la sortida i a quina hora. Mapes del Met Office: anàlisi + previsió cada 12 h fins a 3-5 dies; s\'actualitzen cap a les 8:30 i les 20:30 i queden desats per consultar-los sense cobertura. «Pressió i vent» és Windy: toca ▶ a sota per veure l\'evolució dels propers dies.'); }
   else if(cat&&avZ==='reg'){ set('av-nota','Avisos de situació meteorològica de perill (SMP) del Meteocat per comarques: tria el dia (avui, demà, demà passat) i el fenomen (pluja, neu, vent, fred…). Verd = sense perill; groc = moderat; taronja = alt; vermell = molt alt. Per saber en quina comarca és la ruta, mira el municipi de sortida.'); }
   else if(cat&&avZ==='radar'){ set('av-nota','Última imatge del radar del Meteocat: l\'app la refresca sola cada 6 min mentre la mires i quan tornes a obrir l\'app. Fes zoom amb + per acostar-te a la zona de la ruta. Per veure l\'animació de la darrera hora i la predicció a 1 hora, obre el radar del Meteocat amb el botó de sota.'); }
