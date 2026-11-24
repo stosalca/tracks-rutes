@@ -1,4 +1,4 @@
-const CACHE='catllaras-v26';
+const CACHE='catllaras-v27';
 const TILES='catllaras-mapes-v1';
 const FILES=['./','index.html','rutes.js','info.js','vessants.js','plansb.js','aplus.js','mapa-aplus.jpg','mapa-c1.jpg','mapa-cable.jpg','mapa-cobertura.jpg','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
@@ -7,7 +7,7 @@ self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const url=new URL(e.request.url);
   // teselles del mapa ICGC: primer les desades; si no, xarxa i es desen
-  if(url.hostname==='geoserveis.icgc.cat'){
+  if(url.hostname==='geoserveis.icgc.cat'||(url.hostname==='www.ign.es'&&url.pathname.startsWith('/wmts/'))){
     e.respondWith(caches.open(TILES).then(c=>c.match(e.request.url).then(r=>r||fetch(e.request).then(res=>{
       if(res.ok||res.type==='opaque') c.put(e.request.url,res.clone());
       return res;}).catch(()=>new Response('',{status:504})))));
