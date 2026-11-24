@@ -712,7 +712,7 @@ function dibuixaMapa(E){
   let g=`<polyline points="${all}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" opacity=".8"/>`+
         `<polyline points="${all}" fill="none" stroke="#7a3cc8" stroke-width="4" stroke-linejoin="round"/>`+
         `<polyline points="${done}" fill="none" stroke="#C8553D" stroke-width="5" stroke-linejoin="round"/>`;
-  plansB().forEach(b=>{ if(b.pts.length<2) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
+  if(M.pb!==false) plansB().forEach(b=>{ if(b.pts.length<2) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
     g+=`<polyline points="${ps}" fill="none" stroke="#fff" stroke-width="6" opacity=".7"/><polyline points="${ps}" fill="none" stroke="#C55A11" stroke-width="3.5" stroke-dasharray="8 6"/>`;
     const m=b.pts[Math.floor(b.pts.length/2)], [a,c]=P(m[0],m[1]);
     g+=`<text x="${a+6}" y="${c+14}" font-size="13" font-weight="800" fill="#C55A11" paint-order="stroke" stroke="#fff" stroke-width="4">${b.id}</text>`; });
@@ -918,10 +918,11 @@ function dibuixaOSM(x0,y0,W,H){
     el.querySelectorAll('input').forEach(i=>i.onchange=()=>{ let ids=[...el.querySelectorAll('input:checked')].map(x=>x.value);
       if(!ids.length){ i.checked=true; ids=[i.value]; }
       desaMapes(ids); for(const [k,img] of M.imgs){ img.remove(); } M.imgs.clear(); dibuixaMapa(); estatMapes(); }); }
-  try{ const c=JSON.parse(localStorage.getItem('petjada-rutes-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
-  const desa=()=>{try{localStorage.setItem('petjada-rutes-capes',JSON.stringify({osm:OSM.on,op:+$('c-op').value}))}catch(e){}};
+  try{ const c=JSON.parse(localStorage.getItem('petjada-rutes-capes')||'{}'); if(c.osm===false) OSM.on=false; if(c.pb===false) M.pb=false; if(c.op!=null) $('c-op').value=c.op; }catch(e){}
+  const desa=()=>{try{localStorage.setItem('petjada-rutes-capes',JSON.stringify({osm:OSM.on,pb:M.pb!==false,op:+$('c-op').value}))}catch(e){}};
   const op=()=>{ $('tiles').style.opacity=$('c-op').value/100; $('c-opv').textContent=$('c-op').value+' %'; };
   $('c-osm').checked=OSM.on; op();
+  $('c-pb').checked=M.pb!==false; $('c-pb').onchange=()=>{M.pb=$('c-pb').checked; desa(); dibuixaMapa();};
   $('c-osm').onchange=()=>{OSM.on=$('c-osm').checked; desa(); dibuixaMapa();};
   $('c-op').oninput=()=>{op(); desa();};
 })();
