@@ -189,7 +189,7 @@ function llegeixMVT(buf){
         else if(f2===5) L.extent=vint();
         else if(f2===4){ const l2=vint(), e2=p+l2; let v=null;
           while(p<e2){ const k3=vint(), f3=k3>>3, t3=k3&7;
-            if(f3===1){const l3=vint(); v=str(p,p+l3); p+=l3;} else if(t3===0){v=vint();} else salta(t3); }
+            if(f3===1){const l3=vint(); v=str(p,p+l3); p+=l3;} else if(t3===0){ const r=vint(); v=f3===6?((r%2)?-(r+1)/2:r/2):r; } else salta(t3); }
           L.vals.push(v); }
         else if(f2===2){ const l2=vint(), e2=p+l2, F={tags:[],type:0,geom:[]};
           while(p<e2){ const k3=vint(), f3=k3>>3, t3=k3&7;
@@ -296,7 +296,7 @@ function plansBDia(G,dia,trackNodes,extra={}){
       const R1b=dijkstra(G,prop(i0),null,pen); if(R1b.D[fi]<Infinity) opcions.push({tipus:'final',nodes:cami(R1b,fi)}); }
     if(hav(pts[0],pts[n-1])>300&&R1.D[ini]<Infinity) opcions.push({tipus:'inici',nodes:cami(R1,ini)});
     { const rr=refs.filter(r=>R1.D[r.node]<Infinity).sort((a,b)=>R1.D[a.node]-R1.D[b.node])[0];
-      if(rr) opcions.push({tipus:'refugi',nodes:cami(R1,rr.node),ref:rr.q.nom?(/refug|cabana|cabaña|xalet|abric/i.test(rr.q.nom)?rr.q.nom:'Refugi '+rr.q.nom):'Refugi'}); }
+      if(rr) opcions.push({tipus:'refugi',nodes:cami(R1,rr.node),ref:rr.q.nom?(/refug|cabana|cabaña|xalet|abric/i.test(rr.q.nom)?rr.q.nom:'Refugi '+rr.q.nom):'refugi o cabana (sense nom a OpenStreetMap)'}); }
     const R2=dijkstra(G,prop(i0),u=>G.adj[u].some(([,,t])=>t<=1)&&aprop(G.ll[u],150)<0);
     if(R2.fi>=0) opcions.push({tipus:'vehicle',nodes:cami(R2,R2.fi)});
     for(const o of opcions){

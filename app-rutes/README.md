@@ -6,6 +6,8 @@ App web per guiar rutes de senderisme amb clients. Carregues el GPX de la ruta (
 - mapa base a triar (es poden activar diversos): topogràfic ICGC (Catalunya), topogràfic IGN MTN, mapa base IGN i ortofoto PNOA (tot Espanya); per defecte l'ICGC a Catalunya i l'IGN fora;
 - alçades, pendents i obagues/solells amb el model del terreny (teselles Terrarium a AWS);
 - plans B sobre els camins d'OpenStreetMap (OpenFreeMap): cap al final, de tornada a l'inici o cap a un accés amb vehicle, només si estalvien temps; amb tipus de camí, pendent màxima i enllaç al heatmap de Strava;
+- si el GPX no porta waypoints, l'app en posa sola: cims, colls, refugis i fonts d'OpenStreetMap a tocar del track, peu i dalt de les pujades fortes, inici de les baixades fortes, punts de descans perquè cap tram passi d'1 h 15 i un punt a cada cruïlla de pla B (prova: eines/prova-auto.html?gpx=…);
+- plans B cap a refugis propers (per fer-hi nit o protegir-se), a més de dreceres, tornada a l'inici i sortides a pista o carretera;
 - parades previstes editables per punt (per defecte, primera parada de 10 min al primer punt): compten a les hores previstes, als límits, a «Fins al final» i als plans B;
 - plans B amb **hora de decisió**: un pla B només es recomana si, saltant-se'l, ni amb el pla A ni amb un pla B posterior s'arriba a l'hora objectiu; taules de la cruïlla fins al final i arribada des d'on ets;
 - mode prova amb hora simulada, descàrrega dels tracks en GPX (pla A i cada pla B);
