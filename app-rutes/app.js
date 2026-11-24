@@ -760,19 +760,13 @@ const AV_TIPUS={1:'vent',2:'neu i gel',3:'tempestes',4:'boira',5:'calor',6:'fred
 const AV_NIV={2:['groc','#c9a400'],3:['taronja','#d97a00'],4:['vermell','#c0392b']};
 async function carregaAvisosTxt(forca){
   const z=zonaAvisos(); if(!z||!navigator.onLine||AVTBUSY) return;
-  if(!forca&&AVT&&AVT.zona===z.id&&Date.now()-AVT.ts<30*60e3) return;
+  if(!forca&&AVT&&AVT.zona===z.id&&Date.now()-(AVT.cons||AVT.ts)<15*60e3) return;
   if(!forca&&Date.now()-AVTERR<5*60e3) return;
   AVTBUSY=true;
-  try{ const r=await fetchT('https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain',40000); if(!r.ok) throw 0; const j=await r.json(), now=Date.now(), vist=new Set(), it=[];
-    (j.warnings||[]).forEach(w=>{ const a=w.alert||{}; if(a.status&&a.status!=='Actual') return; if(a.msgType==='Cancel') return;
-      (a.info||[]).forEach(i=>{ if(!/^es/.test(i.language||'')) return;
-        if(!(i.area||[]).some(ar=>(ar.geocode||[]).some(g=>g.value===z.id))) return;
-        const p=n=>((i.parameter||[]).find(x=>x.valueName===n)||{}).value||'', lv=parseInt(p('awareness_level'))||0, tp=parseInt(p('awareness_type'))||0;
-        const on=+new Date(i.onset||i.effective), ex=+new Date(i.expires); if(lv<2||!(ex>now)) return;
-        const k=tp+'|'+lv+'|'+on+'|'+ex; if(vist.has(k)) return; vist.add(k);
-        it.push({lv,tp,on,ex,d:(i.description||'').trim()}); }); });
-    it.sort((a,b)=>a.on-b.on||b.lv-a.lv);
-    AVT={ts:now,zona:z.id,nom:z.n,it}; try{ localStorage.setItem(AVT_KEY,JSON.stringify(AVT)); }catch(e){}
+  // avisos ja resumits per un procés de GitHub cada 30 min (Meteoalarm no es pot llegir directament des del mòbil)
+  try{ const r=await fetchT('https://raw.githubusercontent.com/stosalca/tracks-rutes/avisos/avisos.json?t='+Math.floor(Date.now()/3e5),20000); if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json(), now=Date.now();
+    const it=((j.z||{})[z.id]||[]).filter(a=>a.ex>now);
+    AVT={ts:j.ts,cons:now,zona:z.id,nom:z.n,it}; try{ localStorage.setItem(AVT_KEY,JSON.stringify(AVT)); }catch(e){}
   }catch(e){ AVTERR=Date.now(); AVTMSG=String(e&&e.message||e); }
   AVTBUSY=false; pintaAvTxt();
 }
@@ -780,10 +774,11 @@ function pintaAvTxt(){
   const el=$('av-txt'); if(!el) return; const z=zonaAvisos(); if(!z){ el.innerHTML=''; return; }
   if(!AVT||AVT.zona!==z.id){ el.innerHTML=`<p class="nota">⚠ Avisos de l'AEMET · ${esc(z.n)}: ${navigator.onLine?(AVTERR&&!AVTBUSY?'no s\'ha pogut consultar ara; es torna a provar sol.':'consultant…'):'encara no n\'hi ha cap resum desat (cal obrir-ho una vegada amb cobertura).'}</p>`; return; }
   const dh=t=>new Date(t).toLocaleString('ca-ES',{weekday:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  const cap=`<b>⚠ Avisos de l'AEMET · ${esc(AVT.nom)}</b> <small>(consultat ${fmtFa(Date.now()-AVT.ts)==='0 min'?'ara':'fa '+fmtFa(Date.now()-AVT.ts)}, a les ${new Date(AVT.ts).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})}${navigator.onLine?'':' · sense cobertura'})</small>`;
-  const ll=AVT.it.length?'<ul style="margin:4px 0 0 18px;padding:0">'+AVT.it.map(a=>{ const n=AV_NIV[a.lv]||AV_NIV[4]; return `<li><b style="color:${n[1]}">${n[0]}</b> per ${AV_TIPUS[a.tp]||'fenomen '+a.tp}: ${dh(a.on)} → ${dh(a.ex)}${a.d?'<br><small>'+esc(a.d)+'</small>':''}</li>`; }).join('')+'</ul>'
-    :'<div>Cap avís groc, taronja ni vermell vigent ni previst (l\'AEMET publica avisos fins a 2-3 dies vista).</div>';
-  el.innerHTML=`<div style="background:${AVT.it.length?'#fff4d6':'#eef6ee'};border-radius:10px;padding:8px 10px;margin:0 0 8px;font-size:14px">${cap}${ll}</div>`;
+  const cap=`<b>⚠ Avisos de l'AEMET · ${esc(AVT.nom)}</b> <small>(dades de les ${new Date(AVT.ts).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})}${Date.now()-AVT.ts>36e5?', fa '+fmtFa(Date.now()-AVT.ts):''}${navigator.onLine?'':' · sense cobertura'})</small>`;
+  const vius=AVT.it.filter(a=>a.ex>Date.now());
+  const ll=vius.length?'<ul style="margin:4px 0 0 18px;padding:0">'+vius.map(a=>{ const n=AV_NIV[a.lv]||AV_NIV[4]; return `<li><b style="color:${n[1]}">${n[0]}</b> per ${AV_TIPUS[a.tp]||'fenomen '+a.tp}: ${dh(a.on)} → ${dh(a.ex)}${a.d?'<br><small>'+esc(a.d)+'</small>':''}</li>`; }).join('')+'</ul>'
+    :'<div>Cap avís groc, taronja ni vermell vigent ni previst per a aquesta zona (l\'AEMET publica avisos fins a 2-3 dies vista; font: AEMET via Meteoalarm).</div>';
+  el.innerHTML=`<div style="background:${vius.length?'#fff4d6':'#eef6ee'};border-radius:10px;padding:8px 10px;margin:0 0 8px;font-size:14px">${cap}${ll}</div>`;
 }
 function avisosSenseCob(el){ el.style.height='auto'; el.innerHTML=`<p class="nota" style="padding:14px">Sense cobertura: aquest mapa no es pot guardar (és una pàgina de ${esCat(...avisosCentre())&&avZ==='reg'?'Meteocat':'Windy'} incrustada). A dalt tens l'últim resum d'avisos de l'AEMET per a la vostra zona, amb l'hora de la consulta. El radar i els fronts sí que queden desats.</p>`; }
 setInterval(()=>{ if(navigator.onLine&&!document.hidden){ carregaAvisosTxt(false); radarPrecarrega(); } }, 3*60e3);
@@ -888,7 +883,7 @@ function pintaMeteo(){
     ['Windy',`https://www.windy.com/${A.lat.toFixed(3)}/${A.lon.toFixed(3)}?${A.lat.toFixed(3)},${A.lon.toFixed(3)},12`],
     ['AEMET · muntanya','https://www.aemet.es/ca/eltiempo/prediccion/montana']
   ].map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(t)}</a>`).join(''));
-  set('met-nota',`Previsió per hores d'Open-Meteo a tres alçades de la ruta (${MET_PTS.map(p=>esc(p.n)+' '+Math.round(p.e)+' m').join(', ')}), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada hora els dies de la sortida i cada 3 hores la resta. Contrasta-la amb el servei meteorològic oficial; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.`);
+  set('met-nota',`Previsió per hores d'Open-Meteo a tres alçades de la ruta (${MET_PTS.map(p=>esc(p.n)+' '+Math.round(p.e)+' m').join(', ')}), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada 20 min els dies de la sortida i cada 3 hores la resta. Contrasta-la amb el servei meteorològic oficial; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.`);
   if(!MET){ set('met-act','sense dades'); set('met-dies',''); set('met-resum','<p class="nota">Toca «Actualitzar previsió» amb connexió.</p>'); set('met-hores',''); set('met-avisos',''); return; }
   const fa=Math.round((Date.now()-MET.ts)/60000);
   set('met-act', 'actualitzada '+(fa<60?`fa ${fa} min`:fa<1440?`fa ${Math.round(fa/60)} h`:new Date(MET.ts).toLocaleDateString('ca-ES')));
