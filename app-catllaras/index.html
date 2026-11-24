@@ -591,12 +591,13 @@ function render(){
   // fins al final
   let hRest=hSeg; for(let k=w;k<R.trams.length;k++) hRest+=R.trams[k].h;
   const dR=tot-E.d, uR=R.cu[R.n-1]-E.u, nR=R.cn[R.n-1]-E.n;
-  set('r-km',km(dR)+'<small>km</small>'); set('r-t',hm(hRest));
+  const pRest=paradesEntre(E.d,R.n-1);
+  set('r-km',km(dR)+'<small>km</small>'); set('r-t',hm(hRest+pRest));
   set('r-up','+'+mts(uR)); set('r-dn','−'+mts(nR));
-  const arr=new Date(now+hRest*3600e3), lim=LIMIT[dia];
+  const arr=new Date(now+(hRest+pRest)*3600e3), lim=LIMIT[dia];
   const limD=new Date(now); limD.setHours(...lim.h.split(':').map(Number),0,0);
   const marge=(limD-arr)/3600e3;
-  set('r-hora',`Arribada prevista <b>${rel(arr)}</b> · ${lim.txt} ${lim.h} → `+
+  set('r-hora',`Arribada prevista <b>${rel(arr)}</b> (${hm(hRest)} de marxa + ${hm(pRest)} de parades previstes) · ${lim.txt} ${lim.h} → `+
     (marge>=0?`<b style="color:var(--ok)">marge ${hm(marge)}</b>`:`<b style="color:var(--ter)">vas ${hm(-marge)} tard</b>`));
   // ritme respecte a la fitxa
   let hFet=0; for(let k=0;k<trIdx;k++) hFet+=R.trams[k].h;
@@ -644,8 +645,9 @@ function pintaModeB(b,EB,E,now){
   set('f-km',km(fk)+'<small>km</small>'); set('f-up','+'+mts(fu)); set('f-dn','−'+mts(fn));
   $('barra').style.width=(fk/tt*100).toFixed(1)+'%'; set('pct',Math.round(fk/tt*100)+' %');
   set('final-nom',b.fi||R.wp[R.wp.length-1].n.split(' · ')[0]);
-  set('r-km',km(dB+kA)+'<small>km</small>'); set('r-t',hm(hB+hA)); set('r-up','+'+mts(uB+uA)); set('r-dn','−'+mts(nB+nA));
-  const arr=new Date(now+(hB+hA)*3600e3), lim=LIMIT[dia], limD=new Date(now); limD.setHours(...lim.h.split(':').map(Number),0,0);
+  const pA=b.ib!=null?paradesEntre(R.cd[b.ib],R.n-1):0;
+  set('r-km',km(dB+kA)+'<small>km</small>'); set('r-t',hm(hB+hA+pA)); set('r-up','+'+mts(uB+uA)); set('r-dn','−'+mts(nB+nA));
+  const arr=new Date(now+(hB+hA+pA)*3600e3), lim=LIMIT[dia], limD=new Date(now); limD.setHours(...lim.h.split(':').map(Number),0,0);
   const marge=(limD-arr)/3600e3;
   set('r-hora',`Pla ${b.id} · arribada prevista <b>${rel(arr)}</b> · ${lim.txt} ${lim.h} → `+
     (marge>=0?`<b style="color:var(--ok)">marge ${hm(marge)}</b>`:`<b style="color:var(--ter)">vas ${hm(-marge)} tard</b>`));
