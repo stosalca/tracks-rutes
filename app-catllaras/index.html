@@ -656,7 +656,7 @@ function render(){
 
 // ---------- Fins a un punt (el que triïs) ----------
 function pintaFinsA(E,now,PB){ const el=$('fa-sel'); if(!el||!E) return; const s=ds();
-  if(el.dataset.k!==dia){ el.dataset.k=dia; el.innerHTML=R.wp.slice(1).map(w=>`<option value="${esc(w.k)}">${esc(w.n)}</option>`).join('');
+  if(el.dataset.k!==dia){ el.dataset.k=dia; el.innerHTML=R.wp.map(w=>`<option value="${esc(w.k)}">${esc(w.n)}</option>`).join('');
     el.onchange=()=>{ ds().fa=el.value; save(); render(); }; }
   let w=R.wp.find(x=>x.k===s.fa);
   if(!w){ w=R.wp.find(x=>R.cd[x.i]>E.d+20)||R.wp[R.wp.length-1]; }
