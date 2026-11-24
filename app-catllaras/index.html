@@ -413,6 +413,13 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
     <div class="enllacos" id="met-links"></div>
     <p class="nota" id="met-nota"></p>
   </section>
+  <section class="card" id="avisos-card">
+    <h2>Avisos meteorològics <b>Windy · dades de l'AEMET</b></h2>
+    <div class="dies" id="av-sel"><button data-z="pen" class="on">Península</button><button data-z="reg">Zona de la ruta</button></div>
+    <div id="av-map" style="position:relative;width:100%;height:440px;border-radius:12px;overflow:hidden;background:#e9e6df"></div>
+    <p class="nota" id="av-nota" style="margin-top:6px"></p>
+    <div class="enllacos" id="av-links"></div>
+  </section>
 </main>
 
 <main id="v112" hidden>
@@ -885,7 +892,7 @@ document.querySelectorAll('nav.vistes button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.vistes button').forEach(x=>x.classList.toggle('on',x===b));
   for(const id of ['vruta','vbri','vplans','vmet','v112']) $(id).hidden=id!==v;
   document.querySelector('header .tabs').style.display=v==='vruta'?'':'none';
-  window.scrollTo(0,0); if(v==='v112') pinta112(); if(v==='vbri') pintaBriefing(); if(v==='vmet') try{pintaMeteo()}catch(e){} });
+  window.scrollTo(0,0); if(v==='v112') pinta112(); if(v==='vbri') pintaBriefing(); if(v==='vmet'){ try{pintaMeteo()}catch(e){} try{pintaAvisos()}catch(e){} } });
 $('e-gps').onclick=()=>{ gpsOn(); };
 $('e-copia').onclick=async()=>{ const t=textCoord(); if(!t){ $('e-copia').textContent='Encara no hi ha posició'; return; }
   try{ await navigator.clipboard.writeText(t); $('e-copia').textContent='Copiat ✓'; }catch(e){ prompt('Copia aquest text:',t); }
@@ -1091,6 +1098,23 @@ const VENTS=[['N','tramuntana'],['NE','gregal'],['E','llevant'],['SE','xaloc'],[
 function ventDir(g){ if(g==null||isNaN(g)) return null; const k=Math.round(((g%360)+360)%360/45)%8; return {c:VENTS[k][0],n:VENTS[k][1],g}; }
 function fletxa(g,mida){ return `<span class="fv" style="transform:rotate(${(g+180)%360}deg);${mida?'font-size:'+mida+'px':''}" title="bufa de ${Math.round(g)}°">↑</span>`; }
 function dirMitjana(a){ let x=0,y=0; a.forEach(([g,w])=>{ if(g==null) return; x+=Math.sin(g*Math.PI/180)*(w||1); y+=Math.cos(g*Math.PI/180)*(w||1); }); return (x||y)?(Math.atan2(x,y)*180/Math.PI+360)%360:null; }
+// ---------- Avisos meteorològics (Windy, capa CAP) ----------
+let avZ='pen';
+function avisosCentre(){ return [42.224,1.971]; }
+function esCat(la,lo){ return la>40.5&&la<42.9&&lo>0.15&&lo<3.35; }
+function pintaAvisos(){
+  const el=$('av-map'); if(!el) return; const [la,lo]=avisosCentre(), cat=esCat(la,lo);
+  document.querySelectorAll('#av-sel button').forEach(b=>{ b.classList.toggle('on',b.dataset.z===avZ); b.onclick=()=>{avZ=b.dataset.z; el.dataset.k=''; pintaAvisos();}; });
+  const z=avZ==='pen'?{lat:40.2,lon:-3.6,zoom:5}:{lat:cat?41.75:la,lon:cat?1.6:lo,zoom:8};
+  const u=`https://embed.windy.com/embed2.html?lat=${z.lat}&lon=${z.lon}&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=${z.zoom}&level=surface&overlay=capAlerts&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+  if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: els mapes d\'avisos només funcionen amb cobertura.</p>'; }
+  else if(el.dataset.k!==u){ el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
+  set('av-nota',`Colors: <b style="color:#a8a800">moderat</b> · <b style="color:#d97a00">sever</b> · <b style="color:#c0392b">extrem</b>. Toca una zona per llegir l'avís; a sota pots triar «Today / Tomorrow / Later». El marcador és la ruta. `+
+    (avZ==='reg'?'Windy dibuixa les zones d\'avís de l\'AEMET i els límits de comarca, però no n\'escriu els noms: ':' ')+(cat?'per veure les comarques amb el seu nom, mira el mapa del Meteocat.':'per al detall per zones, mira l\'AEMET.'));
+  set('av-links',(cat?'<a href="https://www.meteo.cat/prediccio/general" target="_blank" rel="noopener">⚠ Avisos del Meteocat per comarques</a>':'')+
+    '<a href="https://www.aemet.es/es/eltiempo/prediccion/avisos" target="_blank" rel="noopener">⚠ Avisos de l\'AEMET</a>'+
+    `<a href="https://www.windy.com/-Weather-warnings-capAlerts?capAlerts,${la.toFixed(3)},${lo.toFixed(3)},8" target="_blank" rel="noopener">Obrir a Windy</a>`);
+}
 function pintaMeteo(){
   set('met-links',[
     ['Meteocat · la Pobla de Lillet','https://www.meteo.cat/prediccio/municipal/081666'],
