@@ -474,6 +474,9 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 <script src="aplus.js"></script>
 <script>
 "use strict";
+// alçades dels punts com a la fitxa (el track en dona 1-3 m de diferència)
+const ALT_FITXA={dia1:{P3:1366},dia2:{X:1366,P13:1236,P0:925}};
+for(const d in ALT_FITXA) for(const w of RUTES[d].wp){ const v=ALT_FITXA[d][w.k]; if(v!=null) RUTES[d].pts[w.i][2]=v; }
 const LIMIT={dia1:{h:'17:23',txt:'posta de sol'},dia2:{h:'15:30',txt:'arribada al pàrquing (P0)'}};
 const ST_KEY='petjada-catllaras-v1';
 let st=load();
@@ -626,19 +629,19 @@ function render(){
     (marge>=0?`<b style="color:var(--ok)">marge ${hm(marge)}</b>`:`<b style="color:var(--ter)">vas ${hm(-marge)} tard</b>`));
   // ritme respecte a la fitxa
   let hFet=0; for(let k=0;k<trIdx;k++) hFet+=R.trams[k].h;
-  hFet+=Math.max(0,tr.h-hSeg);
+  hFet+=Math.max(0,tr.h-hSeg); hFet+=paradesEntre(0,Math.max(1,R.wp[w].i));
   if(INI && E.d>300){
     const real=(now-INI)/3600e3, dif=real-hFet;
-    set('ritme',`Segons la fitxa hauries trigat ${hm(hFet)} (sense parades): `+
-      (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`));
+    set('ritme',`Segons la fitxa hauries trigat ${hm(hFet)} (amb les parades previstes): `+
+      (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b>`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`));
   } else set('ritme', INI?'':'Toca «Iniciar ruta» per comptar el temps.');
   if(PB) pintaModeB(PB,EB,E,now);
   else if(DV){ // després d'un pla B: el fet inclou el pla B i no el tros de pla A saltat
     const fk=E.d+DV.km, tt=tot+DV.km; set('f-km',km(fk)+'<small>km</small>'); set('f-up','+'+mts(E.u+DV.u)); set('f-dn','−'+mts(E.n+DV.n));
     $('barra').style.width=(fk/tt*100).toFixed(1)+'%'; set('pct',Math.round(fk/tt*100)+' %');
-    if(INI&&E.d>300){ const real=(now-INI)/3600e3, hf=hFet+DV.h, dif=real-hf;
-      set('ritme',`Segons la fitxa (amb el pla ${DV.id}) hauries trigat ${hm(hf)} (sense parades): `+
-        (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
+    if(INI&&E.d>300){ const pbx=R.pb.find(x=>x.id===DV.id), real=(now-INI)/3600e3, hf=hFet+DV.h-(pbx&&pbx.ib!=null?paradesEntre(R.cd[pbx.ia]+40,pbx.ib):0), dif=real-hf;
+      set('ritme',`Segons la fitxa (amb el pla ${DV.id}) hauries trigat ${hm(hf)} (amb les parades previstes): `+
+        (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b>`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
   }
   // trams
   const base=INI?new Date(INI):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
@@ -713,9 +716,9 @@ function pintaModeB(b,EB,E,now){
   const marge=(limD-arr)/3600e3;
   set('r-hora',`Pla ${b.id} · arribada prevista <b>${rel(arr)}</b> · ${lim.txt} ${lim.h} → `+
     (marge>=0?`<b style="color:var(--ok)">marge ${hm(marge)}</b>`:`<b style="color:var(--ter)">vas ${hm(-marge)} tard</b>`));
-  if(INI){ const hf=horesEntre(0,b.ia)+hores(EB.d/1000,EB.u,EB.n), dif=(now-INI)/3600e3-hf;
-    set('ritme',`Segons la fitxa (amb el pla ${b.id}) hauries trigat ${hm(hf)} (sense parades): `+
-      (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b> (parades incloses)`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
+  if(INI){ const hf=horesEntre(0,b.ia)+paradesEntre(0,b.ia+1)+hores(EB.d/1000,EB.u,EB.n), dif=(now-INI)/3600e3-hf;
+    set('ritme',`Segons la fitxa (amb el pla ${b.id}) hauries trigat ${hm(hf)} (amb les parades previstes): `+
+      (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b>`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
 }
 function plansB(){ return (typeof PLANSB!=='undefined'&&PLANSB[dia])||[]; }
 function sortidaPrevista(ref){ const d=new Date(ref); const [h,m]=R.r.sortida.split(':'); d.setHours(+h,+m,0,0); return d; }
@@ -861,13 +864,13 @@ $('e-ext').onchange=desaExt; $('e-ext-nom').onchange=desaExt;
 pintaTels();
 
 // ---------- Briefing inicial ----------
-const PARADES={dia1:{min:45,txt:'1a parada a P1 (aigua i capes) ≈ 10 min, descans al Xalet ≈ 20 min + parades curtes i explicacions'},dia2:{min:60,txt:'mos ≈ 15 min, descans al Coll de Llevat ≈ 20 min + parades curtes'}};
+const PARADES={dia1:{txt:'P1 10 min (aigua i capes), Xalet 20 min (descans), Roc de la Lluna 10 min (mirador), Roc del Joc de Pilota 40 min (grimpada assegurada)'},dia2:{txt:'P9 10 min (esmorzar), P10 10 min (punt més alt), P12 10 min (mos i aigua), Coll de Llevat 20 min (descans)'}};
 const BRI_KEY='catllaras-bri', BRI_NOTES='catllaras-bri-notes';
 function briEstat(){ try{return JSON.parse(localStorage.getItem(BRI_KEY))||{}}catch(e){return {}} }
 function sumaHora(hhmm,h){ const [H,M]=hhmm.split(':').map(Number); const t=Math.round(H*60+M+h*60); return String(Math.floor(t/60)%24).padStart(2,'0')+':'+String(t%60).padStart(2,'0'); }
 function resumDia(k){
   const r=prepara(k); let km=0,up=0,dn=0,h=0; r.trams.forEach(t=>{km+=t.km;up+=t.up;dn+=t.dn;h+=t.h;});
-  const zmax=Math.max(...RUTES[k].pts.map(p=>p[2])), par=PARADES[k].min/60;
+  const zmax=Math.max(...RUTES[k].pts.map(p=>p[2])), par=Object.values(PARADES_PA[k]||{}).reduce((a,b)=>a+b,0)/60;
   return {km,up,dn,h,hp:h+par,zmax,sort:RUTES[k].sortida||r.r.sortida};
 }
 function pintaBriefing(){
@@ -882,7 +885,7 @@ function pintaBriefing(){
   sec(1,'jo','Em presento',`<ul>
     <li>Sóc en <b>Sergi Tossal</b>, guia de mitja muntanya. Aquests dos dies sóc el vostre guia.</li>
     <li>El meu telèfon: <a href="tel:667999040"><b>667 999 040</b></a>. Guardeu-lo ara al mòbil.</li>
-    <li>Som un grup de 6 + guia. Dormirem en bivac al costat del Xalet del Catllaràs i demà tornarem aquí, als cotxes.</li></ul>`)+
+    <li>Som un grup de 6 + guia (en total, 2 grups de 6, cadascun amb el seu guia). Dormirem en bivac al costat del Xalet del Catllaràs i demà tornarem aquí, als cotxes.</li></ul>`)+
   sec(2,'grup','Es presenta el grup',`<p style="font-size:15px;margin-bottom:6px">Una ronda ràpida, cadascú:</p><ul>
     <li><b>Nom</b></li><li><b>Experiència prèvia</b> en rutes: travessies de més d'un dia, bivac, desnivells semblants</li>
     <li><b>Professió</b></li><li>Alguna <b>molèstia, lesió</b>, al·lèrgia o medicació que hagi de saber? <span class="nota">(Qui ho prefereixi, m'ho pot dir a part.)</span></li></ul>
@@ -904,8 +907,8 @@ function pintaBriefing(){
     <li><b>Demà:</b> del Xalet al Coll i el Refugi d'Ardericó, pugem a la carena entre el Berguedà i el Ripollès (${Math.round(d2.zmax).toLocaleString('ca')} m, punt més alt del dia), passem per la collada de Montclús i la Roca del Corb i baixem pel torrent de Junyent fins aquí, al Monestir.</li></ul>`)+
   sec(4,'det','Detalls de la ruta',`<div class="xif">${xif('Dia 1 · dissabte',d1,'dia1')}${xif('Dia 2 · diumenge',d2,'dia2')}</div><ul>
     <li>Parades previstes: dia 1, ${PARADES.dia1.txt}; dia 2, ${PARADES.dia2.txt}.</li>
-    <li>Sol: surt a les 7:57 i es pon a les 17:23. Cap a les 17:54 ja és fosc: el frontal, a mà.</li>
-    <li>Aigua: font del Catllaràs al costat del Xalet (cabal per confirmar). Sortiu amb les ampolles plenes.</li>
+    <li>Sol: surt a les 7:58 (diumenge 7:59) i es pon a les 17:23. Cap a les 17:54 ja és fosc: el frontal, a mà.</li>
+    <li>Aigua: font del Catllaràs al costat del Xalet (ho comprovem en arribar) i font de la Devesa Jussana abans de P5 (rajava el 21/11). Sortiu amb les ampolles plenes.</li>
     <li>Els horaris són orientatius: si anem tard o el temps canvia, tenim alternatives (plans B) i les decideixo jo.</li></ul>`)+
   sec(5,'mat','Repàs del material',`<p style="font-size:15px;margin-bottom:6px">Encara som als cotxes: si falta alguna cosa, ara és el moment.</p><ul>
     <li><b>Dormir:</b> sac (confort de −5 °C o menys), màrfega o aïllant, funda de bivac.</li>

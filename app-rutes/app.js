@@ -172,8 +172,8 @@ function render(){
   else if(DV){ // després d'un pla B: el fet inclou el pla B i no el tros de pla A saltat
     const fk=E.d+DV.km, tt=tot+DV.km; set('f-km',km(fk)+'<small>km</small>'); set('f-up','+'+mts(E.u+DV.u)); set('f-dn','−'+mts(E.n+DV.n));
     $('barra').style.width=(fk/tt*100).toFixed(1)+'%'; set('pct',Math.round(fk/tt*100)+' %');
-    if(INI&&E.d>300){ const real=(now-INI)/3600e3, hf=hFet+DV.h, dif=real-hf;
-      set('ritme',`Segons la fitxa (amb el pla ${DV.id}) hauries trigat ${hm(hf)} (sense parades): `+
+    if(INI&&E.d>300){ const pbx=R.pb.find(x=>x.id===DV.id), real=(now-INI)/3600e3, hf=hFet+DV.h-(pbx&&pbx.ib!=null?paradesEntre(R.cd[pbx.ia]+40,pbx.ib):0), dif=real-hf;
+      set('ritme',`Segons la fitxa (amb el pla ${DV.id}) hauries trigat ${hm(hf)} (amb les parades previstes): `+
         (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b>`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
   }
   // trams
@@ -237,8 +237,8 @@ function pintaModeB(b,EB,E,now){
   const marge=(limD-arr)/3600e3;
   set('r-hora',`Pla ${b.id} · arribada prevista <b>${rel(arr)}</b> · ${lim.txt} ${lim.h} → `+
     (marge>=0?`<b style="color:var(--ok)">marge ${hm(marge)}</b>`:`<b style="color:var(--ter)">vas ${hm(-marge)} tard</b>`));
-  if(INI){ const hf=horesEntre(0,b.ia)+hores(EB.d/1000,EB.u,EB.n), dif=(now-INI)/3600e3-hf;
-    set('ritme',`Segons la fitxa (amb el pla ${b.id}) hauries trigat ${hm(hf)} (sense parades): `+
+  if(INI){ const hf=horesEntre(0,b.ia)+paradesEntre(0,b.ia+1)+hores(EB.d/1000,EB.u,EB.n), dif=(now-INI)/3600e3-hf;
+    set('ritme',`Segons la fitxa (amb el pla ${b.id}) hauries trigat ${hm(hf)} (amb les parades previstes): `+
       (Math.abs(dif)<5/60?'<b>vas al ritme previst</b>':dif>0?`<b class="up">${hm(dif)} més</b>`:`<b style="color:var(--ok)">${hm(-dif)} menys</b>`)); }
 }
 function plansB(){ return (typeof PLANSB!=='undefined'&&PLANSB[dia])||[]; }
