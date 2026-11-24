@@ -776,7 +776,7 @@ function pintaPlansB(E,seg,now){
   const tPlaA=i=>({km:(R.cd[fiA]-R.cd[i])/1000,up:R.cu[fiA]-R.cu[i],dn:R.cn[fiA]-R.cn[i],h:horesEntre(i,fiA)+paradesEntre(R.cd[i],fiA)});
   const tAmbB=b=>{ const hB=hores(b.km,b.up,b.dn); if(b.ib==null) return {km:b.km,up:b.up,dn:b.dn,h:hB};
     const t=tPlaA(b.ib); return {km:b.km+t.km,up:b.up+t.up,dn:b.dn+t.dn,h:hB+t.h}; };
-  // cadena de decisions: plans B que acaben al mateix final (no el B5 de Falgars)
+  // cadena de decisions: plans B que acaben al mateix final
   const chain=L.filter(b=>!b.limitPropi&&(!b.fi||b.fi===fiNom)).sort((x,y)=>x.ia-y.ia);
   const trajecte=(i,j)=>horesEntre(i,j)+paradesEntre(R.cd[i],j);
   // millor opció si ens saltem la cruïlla i: pla A o un pla B posterior
@@ -827,7 +827,7 @@ const TELS=[
   ['Emergències',[['Emergències (sanitat, bombers, policia)','112',1],['Salut Respon (consulta sanitària 24 h)','061'],['Mossos d’Esquadra','088'],['Mossos d’Esquadra · comissaria de Berga','938815785']]],
   ['Salut',[['CAP Guardiola de Berguedà · urgències 24 h ds, dg i festius (dl–dv de 20 a 8 h)','938227172'],['Consultori de la Pobla de Lillet · dl–dv','938236006'],['Hospital de Berga (Sant Bernabé)','938243400'],['Hospital de Campdevànol (Ripollès)','972730013'],['Farmàcia de la Pobla de Lillet','938236110']]],
   ['Taxis (Berga)',[['Taxis Berga','938211111'],['Taxi Berga (guàrdies nocturnes)','640738862'],['Taxi Berga (guàrdies nocturnes)','686561712']]],
-  ['Logística',[['Hostal del Santuari de Falgars','937441095'],['Oficina de turisme de la Pobla de Lillet','687998541'],['Ajuntament de la Pobla de Lillet','938236011'],['Guia · Sergi Tossal','667999040']]]
+  ['Logística',[['Oficina de turisme de la Pobla de Lillet','687998541'],['Ajuntament de la Pobla de Lillet','938236011'],['Guia · Sergi Tossal','667999040']]]
 ];
 const fmtTel=t=>t.length===9?t.replace(/(\d{3})(\d{2})(\d{2})(\d{2})/,'$1 $2 $3 $4'):t;
 function pintaTels(){
@@ -1230,7 +1230,7 @@ function dibuixaMapa(E){
     const m=a.pts[Math.floor(a.pts.length*(a.id==='A+1'?0.72:0.45))], [x,y]=P(m[0],m[1]);
     g+=`<text x="${x+8}" y="${y+5}" font-size="18" font-weight="800" fill="${a.col}" paint-order="stroke" stroke="#fff" stroke-width="4">${a.id}</text>`;
     a.wp.slice(1,-1).forEach(([i,n,c])=>{ const [x2,y2]=P(a.pts[i][0],a.pts[i][1]); g+=`<circle cx="${x2}" cy="${y2}" r="5.5" fill="${a.col}" stroke="#fff" stroke-width="2"/><text x="${x2+9}" y="${y2-7}" font-size="13" font-weight="700" fill="${a.col}" paint-order="stroke" stroke="#fff" stroke-width="3.5">${c||''}</text>`; }); });
-  const PBOFF=PRINT?[]:pbOff(); if(!PRINT_AP&&(M.pb!==false||PRINT)) plansB().forEach(b=>{ if(b.pts.length<2||PBOFF.includes(b.id)) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
+  const PBOFF=PRINT?(new URLSearchParams(location.search).get('sense')||'').split(','):pbOff(); if(!PRINT_AP&&(M.pb!==false||PRINT)) plansB().forEach(b=>{ if(b.pts.length<2||PBOFF.includes(b.id)) return; let ps=''; b.pts.forEach(q=>{const [a,c]=P(q[0],q[1]); ps+=a.toFixed(1)+','+c.toFixed(1)+' ';});
     g+=`<polyline points="${ps}" fill="none" stroke="#fff" stroke-width="6" opacity=".7"/><polyline points="${ps}" fill="none" stroke="#C55A11" stroke-width="3.5" stroke-dasharray="8 6"/>`;
     const m=b.pts[Math.floor(b.pts.length*(PRINT?0.35:0.5))], [a,c]=P(m[0],m[1]);
     g+=`<text x="${a+6}" y="${c+14}" font-size="${PRINT?17:13}" font-weight="800" fill="#C55A11" paint-order="stroke" stroke="#fff" stroke-width="4">${b.id}</text>`; });
@@ -1596,7 +1596,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 setInterval(()=>{$('rellotge').textContent=rel(new Date()); if(R) render();},20000);
 $('rellotge').textContent=rel(new Date());
 
-function fitPrint(){ const el=$('tmap'), W=el.clientWidth, H=el.clientHeight, pts=PRINT_AP?aplusDia().flatMap(a=>a.pts):[...R.p,...plansB().flatMap(b=>b.pts)];
+function fitPrint(){ const el=$('tmap'), W=el.clientWidth, H=el.clientHeight, pts=PRINT_AP?aplusDia().flatMap(a=>a.pts):[...R.p,...plansB().filter(b=>!(new URLSearchParams(location.search).get('sense')||'').split(',').includes(b.id)).flatMap(b=>b.pts)];
   const xy=pts.map(q=>wpx(q[0],q[1],0)), b0=[Math.min(...xy.map(a=>a[0])),Math.max(...xy.map(a=>a[0])),Math.min(...xy.map(a=>a[1])),Math.max(...xy.map(a=>a[1]))];
   const z=Math.min(16,Math.log2(Math.min((W-120)/(b0[1]-b0[0]),(H-120)/(b0[3]-b0[2])))), f=2**z, bb=b0.map(v=>v*f);
   M.z=z; M.follow=false; M.cx=(bb[0]+bb[1])/2; M.cy=(bb[2]+bb[3])/2; dibuixaMapa(); }
