@@ -1193,7 +1193,7 @@ const MAPES=[
   {id:'icgc',nom:'Topogràfic ICGC (Catalunya)',curt:'ICGC',url:'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png',zmax:16,attr:'© ICGC CC BY 4.0'},
   {id:'strava',nom:'Heatmap de Strava (per on passa la gent)',curt:'Strava',attr:'© Strava (heatmap)',url:'',zmax:12}];
 const TZMAX=16, ZMIN=12, ZMAX=18, MAPES_KEY='catllaras-mapes-on';
-function mapesOn(){ let m=null; try{ m=JSON.parse(localStorage.getItem(MAPES_KEY)); }catch(e){} if(!Array.isArray(m)||!m.length) m=['icgc']; return MAPES.filter(x=>m.includes(x.id)).map(x=>x.id==='strava'?capaStrava(x):x); }
+function mapesOn(){ let m=null; try{ m=JSON.parse(localStorage.getItem(MAPES_KEY)); }catch(e){} if(!Array.isArray(m)||!m.length||new URLSearchParams(location.search).get('mapa')) m=['icgc']; return MAPES.filter(x=>m.includes(x.id)).map(x=>x.id==='strava'?capaStrava(x):x); }
 const PRINT=(new URLSearchParams(location.search).get('mapa')||'').replace(/[^a-z0-9]/g,'')||null;
 const PRINT_AP=PRINT&&new URLSearchParams(location.search).get('extra')==='aplus';
 const aplusDia=()=>(typeof APLUS!=='undefined'&&APLUS[dia])||[];
