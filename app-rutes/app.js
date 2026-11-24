@@ -676,10 +676,17 @@ function pintaAvisos(){
   document.querySelectorAll('#av-sel button').forEach(b=>{ b.classList.toggle('on',b.dataset.z===avZ); b.onclick=()=>{avZ=b.dataset.z; el.dataset.k=''; pintaAvisos();}; });
   const z=avZ==='pen'?{lat:40.2,lon:-3.6,zoom:5}:{lat:cat?41.75:la,lon:cat?1.6:lo,zoom:8};
   const u=`https://embed.windy.com/embed2.html?lat=${z.lat}&lon=${z.lon}&detailLat=${la.toFixed(3)}&detailLon=${lo.toFixed(3)}&zoom=${z.zoom}&level=surface&overlay=capAlerts&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
-  if(avZ==='radar'){ radarMostra(); }
+  const MC={reg:['mapaAvisos','Mapa d\'avisos del Meteocat',540],radar:['mapaRadar','Última imatge de radar del Meteocat',430]}[avZ];
+  el.style.height=(cat&&MC?MC[2]:440)+'px';
+  if(cat&&MC){ radarAtura(); const um=`https://static-m.meteo.cat/ginys/${MC[0]}?language=ca&color=2c3e50&target=_blank`;
+    if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: aquest mapa només funciona amb cobertura.</p>'; }
+    else if(el.dataset.k!==um){ el.dataset.k=um; el.innerHTML=`<iframe src="${um}" title="${MC[1]}" scrolling="no" style="border:0;width:100%;height:100%"></iframe>`; } }
+  else if(avZ==='radar'){ radarMostra(); }
   else if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: els mapes d\'avisos només funcionen amb cobertura.</p>'; }
   else if(el.dataset.k!==u){ radarAtura(); el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
-  if(avZ==='radar'){ set('av-nota','Radar de pluja de les últimes 2 hores (cada 10 min) sobre la zona de la ruta, en lila; el punt blau és on ets. Toca ▶ per veure l\'animació i cap on es mou la pluja, o arrossega la barra. Blau clar = pluja feble; groc i vermell = forta; tons rosats = neu. A muntanya el radar pot no veure la pluja feble o la neu de les valls (les muntanyes li fan ombra).'); }
+  if(cat&&avZ==='reg'){ set('av-nota','Avisos de situació meteorològica de perill (SMP) del Meteocat per comarques: tria el dia (avui, demà, demà passat) i el fenomen (pluja, neu, vent, fred…). Verd = sense perill; groc = moderat; taronja = alt; vermell = molt alt. Per saber en quina comarca és la ruta, mira el municipi de sortida.'); }
+  else if(cat&&avZ==='radar'){ set('av-nota','Última imatge del radar del Meteocat (s\'actualitza cada 6 min). Fes zoom amb + per acostar-te a la zona de la ruta. Per veure l\'animació de la darrera hora i la predicció a 1 hora, obre el radar del Meteocat amb el botó de sota.'); }
+  else if(avZ==='radar'){ set('av-nota','Radar de pluja de les últimes 2 hores (cada 10 min) sobre la zona de la ruta, en lila; el punt blau és on ets. Toca ▶ per veure l\'animació i cap on es mou la pluja, o arrossega la barra. Blau clar = pluja feble; groc i vermell = forta; tons rosats = neu. A muntanya el radar pot no veure la pluja feble o la neu de les valls (les muntanyes li fan ombra).'); }
   else set('av-nota',`Colors: <b style="color:#a8a800">moderat</b> · <b style="color:#d97a00">sever</b> · <b style="color:#c0392b">extrem</b>. Toca una zona per llegir l'avís; a sota pots triar «Today / Tomorrow / Later». El marcador és la ruta. `+
     (avZ==='reg'?'Windy dibuixa les zones d\'avís de l\'AEMET i els límits de comarca, però no n\'escriu els noms: ':' ')+(cat?'per veure les comarques amb el seu nom, mira el mapa del Meteocat.':'per al detall per zones, mira l\'AEMET.'));
   set('av-links',(cat?'<a href="https://www.meteo.cat/prediccio/general" target="_blank" rel="noopener">⚠ Avisos del Meteocat per comarques</a>':'')+
