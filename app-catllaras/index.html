@@ -256,7 +256,7 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
   <section class="card">
     <h2>Trams <b id="sortida"></b></h2>
     <table><thead><tr><th>Punt</th><th>km<br><small class="acu">acum.</small></th><th>D+<br><small class="acu">acum.</small></th><th>D−<br><small class="acu">acum.</small></th><th>Temps<br><small class="acu">acum.</small></th><th>Previst</th><th>Real</th><th title="Hora de pas prevista + marge (1 h 30, o menys si no arribaríeu a l'hora objectiu)">Límit</th></tr></thead><tbody id="trams"></tbody></table>
-    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, sense parades. "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a la posta el dia 1 / les 15:30 al pàrquing el dia 2); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
+    <p class="nota" style="margin-top:8px">Temps per tram = màx(dist./3,5 km/h ; D+/300 + D−/400) × 1,2. Hora prevista des de l'hora d'inici, amb les parades previstes (+min = parada en aquell punt). "Real" s'apunta sol quan passes pel punt; amb ≈ si hi has passat amb el mòbil bloquejat (hora estimada). «Límit»: hora de pas prevista + 1 h 30 (o el marge que quedi fins a la posta el dia 1 / les 15:30 al pàrquing el dia 2); si hi arribeu més tard, aplica un pla B. En vermell, si hi heu passat després del límit. Distàncies, desnivells i alçades ajustats amb el registre del COROS del 21/11; els trams P5→P6 i Xalet→P7 són del track planificat.</p>
   </section>
 
   <section class="card vess" id="vess">
@@ -622,10 +622,12 @@ function render(){
   // trams
   const base=INI?new Date(INI):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows='';
-  R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k], salt=(s.salt||{})[k];
-    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}<br><small class="acu">${(R.cd[x.ib]/1000).toFixed(2).replace('.',',')}</small></td><td>${Math.round(x.up)}<br><small class="acu">${Math.round(R.cu[x.ib])}</small></td><td>${Math.round(x.dn)}<br><small class="acu">${Math.round(R.cn[x.ib])}</small></td><td>${hm(x.h)}<br><small class="acu">${hm(acc)}</small></td><td>${rel(new Date(+base+acc*3600e3))}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
-  let H=R.trams.reduce((a,x)=>a+x.h,0);
-  rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td></td><td></td><td></td></tr>`;
+  const PAR=PARADES_PA[dia]||{};
+  R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k], salt=(s.salt||{})[k], pm=PAR[R.wp[k+1].k]||0, arrP=+base+(acc+paradesEntre(0,x.ib))*3600e3;
+    rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}</td><td>${x.km.toFixed(2).replace('.',',')}<br><small class="acu">${(R.cd[x.ib]/1000).toFixed(2).replace('.',',')}</small></td><td>${Math.round(x.up)}<br><small class="acu">${Math.round(R.cu[x.ib])}</small></td><td>${Math.round(x.dn)}<br><small class="acu">${Math.round(R.cn[x.ib])}</small></td><td>${hm(x.h)}<br><small class="acu">${hm(acc)}</small></td><td>${rel(new Date(arrP))}${pm&&k<R.trams.length-1?`<br><small>+${pm} min</small>`:''}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
+  let H=R.trams.reduce((a,x)=>a+x.h,0), HP=paradesEntre(0,R.n-1);
+  rows+=`<tr><td><b>Total</b></td><td><b>${(tot/1000).toFixed(2).replace('.',',')}</b></td><td><b>${Math.round(R.cu[R.n-1])}</b></td><td><b>${Math.round(R.cn[R.n-1])}</b></td><td><b>${hm(H)}</b></td><td><b>${rel(new Date(+base+(H+HP)*3600e3))}</b></td><td></td><td></td></tr>`+
+    `<tr><td colspan="8" class="nota">Marxa ${hm(H)} + parades ${hm(HP)} = <b>${hm(H+HP)}</b>.</td></tr>`;
   set('trams',rows);
   dibuixaPerfil(E); dibuixaMapa(E);
   pintaGuio(E,w); pintaVessant(E); pintaPlansB(E,seg,now);
@@ -663,8 +665,8 @@ function plansB(){ return (typeof PLANSB!=='undefined'&&PLANSB[dia])||[]; }
 function sortidaPrevista(ref){ const d=new Date(ref); const [h,m]=R.r.sortida.split(':'); d.setHours(+h,+m,0,0); return d; }
 function objectiu(ref){ const d=new Date(ref); const [h,m]=LIMIT[dia].h.split(':'); d.setHours(+h,+m,0,0); return d; }
 // marge de l'hora límit: 1 h 30, o menys si amb aquest retard no s'arriba a l'hora objectiu
-function margeLimit(ref){ const arr=+sortidaPrevista(ref)+horesEntre(0,R.n-1)*3600e3; return Math.max(0,Math.min(1.5*3600e3,+objectiu(ref)-arr)); }
-function limitEn(i,ref){ return +sortidaPrevista(ref)+horesEntre(0,i)*3600e3+margeLimit(ref); }
+function margeLimit(ref){ const arr=+sortidaPrevista(ref)+(horesEntre(0,R.n-1)+paradesEntre(0,R.n-1))*3600e3; return Math.max(0,Math.min(1.5*3600e3,+objectiu(ref)-arr)); }
+function limitEn(i,ref){ return +sortidaPrevista(ref)+(horesEntre(0,i)+paradesEntre(0,i))*3600e3+margeLimit(ref); }
 // temps de marxa des de la posició actual (E) fins a l'índex i1 del track, per trams
 function horesDesE(E,i1){ let h=0;
   for(const x of R.trams){ const b=Math.min(i1,x.ib); if(R.cd[b]<=E.d) continue;
