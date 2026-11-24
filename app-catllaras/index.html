@@ -1128,6 +1128,10 @@ function radarPinta(){
   const sl=$('rv-sl'); if(sl) sl.oninput=()=>{RV.i=+sl.value; radarAtura(); radarPinta();};
   const pl=$('rv-play'); if(pl) pl.onclick=()=>{ if(RV.play) radarAtura(); else { RV.play=setInterval(()=>{ if(avZ!=='radar'||$('vmet').hidden){radarAtura();return;} RV.i=(RV.i+1)%RV.fr.length; radarPinta(); },700); } radarPinta(); };
 }
+// refresc automàtic del radar cada 6 min mentre es mira (Meteocat publica una imatge nova cada 6 min)
+setInterval(()=>{ try{ if(avZ!=='radar'||$('vmet').hidden||document.hidden||!navigator.onLine) return;
+  const el=$('av-map'); if(el.querySelector('iframe')){ el.dataset.k=''; pintaAvisos(); } else { RV.ts=0; if(!RV.play) radarMostra(); } }catch(e){} },6*60e3);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&avZ==='radar'&&!$('vmet').hidden){ const el=$('av-map'); el.dataset.k=''; RV.ts=0; pintaAvisos(); } });
 function radarAtura(){ if(RV.play){ clearInterval(RV.play); RV.play=null; } }
 async function radarMostra(){ const el=$('av-map'); el.dataset.k='radar';
   if(!navigator.onLine){ el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: el radar només funciona amb cobertura.</p>'; return; }
@@ -1150,8 +1154,8 @@ function pintaAvisos(){
   else if(!navigator.onLine){ el.dataset.k=''; el.innerHTML='<p class="nota" style="padding:14px">Sense connexió: els mapes d\'avisos només funcionen amb cobertura.</p>'; }
   else if(el.dataset.k!==u){ radarAtura(); el.dataset.k=u; el.innerHTML=`<iframe src="${u}" title="Avisos meteorològics (Windy)" style="border:0;width:100%;height:100%" allowfullscreen></iframe>`; }
   if(cat&&avZ==='reg'){ set('av-nota','Avisos de situació meteorològica de perill (SMP) del Meteocat per comarques: tria el dia (avui, demà, demà passat) i el fenomen (pluja, neu, vent, fred…). Verd = sense perill; groc = moderat; taronja = alt; vermell = molt alt. La ruta és al Berguedà (la Pobla de Lillet).'); }
-  else if(cat&&avZ==='radar'){ set('av-nota','Última imatge del radar del Meteocat (s\'actualitza cada 6 min). Fes zoom amb + per acostar-te a la zona de la ruta. Per veure l\'animació de la darrera hora i la predicció a 1 hora, obre el radar del Meteocat amb el botó de sota.'); }
-  else if(avZ==='radar'){ set('av-nota','Radar de pluja de les últimes 2 hores (cada 10 min) sobre la zona de la ruta, en lila; el punt blau és on ets. Toca ▶ per veure l\'animació i cap on es mou la pluja, o arrossega la barra. Blau clar = pluja feble; groc i vermell = forta; tons rosats = neu. A muntanya el radar pot no veure la pluja feble o la neu de les valls (les muntanyes li fan ombra).'); }
+  else if(cat&&avZ==='radar'){ set('av-nota','Última imatge del radar del Meteocat: l\'app la refresca sola cada 6 min mentre la mires i quan tornes a obrir l\'app. Fes zoom amb + per acostar-te a la zona de la ruta. Per veure l\'animació de la darrera hora i la predicció a 1 hora, obre el radar del Meteocat amb el botó de sota.'); }
+  else if(avZ==='radar'){ set('av-nota','Radar de pluja de les últimes 2 hores (cada 10 min; es refresca sol mentre el mires) sobre la zona de la ruta, en lila; el punt blau és on ets. Toca ▶ per veure l\'animació i cap on es mou la pluja, o arrossega la barra. Blau clar = pluja feble; groc i vermell = forta; tons rosats = neu. A muntanya el radar pot no veure la pluja feble o la neu de les valls (les muntanyes li fan ombra).'); }
   else set('av-nota',`Colors: <b style="color:#a8a800">moderat</b> · <b style="color:#d97a00">sever</b> · <b style="color:#c0392b">extrem</b>. Toca una zona per llegir l'avís; a sota pots triar «Today / Tomorrow / Later». El marcador és la ruta. `+
     (avZ==='reg'?'Windy dibuixa les zones d\'avís de l\'AEMET i els límits de comarca, però no n\'escriu els noms: ':' ')+(cat?'per veure les comarques amb el seu nom, mira el mapa del Meteocat.':'per al detall per zones, mira l\'AEMET.'));
   set('av-links',(cat?'<a href="https://www.meteo.cat/prediccio/general" target="_blank" rel="noopener">⚠ Avisos del Meteocat per comarques</a>':'')+
