@@ -661,6 +661,7 @@ function render(){
   // trams
   const base=INI?new Date(INI):(()=>{const d=new Date();const [h,m]=R.r.sortida.split(':');d.setHours(+h,+m,0,0);return d})();
   let acc=0, rows='';
+  { const w0=R.wp[0]; rows+=`<tr class="${trIdx>0||E.d>30?'fet':''}"><td>${w0.k}<br><small class="acu">(${mts(R.p[0][2])})</small></td><td>0,00</td><td>0</td><td>0</td><td>–</td><td><b>${rel(base)}</b><br><small class="acu">sortida</small></td><td>${INI?rel(new Date(INI)):''}</td><td></td></tr>`; }
   const PAR=PARADES_PA[dia]||{};
   R.trams.forEach((x,k)=>{acc+=x.h; const real=(s.pas||{})[k], salt=(s.salt||{})[k], pm=PAR[R.wp[k+1].k]||0, arrP=+base+(acc+paradesEntre(0,x.ib))*3600e3;
     rows+=`<tr class="${k<trIdx?'fet':k===trIdx?'act':''}"><td>${x.a.split(' · ')[0]}<br><small class="acu">(${mts(R.p[x.ib][2])})</small></td><td>${x.km.toFixed(2).replace('.',',')}<br><small class="acu">${(R.cd[x.ib]/1000).toFixed(2).replace('.',',')}</small></td><td>${Math.round(x.up)}<br><small class="acu">${Math.round(R.cu[x.ib])}</small></td><td>${Math.round(x.dn)}<br><small class="acu">${Math.round(R.cn[x.ib])}</small></td><td>${hm(x.h)}<br><small class="acu">${hm(acc)}</small></td><td>${rel(new Date(arrP))}${pm&&k<R.trams.length-1?`<br><small>+${pm} min</small>`:''}</td><td${salt?' style="color:#C55A11;font-weight:700"':''}${real&&real>limitEn(R.wp[k+1].i,real)?' style="color:var(--ter);font-weight:700"':''}>${salt?'pla '+salt:real?((s.est||{})[k]?'≈':'')+rel(new Date(real)):''}</td><td>${rel(new Date(limitEn(R.wp[k+1].i,now)))}</td></tr>`;});
@@ -695,7 +696,7 @@ function pintaFinsA(E,now,PB){ const el=$('fa-sel'); if(!el||!E) return; const s
     (PB?'<br><span class="nota">Calculat pel pla A des de la cruïlla del pla B.</span>':''));
 }
 
-$('trams').addEventListener('click',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const k=[...$('trams').children].indexOf(tr); if(k<0||k>=R.trams.length) return;
+$('trams').addEventListener('click',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const k=[...$('trams').children].indexOf(tr)-1; if(k<-1||k>=R.trams.length) return;
   ds().fa=R.wp[k+1].k; save(); render(); $('fa').scrollIntoView({behavior:'smooth',block:'center'}); });
 // ---------- plans B visibles al mapa (un a un; es desa per dia) ----------
 const PBOFF_KEY='catllaras-pboff';
