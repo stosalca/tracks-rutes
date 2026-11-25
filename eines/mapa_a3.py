@@ -68,93 +68,114 @@ def main():
   la, lo = [], []
   for f in glob.glob(a.gpx):
     for p, q in re.findall(r'lat="([-\d.]+)"\s+lon="([-\d.]+)"', open(f, encoding='utf-8').read()): la.append(float(p)); lo.append(float(q))
-  clat, clon = (min(la)+max(la))/2, (min(lo)+max(lo))/2
   # A3 apaïsat: 420 x 297 mm; marc del mapa 400 x 270 mm (marges per a la impressora i el peu)
   W_MM, H_MM, MX, MT, MB = 420, 297, 10, 10, 17
   FW, FH = W_MM-2*MX, H_MM-MT-MB
-  gr = 156543.03392*math.cos(math.radians(clat))/2**a.z           # m de terreny per píxel de tessel·la
-  pxmm = (a.escala/1000)/gr                                       # píxels per mm de paper a l'escala triada
-  DPI = pxmm*25.4
-  k = 1/math.cos(math.radians(clat))                              # m de Mercator per m de terreny
-  cx, cy = merc(clat, clon)
-  halfx, halfy = FW/2*a.escala/1000*k, FH/2*a.escala/1000*k       # mig marc en m de Mercator
-  x0, x1, y0, y1 = cx-halfx, cx+halfx, cy-halfy, cy+halfy
-  n = 2**a.z; res = 2*math.pi*R/n/256
-  tx0, tx1 = int((x0+math.pi*R)/res/256), int((x1+math.pi*R)/res/256)
-  ty0, ty1 = int((math.pi*R-y1)/res/256), int((math.pi*R-y0)/res/256)
-  print(f'escala 1:{a.escala} · {DPI:.0f} ppp · {(tx1-tx0+1)*(ty1-ty0+1)} tessel·les per mapa')
-  PW, PH = round(W_MM*pxmm), round(H_MM*pxmm)
+  pxmm = 300/25.4; DPI = 300                                       # full a 300 ppp
+  PW, PH = round(W_MM*pxmm), round(H_MM*pxmm); fw, fh = round(FW*pxmm), round(FH*pxmm)
+  mlat = (min(la)+max(la))/2; k = 1/math.cos(math.radians(mlat))  # m de Mercator per m de terreny
+  # zona a cobrir (itinerari + 400 m de marge) i fulls que calen, amb 300 m de solapament
+  MG, OV = 400*k, 300*k
+  ax0, ay0 = merc(min(la), min(lo)); ax1, ay1 = merc(max(la), max(lo)); ax0 -= MG; ay0 -= MG; ax1 += MG; ay1 += MG
+  SW, SH = FW*a.escala/1000*k, FH*a.escala/1000*k
+  NXs = max(1, math.ceil((ax1-ax0-OV)/(SW-OV))); NYs = max(1, math.ceil((ay1-ay0-OV)/(SH-OV)))
+  gx = (NXs*(SW-OV)+OV-(ax1-ax0))/2; gy = (NYs*(SH-OV)+OV-(ay1-ay0))/2
+  fulls = []
+  for r in range(NYs):
+    for c in range(NXs):
+      x0 = ax0-gx+c*(SW-OV); y1 = ay1+gy-r*(SH-OV); fulls.append((r, c, x0, x0+SW, y1-SH, y1))
+  print(f'escala 1:{a.escala} · {DPI} ppp · {len(fulls)} fulls ({NYs} files × {NXs} columnes)')
+  import unicodedata; slug = re.sub(r"[^A-Za-z0-9]+", "_", unicodedata.normalize('NFKD', a.titol).encode('ascii', 'ignore').decode()).strip("_")
   for clau in a.mapes.split(','):
     nom, url, credit = MAPES[clau]
-    print('mapa', clau)
-    fw, fh = round(FW*pxmm), round(FH*pxmm)
-    if url.startswith('WMS:'):
-      # mapa vectorial: es demana a ~200 ppp perquè els rètols quedin d'una mida llegible en paper, i s'escala a la resolució del full
-      wd = 200/25.4; ww, wh = round(FW*wd), round(FH*wd); NX, NY = 4, 3
-      mos = Image.new('RGB', (ww, wh))
-      jobs = {}
-      with cf.ThreadPoolExecutor(4) as ex:
-        for i in range(NX):
-          for j in range(NY):
-            px0, px1 = round(ww*i/NX), round(ww*(i+1)/NX); py0, py1 = round(wh*j/NY), round(wh*(j+1)/NY)
-            bb = (x0+(x1-x0)*px0/ww, y1-(y1-y0)*py1/wh, x0+(x1-x0)*px1/ww, y1-(y1-y0)*py0/wh)
-            jobs[(px0, py0)] = ex.submit(wms, url[4:], bb, px1-px0, py1-py0)
-      for (px, py), f in jobs.items(): mos.paste(f.result(), (px, py))
-      mapa = mos.resize((fw, fh), Image.LANCZOS)
-    else:
-      with cf.ThreadPoolExecutor(8) as ex:
-        fut = {(x, y): ex.submit(tile, url, a.z, x, y) for x in range(tx0, tx1+1) for y in range(ty0, ty1+1)}
-      mos = Image.new('RGB', ((tx1-tx0+1)*256, (ty1-ty0+1)*256))
-      for (x, y), f in fut.items(): mos.paste(f.result(), ((x-tx0)*256, (y-ty0)*256))
-      ox, oy = tx0*256*res-math.pi*R, math.pi*R-ty0*256*res
-      cl = round((x0-ox)/res); ct = round((oy-y1)/res)
-      mapa = mos.crop((cl, ct, cl+round((x1-x0)/res), ct+round((y1-y0)/res))).resize((fw, fh), Image.LANCZOS)
-    d = ImageDraw.Draw(mapa)
-    # quadrícula UTM 31N cada 1 km
-    def topx(e, nn):
-      lat, lon = utm2ll(e, nn); mx, my = merc(lat, lon)
-      return ((mx-x0)/(x1-x0)*fw, (y1-my)/(y1-y0)*fh)
-    corners = [unmerc(x0, y0), unmerc(x0, y1), unmerc(x1, y0), unmerc(x1, y1)]
-    U = [ll2utm(lat, lon) for lat, lon in corners]
-    e0, e1 = int(min(u[0] for u in U)//1000), int(max(u[0] for u in U)//1000)+1
-    n0, n1 = int(min(u[1] for u in U)//1000), int(max(u[1] for u in U)//1000)+1
-    blau = (30, 90, 200); fl = font(round(2.6*pxmm))
-    for e in range(e0, e1+1):
-      pts = [topx(e*1000, nn*1000) for nn in (n0, n1)]; d.line(pts, fill=blau, width=max(2, round(0.25*pxmm)))
-      xb = topx(e*1000, (n0+n1)/2*1000)[0]
-      if 0 < xb < fw: d.text((xb+4, fh-round(4*pxmm)), f'{e % 100:02d}', font=fl, fill=blau, stroke_width=3, stroke_fill='white')
-    for nn in range(n0, n1+1):
-      pts = [topx(e*1000, nn*1000) for e in (e0, e1)]; d.line(pts, fill=blau, width=max(2, round(0.25*pxmm)))
-      yb = topx((e0+e1)/2*1000, nn*1000)[1]
-      if 0 < yb < fh: d.text((round(1.5*pxmm), yb-round(3.2*pxmm)), f'{nn % 100:02d}', font=fl, fill=blau, stroke_width=3, stroke_fill='white')
-    # caixa de títol, escala i nord
-    bw, bh = round(118*pxmm), round(40*pxmm); m6 = round(6*pxmm)
-    rp = [((merc(p, q)[0]-x0)/(x1-x0)*fw, (y1-merc(p, q)[1])/(y1-y0)*fh) for p, q in zip(la, lo)]
-    cand = [(m6, m6), (fw-bw-m6, m6), (m6, fh-bh-m6), (fw-bw-m6, fh-bh-m6)]   # cantonada amb menys itinerari a sota
-    bx, by = min(cand, key=lambda c: sum(1 for x, y in rp if c[0]-50 <= x <= c[0]+bw+50 and c[1]-50 <= y <= c[1]+bh+50))
-    d.rectangle((bx, by, bx+bw, by+bh), fill=(255, 255, 255), outline=(30, 30, 30), width=max(2, round(0.3*pxmm)))
-    d.text((bx+round(4*pxmm), by+round(3*pxmm)), a.titol, font=font(round(7*pxmm), True), fill=(20, 20, 20))
-    d.text((bx+round(4*pxmm), by+round(13*pxmm)), f'{nom} · escala 1:{a.escala:,}'.replace(',', '.'), font=font(round(3.8*pxmm)), fill=(20, 20, 20))
-    d.text((bx+round(4*pxmm), by+round(19*pxmm)), 'Quadrícula UTM 31N ETRS89 cada 1 km', font=font(round(3.2*pxmm)), fill=blau)
-    sb = 1000/a.escala*1000*pxmm  # 1 km en píxels
-    sx, sy = bx+round(4*pxmm), by+round(30*pxmm)
-    for i in range(2):
-      d.rectangle((sx+i*sb/2, sy, sx+(i+1)*sb/2, sy+round(2*pxmm)), fill=(20, 20, 20) if i == 0 else (255, 255, 255), outline=(20, 20, 20), width=2)
-    for i, t in enumerate(['0', '500 m', '1 km']): d.text((sx+i*sb/2-(0 if i == 0 else round(4*pxmm)), sy+round(2.6*pxmm)), t, font=font(round(2.6*pxmm)), fill=(20, 20, 20))
-    ax, ay = bx+bw-round(12*pxmm), by+round(8*pxmm)
-    d.polygon([(ax, ay), (ax-round(4*pxmm), ay+round(14*pxmm)), (ax, ay+round(10*pxmm)), (ax+round(4*pxmm), ay+round(14*pxmm))], fill=(20, 20, 20))
-    d.text((ax-round(2*pxmm), ay+round(15*pxmm)), 'N', font=font(round(5*pxmm), True), fill=(20, 20, 20))
-    # full A3
-    full = Image.new('RGB', (PW, PH), 'white')
-    full.paste(mapa, (round(MX*pxmm), round(MT*pxmm)))
-    fd = ImageDraw.Draw(full)
-    fd.rectangle((round(MX*pxmm)-2, round(MT*pxmm)-2, round(MX*pxmm)+fw+1, round(MT*pxmm)+fh+1), outline=(20, 20, 20), width=max(3, round(0.4*pxmm)))
-    peu = f'{credit} · Imprimir en A3 apaïsat a mida real (100 %, sense «ajustar a la pàgina") perquè l\'escala sigui 1:{a.escala:,}. Comprova-ho amb la barra d\'1 km.'.replace(',', '.')
-    fd.text((round(MX*pxmm), round((H_MM-MB+3)*pxmm)), peu, font=font(round(2.8*pxmm)), fill=(60, 60, 60))
-    fd.text((round(MX*pxmm), round((H_MM-MB+8)*pxmm)), 'Petjada · viatges de senderisme · mapa sense itinerari marcat', font=font(round(2.8*pxmm)), fill=(60, 60, 60))
-    import unicodedata; slug = re.sub(r"[^A-Za-z0-9]+", "_", unicodedata.normalize('NFKD', a.titol).encode('ascii', 'ignore').decode()).strip("_")
-    fn = os.path.join(a.sortida, f'Mapa_A3_{slug}_{clau}.pdf')
-    full.save(fn, 'PDF', resolution=DPI, quality=88)
+    print('mapa', clau); pagines = []
+    for (r, c, x0, x1, y0, y1) in fulls:
+      if url.startswith('WMS:'):
+        # mapa vectorial: es demana a ~200 ppp perquè els rètols quedin d'una mida llegible en paper, i s'escala a 300 ppp
+        wd = 200/25.4; ww, wh = round(FW*wd), round(FH*wd); NX, NY = 4, 3
+        mos = Image.new('RGB', (ww, wh)); jobs = {}
+        with cf.ThreadPoolExecutor(4) as ex:
+          for i in range(NX):
+            for j in range(NY):
+              px0, px1 = round(ww*i/NX), round(ww*(i+1)/NX); py0, py1 = round(wh*j/NY), round(wh*(j+1)/NY)
+              bb = (x0+(x1-x0)*px0/ww, y1-(y1-y0)*py1/wh, x0+(x1-x0)*px1/ww, y1-(y1-y0)*py0/wh)
+              jobs[(px0, py0)] = ex.submit(wms, url[4:], bb, px1-px0, py1-py0)
+        for (px, py), f in jobs.items(): mos.paste(f.result(), (px, py))
+        mapa = mos.resize((fw, fh), Image.LANCZOS)
+      else:
+        z = a.z
+        n = 2**z; res = 2*math.pi*R/n/256
+        tx0, tx1 = int((x0+math.pi*R)/res/256), int((x1+math.pi*R)/res/256)
+        ty0, ty1 = int((math.pi*R-y1)/res/256), int((math.pi*R-y0)/res/256)
+        with cf.ThreadPoolExecutor(8) as ex:
+          fut = {(x, y): ex.submit(tile, url, z, x, y) for x in range(tx0, tx1+1) for y in range(ty0, ty1+1)}
+        mos = Image.new('RGB', ((tx1-tx0+1)*256, (ty1-ty0+1)*256))
+        for (x, y), f in fut.items(): mos.paste(f.result(), ((x-tx0)*256, (y-ty0)*256))
+        ox, oy = tx0*256*res-math.pi*R, math.pi*R-ty0*256*res
+        cl = round((x0-ox)/res); ct = round((oy-y1)/res)
+        mapa = mos.crop((cl, ct, cl+round((x1-x0)/res), ct+round((y1-y0)/res))).resize((fw, fh), Image.LANCZOS)
+      d = ImageDraw.Draw(mapa)
+      def topx(e, nn):
+        lat, lon = utm2ll(e, nn); mx, my = merc(lat, lon)
+        return ((mx-x0)/(x1-x0)*fw, (y1-my)/(y1-y0)*fh)
+      corners = [unmerc(x0, y0), unmerc(x0, y1), unmerc(x1, y0), unmerc(x1, y1)]
+      U = [ll2utm(lat, lon) for lat, lon in corners]
+      e0, e1 = int(min(u[0] for u in U)//1000), int(max(u[0] for u in U)//1000)+1
+      n0, n1 = int(min(u[1] for u in U)//1000), int(max(u[1] for u in U)//1000)+1
+      blau = (30, 90, 200); fl = font(round(2.6*pxmm))
+      for e in range(e0, e1+1):
+        d.line([topx(e*1000, nn*1000) for nn in (n0, n1)], fill=blau, width=max(2, round(0.25*pxmm)))
+        xb = topx(e*1000, (n0+n1)/2*1000)[0]
+        if 0 < xb < fw: d.text((xb+4, fh-round(4*pxmm)), f'{e % 100:02d}', font=fl, fill=blau, stroke_width=3, stroke_fill='white')
+      for nn in range(n0, n1+1):
+        d.line([topx(e*1000, nn*1000) for e in (e0, e1)], fill=blau, width=max(2, round(0.25*pxmm)))
+        yb = topx((e0+e1)/2*1000, nn*1000)[1]
+        if 0 < yb < fh: d.text((round(1.5*pxmm), yb-round(3.2*pxmm)), f'{nn % 100:02d}', font=fl, fill=blau, stroke_width=3, stroke_fill='white')
+      # caixa de títol, escala, nord i esquema de fulls; a la cantonada on tapa menys itinerari
+      bw, bh = round(122*pxmm), round(44*pxmm); m6 = round(6*pxmm)
+      rp = [((merc(p, q)[0]-x0)/(x1-x0)*fw, (y1-merc(p, q)[1])/(y1-y0)*fh) for p, q in zip(la, lo)]
+      cand = [(m6, m6), (fw-bw-m6, m6), (m6, fh-bh-m6), (fw-bw-m6, fh-bh-m6)]
+      bx, by = min(cand, key=lambda cc: sum(1 for x, y in rp if cc[0]-50 <= x <= cc[0]+bw+50 and cc[1]-50 <= y <= cc[1]+bh+50))
+      d.rectangle((bx, by, bx+bw, by+bh), fill=(255, 255, 255), outline=(30, 30, 30), width=max(2, round(0.3*pxmm)))
+      d.text((bx+round(4*pxmm), by+round(3*pxmm)), a.titol, font=font(round(7*pxmm), True), fill=(20, 20, 20))
+      nf = r*NXs+c+1
+      d.text((bx+round(4*pxmm), by+round(12.5*pxmm)), f'{nom} · 1:{a.escala:,}'.replace(',', '.') + (f' · full {nf} de {len(fulls)}' if len(fulls) > 1 else ''), font=font(round(3.6*pxmm)), fill=(20, 20, 20))
+      d.text((bx+round(4*pxmm), by+round(18.5*pxmm)), 'Quadrícula UTM 31N ETRS89 cada 1 km', font=font(round(3.2*pxmm)), fill=blau)
+      sb = 1000/a.escala*1000*pxmm; L = 1000 if sb <= 85*pxmm else 500; sb = L/a.escala*1000*pxmm
+      sx, sy = bx+round(4*pxmm), by+round(28*pxmm)
+      for i in range(2):
+        d.rectangle((sx+i*sb/2, sy, sx+(i+1)*sb/2, sy+round(2*pxmm)), fill=(20, 20, 20) if i == 0 else (255, 255, 255), outline=(20, 20, 20), width=2)
+      for i, t in enumerate(['0', f'{L//2} m', '1 km' if L == 1000 else '500 m']): d.text((sx+i*sb/2-(0 if i == 0 else round(4*pxmm)), sy+round(2.6*pxmm)), t, font=font(round(2.6*pxmm)), fill=(20, 20, 20))
+      if len(fulls) > 1:  # esquema dels fulls, amb aquest en negre
+        cw, ch = round(5*pxmm), round(3.4*pxmm); qx = bx+bw-round(5*pxmm)-NXs*cw; qy = by+round(25*pxmm)
+        for rr in range(NYs):
+          for cc in range(NXs):
+            d.rectangle((qx+cc*cw, qy+rr*ch, qx+(cc+1)*cw, qy+(rr+1)*ch), fill=(20, 20, 20) if (rr, cc) == (r, c) else (235, 235, 235), outline=(20, 20, 20), width=2)
+            d.text((qx+cc*cw+round(1.2*pxmm), qy+rr*ch+round(0.3*pxmm)), str(rr*NXs+cc+1), font=font(round(2.4*pxmm)), fill=(255, 255, 255) if (rr, cc) == (r, c) else (20, 20, 20))
+        axx, ayy = qx-round(9*pxmm), by+round(26*pxmm)
+      else:
+        axx, ayy = bx+bw-round(12*pxmm), by+round(8*pxmm)
+      d.polygon([(axx, ayy), (axx-round(3*pxmm), ayy+round(10*pxmm)), (axx, ayy+round(7*pxmm)), (axx+round(3*pxmm), ayy+round(10*pxmm))], fill=(20, 20, 20))
+      d.text((axx-round(1.6*pxmm), ayy+round(10.5*pxmm)), 'N', font=font(round(3.8*pxmm), True), fill=(20, 20, 20))
+      # veïns: fletxes als marges amb el número del full contigu
+      fv = font(round(3.4*pxmm), True)
+      for dr, dc, pos in ((-1, 0, 'n'), (1, 0, 's'), (0, -1, 'o'), (0, 1, 'e')):
+        rr, cc = r+dr, c+dc
+        if 0 <= rr < NYs and 0 <= cc < NXs:
+          t = {'n': '▲', 's': '▼', 'o': '◀', 'e': '▶'}[pos]+f' full {rr*NXs+cc+1}'
+          tw = d.textlength(t, font=fv)
+          xy = {'n': (fw/2-tw/2, round(2*pxmm)), 's': (fw/2-tw/2, fh-round(7*pxmm)), 'o': (round(2*pxmm), fh/2), 'e': (fw-tw-round(2*pxmm), fh/2)}[pos]
+          d.text(xy, t, font=fv, fill=(20, 20, 20), stroke_width=4, stroke_fill='white')
+      full = Image.new('RGB', (PW, PH), 'white')
+      full.paste(mapa, (round(MX*pxmm), round(MT*pxmm)))
+      fd = ImageDraw.Draw(full)
+      fd.rectangle((round(MX*pxmm)-2, round(MT*pxmm)-2, round(MX*pxmm)+fw+1, round(MT*pxmm)+fh+1), outline=(20, 20, 20), width=max(3, round(0.4*pxmm)))
+      peu = f'{credit} · Imprimir en A3 apaïsat a mida real (100 %, sense «ajustar a la pàgina») perquè l\'escala sigui 1:{a.escala:,}. Comprova-ho amb la barra d\'escala.'.replace(',', '.')
+      fd.text((round(MX*pxmm), round((H_MM-MB+3)*pxmm)), peu, font=font(round(2.8*pxmm)), fill=(60, 60, 60))
+      fd.text((round(MX*pxmm), round((H_MM-MB+8)*pxmm)), 'Petjada · viatges de senderisme · mapa sense itinerari marcat' + (' · els fulls se solapen 300 m' if len(fulls) > 1 else ''), font=font(round(2.8*pxmm)), fill=(60, 60, 60))
+      pagines.append(full); print(f'  full {nf}')
+    fn = os.path.join(a.sortida, f'Mapa_A3_{slug}_{clau}_1-{a.escala//1000}000.pdf')
+    pagines[0].save(fn, 'PDF', resolution=DPI, quality=85, save_all=True, append_images=pagines[1:])
     print('  desat', fn, os.path.getsize(fn)//1024, 'kB')
 
 if __name__ == '__main__': main()
