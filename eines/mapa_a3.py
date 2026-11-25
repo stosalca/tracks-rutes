@@ -54,6 +54,33 @@ def wms(url, bbox, w, h):
     except Exception as e: err = e; time.sleep(2+3*i)
   raise RuntimeError(f'WMS fallit: {err}')
 
+def osm_camins(s, w, n, e):
+  """Corriols i pistes d'OpenStreetMap dins la caixa (graus). Retorna [(tipus, [(lat, lon), ...])]."""
+  import json, time, urllib.parse
+  q = f'[out:json][timeout:120];way["highway"~"^(path|footway|steps|bridleway|track)$"]({s},{w},{n},{e});out geom;'
+  for i in range(6):
+    for ep in ('https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'):
+      try:
+        req = urllib.request.Request(ep, data=urllib.parse.urlencode({'data': q}).encode(), headers={'User-Agent': 'Petjada-mapa-A3 (stosalca)'})
+        with urllib.request.urlopen(req, timeout=150) as r: j = json.load(r)
+        out = [('pista' if el['tags'].get('highway') == 'track' else 'corriol', [(p['lat'], p['lon']) for p in el.get('geometry', [])]) for el in j.get('elements', [])]
+        print(f'  camins OSM: {sum(1 for t, _ in out if t == "corriol")} corriols, {sum(1 for t, _ in out if t == "pista")} pistes ({ep.split("/")[2]})')
+        return out
+      except Exception as ex: print('  overpass', ep.split('/')[2], ex)
+    time.sleep(10+10*i)
+  raise RuntimeError("No s'han pogut baixar els camins d'OpenStreetMap")
+
+def linia_disc(d, pts, color, w, on, off):
+  """Línia discontínua seguint una polilínia."""
+  pen, rest = True, on
+  for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
+    L = math.hypot(xb-xa, yb-ya); t = 0
+    while t < L:
+      st = min(rest, L-t); x0, y0 = xa+(xb-xa)*t/L, ya+(yb-ya)*t/L; x1, y1 = xa+(xb-xa)*(t+st)/L, ya+(yb-ya)*(t+st)/L
+      if pen: d.line((x0, y0, x1, y1), fill=color, width=w)
+      t += st; rest -= st
+      if rest <= 1e-6: pen = not pen; rest = on if pen else off
+
 def font(sz, bold=False):
   for f in (['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'] if bold else []) + ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']:
     if os.path.exists(f): return ImageFont.truetype(f, sz)
@@ -63,7 +90,7 @@ def main():
   ap = argparse.ArgumentParser()
   ap.add_argument('--gpx', required=True); ap.add_argument('--titol', required=True); ap.add_argument('--sortida', default='out')
   ap.add_argument('--escala', type=int, default=25000); ap.add_argument('--z', type=int, default=16)
-  ap.add_argument('--mapes', default='ICGC,IGN_MTN,IGN_BASE')
+  ap.add_argument('--mapes', default='ICGC,IGN_MTN,IGN_BASE'); ap.add_argument('--osm', type=int, default=1)
   a = ap.parse_args(); os.makedirs(a.sortida, exist_ok=True)
   la, lo = [], []
   for f in glob.glob(a.gpx):
@@ -85,6 +112,10 @@ def main():
     for c in range(NXs):
       x0 = ax0-gx+c*(SW-OV); y1 = ay1+gy-r*(SH-OV); fulls.append((r, c, x0, x0+SW, y1-SH, y1))
   print(f'escala 1:{a.escala} · {DPI} ppp · {len(fulls)} fulls ({NYs} files × {NXs} columnes)')
+  CAMINS = []
+  if a.osm:
+    blo, bla = unmerc(ax0-gx, ay0-gy), unmerc(ax0-gx+NXs*(SW-OV)+OV, ay1+gy)
+    CAMINS = osm_camins(blo[0], blo[1], bla[0], bla[1])
   import unicodedata; slug = re.sub(r"[^A-Za-z0-9]+", "_", unicodedata.normalize('NFKD', a.titol).encode('ascii', 'ignore').decode()).strip("_")
   for clau in a.mapes.split(','):
     nom, url, credit = MAPES[clau]
@@ -115,6 +146,15 @@ def main():
         cl = round((x0-ox)/res); ct = round((oy-y1)/res)
         mapa = mos.crop((cl, ct, cl+round((x1-x0)/res), ct+round((y1-y0)/res))).resize((fw, fh), Image.LANCZOS)
       d = ImageDraw.Draw(mapa)
+      if CAMINS:  # camins d'OSM per sobre: pistes marrons, corriols vermells, discontinus amb vora blanca
+        for tipus in ('pista', 'corriol'):
+          col = (139, 90, 43) if tipus == 'pista' else (208, 52, 44); wpx = round((0.55 if tipus == 'pista' else 0.45)*pxmm)
+          for t2, g in CAMINS:
+            if t2 != tipus or len(g) < 2: continue
+            pp = [((merc(p, q)[0]-x0)/(x1-x0)*fw, (y1-merc(p, q)[1])/(y1-y0)*fh) for p, q in g]
+            if max(x for x, _ in pp) < 0 or min(x for x, _ in pp) > fw or max(y for _, y in pp) < 0 or min(y for _, y in pp) > fh: continue
+            d.line(pp, fill=(255, 255, 255), width=wpx+round(0.35*pxmm), joint='curve')
+            linia_disc(d, pp, col, wpx, round(2.2*pxmm), round(1.1*pxmm))
       def topx(e, nn):
         lat, lon = utm2ll(e, nn); mx, my = merc(lat, lon)
         return ((mx-x0)/(x1-x0)*fw, (y1-my)/(y1-y0)*fh)
@@ -132,7 +172,7 @@ def main():
         yb = topx((e0+e1)/2*1000, nn*1000)[1]
         if 0 < yb < fh: d.text((round(1.5*pxmm), yb-round(3.2*pxmm)), f'{nn % 100:02d}', font=fl, fill=blau, stroke_width=3, stroke_fill='white')
       # caixa de títol, escala, nord i esquema de fulls; a la cantonada on tapa menys itinerari
-      bw, bh = round(122*pxmm), round(44*pxmm); m6 = round(6*pxmm)
+      bw, bh = round(122*pxmm), round(44*pxmm)+(round(6*pxmm) if CAMINS else 0); m6 = round(6*pxmm)
       rp = [((merc(p, q)[0]-x0)/(x1-x0)*fw, (y1-merc(p, q)[1])/(y1-y0)*fh) for p, q in zip(la, lo)]
       cand = [(m6, m6), (fw-bw-m6, m6), (m6, fh-bh-m6), (fw-bw-m6, fh-bh-m6)]
       bx, by = min(cand, key=lambda cc: sum(1 for x, y in rp if cc[0]-50 <= x <= cc[0]+bw+50 and cc[1]-50 <= y <= cc[1]+bh+50))
@@ -141,6 +181,11 @@ def main():
       nf = r*NXs+c+1
       d.text((bx+round(4*pxmm), by+round(12.5*pxmm)), f'{nom} · 1:{a.escala:,}'.replace(',', '.') + (f' · full {nf} de {len(fulls)}' if len(fulls) > 1 else ''), font=font(round(3.6*pxmm)), fill=(20, 20, 20))
       d.text((bx+round(4*pxmm), by+round(18.5*pxmm)), 'Quadrícula UTM 31N ETRS89 cada 1 km', font=font(round(3.2*pxmm)), fill=blau)
+      if CAMINS:
+        lx, ly = bx+round(4*pxmm), by+round(38*pxmm); fl2 = font(round(2.8*pxmm))
+        for k2, (lab, col) in enumerate((('corriol (OSM)', (208, 52, 44)), ('pista (OSM)', (139, 90, 43)))):
+          xx = lx+k2*round(40*pxmm); linia_disc(d, [(xx, ly+round(1.6*pxmm)), (xx+round(10*pxmm), ly+round(1.6*pxmm))], col, round(0.5*pxmm), round(2.2*pxmm), round(1.1*pxmm))
+          d.text((xx+round(12*pxmm), ly), lab, font=fl2, fill=(20, 20, 20))
       sb = 1000/a.escala*1000*pxmm; L = 1000 if sb <= 85*pxmm else 500; sb = L/a.escala*1000*pxmm
       sx, sy = bx+round(4*pxmm), by+round(28*pxmm)
       for i in range(2):
@@ -172,7 +217,7 @@ def main():
       fd.rectangle((round(MX*pxmm)-2, round(MT*pxmm)-2, round(MX*pxmm)+fw+1, round(MT*pxmm)+fh+1), outline=(20, 20, 20), width=max(3, round(0.4*pxmm)))
       peu = f'{credit} · Imprimir en A3 apaïsat a mida real (100 %, sense «ajustar a la pàgina») perquè l\'escala sigui 1:{a.escala:,}. Comprova-ho amb la barra d\'escala.'.replace(',', '.')
       fd.text((round(MX*pxmm), round((H_MM-MB+3)*pxmm)), peu, font=font(round(2.8*pxmm)), fill=(60, 60, 60))
-      fd.text((round(MX*pxmm), round((H_MM-MB+8)*pxmm)), 'Petjada · viatges de senderisme · mapa sense itinerari marcat' + (' · els fulls se solapen 300 m' if len(fulls) > 1 else ''), font=font(round(2.8*pxmm)), fill=(60, 60, 60))
+      fd.text((round(MX*pxmm), round((H_MM-MB+8)*pxmm)), 'Petjada · viatges de senderisme · mapa sense itinerari marcat' + (' · camins © col·laboradors d\'OpenStreetMap (ODbL)' if CAMINS else '') + (' · els fulls se solapen 300 m' if len(fulls) > 1 else ''), font=font(round(2.8*pxmm)), fill=(60, 60, 60))
       pagines.append(full); print(f'  full {nf}')
     fn = os.path.join(a.sortida, f'Mapa_A3_{slug}_{clau}_1-{a.escala//1000}000.pdf')
     pagines[0].save(fn, 'PDF', resolution=DPI, quality=85, save_all=True, append_images=pagines[1:])
