@@ -1,0 +1,22 @@
+name: Mapa A3 per imprimir
+on:
+  workflow_dispatch:
+    inputs:
+      gpx: {description: "GPX (glob) que defineixen la zona", required: true, default: "catllaras/fitxa/Catllaras_*.gpx"}
+      titol: {description: "Títol del mapa", required: true, default: "Serra del Catllaràs"}
+      escala: {description: "Escala (25000 = 1:25.000)", required: true, default: "25000"}
+      mapes: {description: "Mapes", required: true, default: "ICGC,IGN_MTN,IGN_BASE"}
+permissions:
+  contents: write
+jobs:
+  mapa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pillow
+      - run: python3 eines/mapa_a3.py --gpx "${{ inputs.gpx }}" --titol "${{ inputs.titol }}" --escala "${{ inputs.escala }}" --mapes "${{ inputs.mapes }}" --sortida /tmp/out
+      - name: Publicar a la branca mapes
+        run: |
+          cd /tmp/out
+          git init -q -b mapes && git add . && git -c user.name=github-actions -c user.email=actions@github.com commit -q -m "Mapes A3"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" mapes
