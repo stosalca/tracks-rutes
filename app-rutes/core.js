@@ -269,7 +269,7 @@ function hA(st,i0,i1){ return hores((st.cd[i1]-st.cd[i0])/1000,st.cu[i1]-st.cu[i
 // Criteris dels plans B, apresos amb les valoracions d'en Sergi (vegeu CRITERIS-PLANS-B.md)
 const CRIT_PB={
   maxPerDia:4, minPerDia:2, // entre 2 i 4 plans B per dia, els millors
-  stravaMin:0.8,         // ≥ 80 % del tram fora del pla A ha de tenir passades a Strava (camí transitat)
+  stravaMin:0.5,         // el tram fora del pla A ha de ser almenys la meitat de transitat que el pla A (intensitat mitjana del heatmap de Strava)
   accesProper:1/3,       // si pel mateix pla A hi ha un poble o carretera a ≤ 20 min, en aquesta cruïlla no cal pla B
   dreceraMinH:0.5,       // una drecera ha d'estalviar ≥ 30 min…
   dreceraMinFrac:0.2,    // …i ≥ 20 % del que queda
@@ -378,8 +378,10 @@ async function plansBDia(G,dia,trackNodes,extra={}){
   cands.sort((a,b)=>b.ia-a.ia);
   const tri=[]; for(const c of cands) if(!tri.some(t=>sem(c,t)||sem(t,c))) tri.push(c);
   // camí transitat (Strava): el tram fora del pla A ha de tenir passades
-  for(const t of tri){ const sv=t.fora.length>=2?await stravaTram(t.fora):{f:1,m:1}; t.q.strava_pct=sv?Math.round(sv.f*100):null; t.transit=sv?sv.f:null; }
-  tri.forEach(t=>console.log(`PB: ${dia.key} ${t.tipus} ia=${t.ia} valor=${t.valor.toFixed(2)} km=${t.km} transitat=${t.transit==null?'?':Math.round(t.transit*100)+'%'}`));
+  const svA=await stravaTram(pts.filter((p,i)=>i%2===0));
+  for(const t of tri){ const sv=t.fora.length>=2?await stravaTram(t.fora):null; t.sv=sv; t.transit=sv&&svA?Math.min(1,sv.m/(svA.m||1)):null; t.q.strava_pct=t.transit==null?null:Math.round(t.transit*100); }
+  console.log(`PB: ${dia.key} pla A strava f=${svA&&svA.f.toFixed(2)} m=${svA&&svA.m.toFixed(3)}`);
+  tri.forEach(t=>console.log(`PB: ${dia.key} ${t.tipus} ia=${t.ia} valor=${t.valor.toFixed(2)} km=${t.km} transitat=${t.transit==null?'?':Math.round(t.transit*100)+'%'} f=${t.sv&&t.sv.f.toFixed(2)} m=${t.sv&&t.sv.m.toFixed(3)}`));
   const bo=tri.filter(t=>t.transit==null||t.transit>=CRIT_PB.stravaMin);
   // els més bons: més temps guanyat; com a molt un de cada tipus a la mateixa cruïlla; entre 2 i 4
   bo.sort((a,b)=>(b.valor+(b.transit||0)*0.2)-(a.valor+(a.transit||0)*0.2)); const sel=[]; for(const t of bo){ if(sel.length>=CRIT_PB.maxPerDia) break; if(sel.some(s=>s.ia===t.ia&&s.tipus===t.tipus)) continue; sel.push(t); }
