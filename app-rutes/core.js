@@ -269,7 +269,7 @@ function hA(st,i0,i1){ return hores((st.cd[i1]-st.cd[i0])/1000,st.cu[i1]-st.cu[i
 // Criteris dels plans B, apresos amb les valoracions d'en Sergi (vegeu CRITERIS-PLANS-B.md)
 const CRIT_PB={
   maxPerDia:4, minPerDia:2, // entre 2 i 4 plans B per dia, els millors
-  pendentMax:45,         // un pla B no pot tenir trams de més del 45 % de pendent (camí dret o perillós)
+  pendentMax:60,         // un pla B no pot tenir trams de més del 60 % de pendent (camí dret o perillós; el model del terreny exagera a prop dels cingles)
   stravaMin:0.5,         // el tram fora del pla A ha de ser almenys la meitat de transitat que el pla A (intensitat mitjana del heatmap de Strava)
   accesProper:1/3,       // si pel mateix pla A hi ha un poble o carretera a ≤ 20 min, en aquesta cruïlla no cal pla B
   dreceraMinH:0.5,       // una drecera ha d'estalviar ≥ 30 min…
