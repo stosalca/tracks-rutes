@@ -1,4 +1,4 @@
-const CACHE='petjada-rutes-v44';
+const CACHE='petjada-rutes-v45';
 const RADAR='petjada-rutes-radar-v1';
 const TILES='petjada-rutes-mapes-v1';
 const FILES=['./','index.html','core.js','app.js','manifest.webmanifest','icon-192.png','icon-512.png'];

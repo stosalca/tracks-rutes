@@ -22,7 +22,10 @@ function desaRuta(r){
   escriu('petjada-ruta-'+r.id,r);
   const L=lib().filter(x=>x.id!==r.id); L.push({id:r.id,nom:r.nom,dies:r.dies.map(d=>({titol:d.titol,data:d.data})),creat:r.creat}); escriu(LIB,L);
 }
-function esborraRuta(id){ localStorage.removeItem('petjada-ruta-'+id); ['st','meteo'].forEach(k=>localStorage.removeItem('petjada-ruta-'+k+'-'+id)); escriu(LIB,lib().filter(x=>x.id!==id)); if(localStorage.getItem(ACT)===JSON.stringify(id)) localStorage.removeItem(ACT); }
+// rutes publicades (preparades per Claude) que l'usuari ha esborrat del mòbil: no es tornen a baixar soles
+const AMAG='petjada-rutes-amagades', amagades=()=>llegeix(AMAG,[]);
+function esborraRuta(id){ const r0=carregaRuta(id); if(r0&&r0.publicada&&!amagades().some(x=>x.id===id)) escriu(AMAG,amagades().concat([{id,nom:r0.nom}]));
+  localStorage.removeItem('petjada-ruta-'+id); ['st','meteo'].forEach(k=>localStorage.removeItem('petjada-ruta-'+k+'-'+id)); escriu(LIB,lib().filter(x=>x.id!==id)); if(localStorage.getItem(ACT)===JSON.stringify(id)) localStorage.removeItem(ACT); }
 window.CONF=llegeix(CONFK,{});
 
 // ---------- GPX ----------
@@ -488,6 +491,7 @@ async function sincronitzaPublicades(){
   let idx; try{ const r=await fetchT('rutes/index.json?t='+Date.now(),15000,{cache:'no-store'}); if(!r.ok) return 0; idx=await r.json(); }catch(e){ return 0; }
   let n=0;
   for(const e of idx.rutes||[]){
+    if(amagades().some(x=>x.id===e.id)) continue;
     const loc=carregaRuta(e.id);
     if(loc&&loc.actualitzat===e.actualitzat) continue;
     try{ const r=await (await fetchT('rutes/'+e.fitxer+'?v='+encodeURIComponent(e.actualitzat),30000,{cache:'no-store'})).json();
@@ -507,6 +511,12 @@ function pintaLib(){
     <div class="botons" style="margin-top:6px"><button class="btn s" data-obre="${x.id}">${x.id===act?'Obrir':'Fer servir aquesta ruta'}</button>
     <button class="btn s" data-xat="${x.id}">Guió amb Claude (xat)</button>${(CONF.key||'').trim()?`<button class="btn s" data-guio="${x.id}">Guió amb Claude (API)</button>`:''}<button class="btn s" data-hores="${x.id}">Dates i hores</button><button class="btn s" data-esb="${x.id}">Esborrar</button></div>
     <pre class="log" id="lg-${x.id}"></pre><div id="ed-${x.id}"></div></div>`).join(''):'<p class="nota">Encara no hi ha cap ruta. Crea\'n una a sota amb el GPX.</p>';
+  const A=amagades();
+  if(A.length) $('lib-llista').innerHTML+=`<details class="det" style="margin-top:8px"><summary>Rutes preparades per Claude que has esborrat (${A.length})</summary><p class="nota">No es tornen a baixar soles. Si en vols recuperar una, toca «Tornar a baixar».</p>`+
+    A.map(x=>`<div class="lr"><h3>${esc(x.nom||x.id)}</h3><div class="botons"><button class="btn s" data-rec="${esc(x.id)}">Tornar a baixar</button></div></div>`).join('')+'</details>';
+  document.querySelectorAll('[data-rec]').forEach(b=>b.onclick=async()=>{ escriu(AMAG,amagades().filter(x=>x.id!==b.dataset.rec)); b.disabled=true; b.textContent='Baixant…';
+    const n=await sincronitzaPublicades(); if(!n){ b.textContent='Cal cobertura: torna-ho a provar'; b.disabled=false; escriu(AMAG,amagades().concat([{id:b.dataset.rec,nom:b.closest('.lr').querySelector('h3').textContent}])); return; }
+    if(!llegeix(ACT,null)) escriu(ACT,b.dataset.rec); location.reload(); });
   document.querySelectorAll('[data-obre]').forEach(b=>b.onclick=()=>{ escriu(ACT,b.dataset.obre); location.reload(); });
   document.querySelectorAll('[data-esb]').forEach(b=>b.onclick=()=>{ if(b.dataset.c){ esborraRuta(b.dataset.esb); location.reload(); } else { b.dataset.c=1; b.textContent='Toca per confirmar'; } });
   document.querySelectorAll('[data-guio]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.guio, lg=m=>$('lg-'+id).textContent=m;
