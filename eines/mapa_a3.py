@@ -91,18 +91,19 @@ def main():
   ap.add_argument('--gpx', required=True); ap.add_argument('--titol', required=True); ap.add_argument('--sortida', default='out')
   ap.add_argument('--escala', type=int, default=25000); ap.add_argument('--z', type=int, default=16)
   ap.add_argument('--mapes', default='ICGC,IGN_MTN,IGN_BASE'); ap.add_argument('--osm', type=int, default=1)
+  ap.add_argument('--vertical', type=int, default=0); ap.add_argument('--marge', type=int, default=400)
   a = ap.parse_args(); os.makedirs(a.sortida, exist_ok=True)
   la, lo = [], []
   for f in glob.glob(a.gpx):
     for p, q in re.findall(r'lat="([-\d.]+)"\s+lon="([-\d.]+)"', open(f, encoding='utf-8').read()): la.append(float(p)); lo.append(float(q))
   # A3 apaïsat: 420 x 297 mm; marc del mapa 400 x 270 mm (marges per a la impressora i el peu)
-  W_MM, H_MM, MX, MT, MB = 420, 297, 10, 10, 17
+  W_MM, H_MM, MX, MT, MB = (297, 420, 10, 10, 17) if a.vertical else (420, 297, 10, 10, 17)
   FW, FH = W_MM-2*MX, H_MM-MT-MB
   pxmm = 300/25.4; DPI = 300                                       # full a 300 ppp
   PW, PH = round(W_MM*pxmm), round(H_MM*pxmm); fw, fh = round(FW*pxmm), round(FH*pxmm)
   mlat = (min(la)+max(la))/2; k = 1/math.cos(math.radians(mlat))  # m de Mercator per m de terreny
   # zona a cobrir (itinerari + 400 m de marge) i fulls que calen, amb 300 m de solapament
-  MG, OV = 400*k, 300*k
+  MG, OV = a.marge*k, 300*k
   ax0, ay0 = merc(min(la), min(lo)); ax1, ay1 = merc(max(la), max(lo)); ax0 -= MG; ay0 -= MG; ax1 += MG; ay1 += MG
   SW, SH = FW*a.escala/1000*k, FH*a.escala/1000*k
   NXs = max(1, math.ceil((ax1-ax0-OV)/(SW-OV))); NYs = max(1, math.ceil((ay1-ay0-OV)/(SH-OV)))
@@ -215,11 +216,13 @@ def main():
       full.paste(mapa, (round(MX*pxmm), round(MT*pxmm)))
       fd = ImageDraw.Draw(full)
       fd.rectangle((round(MX*pxmm)-2, round(MT*pxmm)-2, round(MX*pxmm)+fw+1, round(MT*pxmm)+fh+1), outline=(20, 20, 20), width=max(3, round(0.4*pxmm)))
-      peu = f'{credit} · Imprimir en A3 apaïsat a mida real (100 %, sense «ajustar a la pàgina») perquè l\'escala sigui 1:{a.escala:,}. Comprova-ho amb la barra d\'escala.'.replace(',', '.')
-      fd.text((round(MX*pxmm), round((H_MM-MB+3)*pxmm)), peu, font=font(round(2.8*pxmm)), fill=(60, 60, 60))
-      fd.text((round(MX*pxmm), round((H_MM-MB+8)*pxmm)), 'Petjada · viatges de senderisme · mapa sense itinerari marcat' + (' · camins © col·laboradors d\'OpenStreetMap (ODbL)' if CAMINS else '') + (' · els fulls se solapen 300 m' if len(fulls) > 1 else ''), font=font(round(2.8*pxmm)), fill=(60, 60, 60))
+      peu = f'{credit} · Imprimir en A3 a mida real (100 %, sense «ajustar a la pàgina») perquè l\'escala sigui 1:{a.escala:,}. Comprova-ho amb la barra d\'escala.'.replace(',', '.')
+      if a.vertical:
+        p1, p2 = peu.split(' · Imprimir'); fd.text((round(MX*pxmm), round((H_MM-MB+1.5)*pxmm)), p1, font=font(round(2.6*pxmm)), fill=(60, 60, 60)); fd.text((round(MX*pxmm), round((H_MM-MB+5.5)*pxmm)), 'Imprimir'+p2, font=font(round(2.6*pxmm)), fill=(60, 60, 60))
+      else: fd.text((round(MX*pxmm), round((H_MM-MB+3)*pxmm)), peu, font=font(round(2.8*pxmm)), fill=(60, 60, 60))
+      fd.text((round(MX*pxmm), round((H_MM-MB+(9.5 if a.vertical else 8))*pxmm)), 'Petjada · viatges de senderisme · mapa sense itinerari marcat' + (' · camins © col·laboradors d\'OpenStreetMap (ODbL)' if CAMINS else '') + (' · els fulls se solapen 300 m' if len(fulls) > 1 else ''), font=font(round(2.8*pxmm)), fill=(60, 60, 60))
       pagines.append(full); print(f'  full {nf}')
-    fn = os.path.join(a.sortida, f'Mapa_A3_{slug}_{clau}_1-{a.escala//1000}000.pdf')
+    fn = os.path.join(a.sortida, f'Mapa_A3_{slug}_{clau}_1-{a.escala:,}.pdf'.replace(',', '.'))
     pagines[0].save(fn, 'PDF', resolution=DPI, quality=85, save_all=True, append_images=pagines[1:])
     print('  desat', fn, os.path.getsize(fn)//1024, 'kB')
 
