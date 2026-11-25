@@ -268,15 +268,33 @@ function hA(st,i0,i1){ return hores((st.cd[i1]-st.cd[i0])/1000,st.cu[i1]-st.cu[i
 
 // Criteris dels plans B, apresos amb les valoracions d'en Sergi (vegeu CRITERIS-PLANS-B.md)
 const CRIT_PB={
-  maxPerDia:3,           // menys plans B i més bons
+  maxPerDia:4, minPerDia:2, // entre 2 i 4 plans B per dia, els millors
+  stravaMin:0.8,         // ≥ 80 % del tram fora del pla A ha de tenir passades a Strava (camí transitat)
   accesProper:1/3,       // si pel mateix pla A hi ha un poble o carretera a ≤ 20 min, en aquesta cruïlla no cal pla B
   dreceraMinH:0.5,       // una drecera ha d'estalviar ≥ 30 min…
   dreceraMinFrac:0.2,    // …i ≥ 20 % del que queda
-  dreceraMaxPlaA:50,     // si més de la meitat és desfer el pla A («tornar per on hem pujat»), no és un pla B
   refugiSiAccesH:1,      // refugi només si l'accés amb vehicle (pel pla A o per un pla B) és a més d'1 h
   vehicleMinGuany:0.5    // sortida a vehicle: ha de ser ≥ 30 min més ràpida que arribar a un accés pel pla A
 };
-function plansBDia(G,dia,trackNodes,extra={}){
+// ---------- Strava: és un camí transitat? ----------
+// teselles públiques del heatmap (fins al zoom 12, ~30 m per píxel). Al mòbil el navegador no deixa llegir-ne els píxels (CORS);
+// la tasca de GitHub les baixa des del servidor (window.__stravaTile) i al mòbil es prova directament i, si no es pot, no es comprova.
+const STV={}; const STZ=12;
+async function stravaTile(x,y){ const k=x+'/'+y; if(k in STV) return STV[k];
+  STV[k]=(async()=>{ try{ let blob;
+      if(window.__stravaTile){ const b64=await window.__stravaTile(STZ,x,y); if(!b64) return null; blob=await (await fetch('data:image/png;base64,'+b64)).blob(); }
+      else { const r=await fetchT(`https://heatmap-external-a.strava.com/tiles/all/hot/${STZ}/${x}/${y}.png?px=256`,15000,{mode:'cors'}); if(!r.ok) return null; blob=await r.blob(); }
+      const bm=await createImageBitmap(blob), cv=new OffscreenCanvas(256,256), cx=cv.getContext('2d'); cx.drawImage(bm,0,0,256,256);
+      return cx.getImageData(0,0,256,256).data; }catch(e){ return null; } })();
+  return STV[k]; }
+async function stravaPunt(lat,lon){ const n=2**STZ, X=(lon+180)/360*n, s=Math.sin(lat*Math.PI/180), Y=(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n;
+  const tx=Math.floor(X), ty=Math.floor(Y), px=Math.floor((X-tx)*256), py=Math.floor((Y-ty)*256); const d=await stravaTile(tx,ty); if(!d) return null;
+  let m=0; for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ const xx=Math.min(255,Math.max(0,px+a)), yy=Math.min(255,Math.max(0,py+b)); m=Math.max(m,d[(yy*256+xx)*4+3]); } return m/255; }
+// fracció del tram (cada ~60 m) amb passades a Strava; null si no es pot comprovar
+async function stravaTram(pts){ let n=0,ok=0,acc=0; for(let i=0;i<pts.length;i++){ if(i&&i<pts.length-1&&hav(pts[i],pts[Math.max(0,i-1)])<60&&i%3) continue;
+    const v=await stravaPunt(pts[i][0],pts[i][1]); if(v==null) return null; n++; if(v>0.05) ok++; acc+=v; } return n?{f:ok/n,m:acc/n}:null; }
+
+async function plansBDia(G,dia,trackNodes,extra={}){
   const pts=dia.pts, n=pts.length, st=estat(pts), fi=trackNodes[n-1], ini=trackNodes[0];
   // per cada punt de la ruta: el node del graf més proper (els nodes del track hi són sempre)
   const prop=i=>trackNodes[i];
@@ -302,7 +320,7 @@ function plansBDia(G,dia,trackNodes,extra={}){
       if(b>=0&&!refs.some(r=>hav([r.q.lat,r.q.lon],[q.lat,q.lon])<300)) refs.push({q,node:b}); } }
   for(const i0 of decisions){
     const hRest=hA(st,i0,n-1); if(hRest<0.75) continue; // a menys de ~45 min del final no cal pla B
-    const hAcc=accesPlaA(i0); if(hAcc<=CRIT_PB.accesProper) continue; // al costat d'un poble o carretera: no cal pla B
+    const hAcc=accesPlaA(i0), aProp=hAcc<=CRIT_PB.accesProper; // al costat d'un poble o carretera: poc valor (només si no n'hi ha de millors)
     let hVehAqui=Infinity;
     // 1) cap al final de la ruta pel camí més ràpid · 2) cap a la carretera/pista asfaltada més propera (accés amb vehicle)
     const R1=dijkstra(G,prop(i0));
@@ -338,19 +356,20 @@ function plansBDia(G,dia,trackNodes,extra={}){
       DBG(`hB=${hB.toFixed(2)} hAr=${hAr.toFixed(2)} km=${km.toFixed(2)}`);
       if(o.tipus==='final'&&(ib==null||ib<=ia+3)) continue;
       if(o.tipus==='final'&&!(hAr-hB>=CRIT_PB.dreceraMinH&&hAr-hB>=CRIT_PB.dreceraMinFrac*hAr)) continue; // ha d'estalviar temps de veritat
+      const kmA=(st.cd[n-1]-st.cd[ia])/1000, upA=st.cu[n-1]-st.cu[ia];
+      const kmB=km+(ib!=null?(st.cd[n-1]-st.cd[ib])/1000:0), upB=up+(ib!=null?st.cu[n-1]-st.cu[ib]:0);
+      if((o.tipus==='final'||o.tipus==='inici')&&(kmB>kmA||upB>upA+20)) continue; // ni més llarg ni més desnivell que seguir el pla A
       const hO=hores(km,up,dn);
       if(o.tipus==='vehicle'){ hVehAqui=Math.min(hVehAqui,hO); if(!(hO<hAr*0.8&&hAcc-hO>=CRIT_PB.vehicleMinGuany)) continue; }
       if(o.tipus==='refugi'&&!(hO<hAr*0.9&&hO<3&&Math.min(hAcc,hVehAqui)>CRIT_PB.refugiSiAccesH)) continue;
-      if(o.tipus==='inici'&&!(hO<hAr*0.8&&hAcc-hO>=CRIT_PB.vehicleMinGuany)) continue;
-      if(o.tipus==='inici'&&onA.slice(s,e+1).filter(j=>j>=0).length/(e-s+1)>0.7) {DBG('tornada pel mateix camí');continue;}
+      if(o.tipus==='inici'&&!(hO<=hAr-CRIT_PB.dreceraMinH)) continue; // tornar enrere val si és clarament millor que seguir
       // composició del camí i pendent màxima
       const mix=[0,0,0,0,0,0]; let pmax=0;
       for(let k=s+1;k<=e;k++){ const a=o.nodes[k-1], b=o.nodes[k], ed=G.adj[a].find(x=>x[0]===b); const d=hav(G.ll[a],G.ll[b]); if(ed) mix[ed[2]]+=d; }
       for(let k=0,j=0;k<tram.length;k++){ while(j<tram.length-1&&S.cd[j]-S.cd[k]<60) j++; const d=S.cd[j]-S.cd[k]; if(d>40) pmax=Math.max(pmax,Math.abs(tram[j][2]-tram[k][2])/d*100); }
       const tot=mix.reduce((a,b)=>a+b,0)||1, mid=tram[Math.floor(tram.length/2)];
-      if(o.tipus==='final'&&mix[5]/tot*100>CRIT_PB.dreceraMaxPlaA) continue; // desfer el pla A no és una drecera
       cands.push({tipus:o.tipus,ref:o.ref,ia,ib:o.tipus==='final'?ib:null,pts:tram.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),p[2]]),km:+km.toFixed(3),up:Math.round(up),dn:Math.round(dn),
-        estalvi:hAr-hB,valor:o.tipus==='final'?hAr-hB:o.tipus==='vehicle'?hAcc-hO:o.tipus==='refugi'?Math.min(hAr-hO,2):hAcc-hO,q:{pista:Math.round((mix[1]+mix[2])/tot*100),corriol:Math.round((mix[3]+mix[4])/tot*100),carretera:Math.round(mix[0]/tot*100),plaA:Math.round(mix[5]/tot*100),pmax:Math.round(pmax),
+        estalvi:hAr-hB,valor:(o.tipus==='final'?hAr-hB:o.tipus==='vehicle'?hAcc-hO:o.tipus==='refugi'?Math.min(hAr-hO,2):hAr-hO)*(aProp?0.3:1),fora:tram.filter(p=>aprop(p,30)<0),q:{pista:Math.round((mix[1]+mix[2])/tot*100),corriol:Math.round((mix[3]+mix[4])/tot*100),carretera:Math.round(mix[0]/tot*100),plaA:Math.round(mix[5]/tot*100),pmax:Math.round(pmax),
         strava:`https://www.strava.com/maps/global-heatmap?sport=Run&style=standard#15/${mid[0].toFixed(5)}/${mid[1].toFixed(5)}`}});
     }
   }
@@ -358,8 +377,13 @@ function plansBDia(G,dia,trackNodes,extra={}){
   const sem=(a,b)=>{ if(a.tipus!==b.tipus||a.ref!==b.ref) return false; let c=0; for(const p of a.pts){ if(b.pts.some(q=>hav(p,q)<30)) c++; } return c/a.pts.length>0.6; };
   cands.sort((a,b)=>b.ia-a.ia);
   const tri=[]; for(const c of cands) if(!tri.some(t=>sem(c,t)||sem(t,c))) tri.push(c);
-  // els més bons: més temps guanyat, i com a molt un de cada tipus a la mateixa cruïlla
-  tri.sort((a,b)=>b.valor-a.valor); const sel=[]; for(const t of tri){ if(sel.length>=CRIT_PB.maxPerDia) break; if(sel.some(s=>s.ia===t.ia&&s.tipus===t.tipus)) continue; sel.push(t); } tri.length=0; tri.push(...sel);
+  // camí transitat (Strava): el tram fora del pla A ha de tenir passades
+  for(const t of tri){ const sv=t.fora.length>=2?await stravaTram(t.fora):{f:1,m:1}; t.q.strava_pct=sv?Math.round(sv.f*100):null; t.transit=sv?sv.f:null; }
+  tri.forEach(t=>console.log(`PB: ${dia.key} ${t.tipus} ia=${t.ia} valor=${t.valor.toFixed(2)} km=${t.km} transitat=${t.transit==null?'?':Math.round(t.transit*100)+'%'}`));
+  const bo=tri.filter(t=>t.transit==null||t.transit>=CRIT_PB.stravaMin);
+  // els més bons: més temps guanyat; com a molt un de cada tipus a la mateixa cruïlla; entre 2 i 4
+  bo.sort((a,b)=>(b.valor+(b.transit||0)*0.2)-(a.valor+(a.transit||0)*0.2)); const sel=[]; for(const t of bo){ if(sel.length>=CRIT_PB.maxPerDia) break; if(sel.some(s=>s.ia===t.ia&&s.tipus===t.tipus)) continue; sel.push(t); }
+  tri.length=0; tri.push(...sel);
   tri.sort((a,b)=>a.ia-b.ia);
   const nomP=i=>{ const w=[...dia.wp].reverse().find(x=>x.i<=i); const d=st.cd[i]-st.cd[w.i]; return d<80?w.k:`${w.k} + ${(d/1000).toFixed(1).replace('.',',')} km`; };
   return nomenaPB(tri.slice(0,CRIT_PB.maxPerDia).map((c,j)=>({id:'B'+(j+1),tipus:c.tipus,ia:c.ia,ib:c.ib,pts:c.pts,km:c.km,up:c.up,dn:c.dn,q:c.q,ref:c.ref})),dia);
@@ -415,7 +439,7 @@ async function creaRuta(nom,dies,opc,log){
           for(let a=-1;a<=1;a++) for(let c=-1;c<=1;c++) for(const u of cell.get((ci+a)+','+(cj+c))||[]){ const dd=hav(p,G.ll[u]); if(dd<bd){bd=dd;b=u;} }
           if(b>=0) aresta(G,v,b,5); });
         if(d.auto){ d.autoW=puntsAuto(d.pts,ways.pois); d.wp=situaWaypoints(d.pts,d.autoW); }
-        d.plansb=plansBDia(G,d,tn,{pois:ways.pois,cruilles:d.auto?cruillesTrack(G,tn,d.pts):[]});
+        d.plansb=await plansBDia(G,d,tn,{pois:ways.pois,cruilles:d.auto?cruillesTrack(G,tn,d.pts):[]});
         if(d.auto&&d.plansb.length){ // un punt de pas a cada cruïlla de pla B
           const cdA=estat(d.pts).cd, W=d.autoW.slice();
           for(const b of d.plansb) if(!d.wp.some(w=>Math.abs(cdA[w.i]-cdA[b.ia])<150)) W.push({lat:d.pts[b.ia][0],lon:d.pts[b.ia][1],nom:'Cruïlla del '+b.id,desc:'Punt de decisió: '+(b.tipus==='refugi'?'desviament al '+b.ref:b.tipus==='final'?'drecera':b.tipus==='inici'?'tornada a l\'inici':'sortida a pista o carretera'),auto:true});
