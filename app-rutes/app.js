@@ -114,8 +114,8 @@ function estatEn(seg,t){ // valors acumulats a la posició (segment seg, fracci�
 }
 
 // ---------- Format ----------
-const km=m=>(m/1000).toLocaleString('ca-ES',{minimumFractionDigits:m<10000?2:1,maximumFractionDigits:m<10000?2:1});
-const mts=m=>Math.round(m).toLocaleString('ca-ES')+' m';
+const km=m=>(m/1000).toLocaleString((window.LOC||'ca-ES'),{minimumFractionDigits:m<10000?2:1,maximumFractionDigits:m<10000?2:1});
+const mts=m=>Math.round(m).toLocaleString((window.LOC||'ca-ES'))+' m';
 function hm(h){ if(!isFinite(h)) return '–'; const t=Math.round(h*60), H=Math.floor(t/60), M=t%60; return H?`${H} h ${String(M).padStart(2,'0')}`:`${M} min`; }
 function rel(d){return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function hora(str){const [h,m]=str.split(':').map(Number);return h+m/60;}
@@ -368,7 +368,7 @@ function pintaPlansB(E,seg,now){
       <table><thead><tr><th>De la cruïlla a ${esc(fi)}</th><th>km</th><th>D+</th><th>D−</th><th>Marxa</th>${viu?'<th>Arribada</th>':''}</tr></thead><tbody>
       ${fila('Amb el '+b.id,tB,arrB)}${tAm?fila('Seguint el pla A',tAm,arrA):''}</tbody></table>
       ${viu?'':`<div class="nota" style="margin-top:4px">Si l'agafeu a les ${rel(new Date(lim))}: a ${esc(fi)} a les <b>${rel(new Date(lim+(ATUR+tAmbB(b).h)*3600e3))}</b>.</div>`}
-      ${b.q?`<div class="pbq">${b.q.corriol?`<span>corriol ${b.q.corriol}%</span>`:''}${b.q.pista?`<span>pista ${b.q.pista}%</span>`:''}${b.q.carretera?`<span>carretera ${b.q.carretera}%</span>`:''}${b.q.plaA?`<span>pla A ${b.q.plaA}%</span>`:''}${b.q.strava_pct!=null?`<span>transitat ${b.q.strava_pct}% (Strava)</span>`:''}<span>pendent màx. ${b.q.pmax}%</span><a href="${b.q.strava}" target="_blank" rel="noopener">Heatmap Strava ↗</a></div>`:''}${b.coment?`<p class="nota" style="margin-top:4px">🤖 ${esc(b.coment)}</p>`:''}
+      ${b.q?`<div class="pbq">${b.q.corriol?`<span>corriol ${b.q.corriol}%</span>`:''}${b.q.pista?`<span>pista ${b.q.pista}%</span>`:''}${b.q.carretera?`<span>carretera ${b.q.carretera}%</span>`:''}${b.q.plaA?`<span>pla A ${b.q.plaA}%</span>`:''}${b.q.strava_pct!=null?`<span>transitat ${b.q.strava_pct}% (Strava)</span>`:''}<span>pendent màx. ${b.q.pmax}%</span><a href="${b.q.strava}" target="_blank" rel="noopener">Heatmap Strava ↗</a></div>`:''}${b.coment?`<p class="nota" style="margin-top:4px" data-noi18n>🤖 ${esc(b.coment)}</p>`:''}
       <div style="margin-top:6px">${trkLink(b,'Track '+b.id)}</div></div>`;
   }).join('')+`<p class="nota" style="margin-top:6px">Un pla B només es recomana si, saltant-vos-el, ni amb el pla A ni amb un pla B posterior arribaríeu abans de ${objTxt}. «Decisió» = hora més tardana per passar per la cruïlla i saltar-vos-el, comptant les parades previstes i 5 min d'aturada quan s'agafa un pla B. Taules: temps de marxa; «Arribada» des d'on sou ara, amb parades.</p>`;
 }
@@ -387,7 +387,7 @@ function pintaTels(){
     ll.forEach(([n,t,u])=>{ h+=`<tr><td>${esc(n)}</td><td><a class="${u?'urg':''}" href="tel:${esc(t)}">${esc(fmtTel(t))}</a></td></tr>`; }); });
   if(ext.tel) h+=`<tr class="grup"><td colspan="2">Contacte extern</td></tr><tr><td>${esc(ext.nom||'')}</td><td><a href="tel:${esc(ext.tel.replace(/\s/g,''))}">${esc(ext.tel)}</a></td></tr>`;
   
-  $('e-tels').innerHTML=h; $('e-acces').innerHTML=''; if(RUTA.acces){ $('e-acces').innerHTML='<b>Accés amb vehicle:</b> '; $('e-acces').append(RUTA.acces); } $('e-nota-tels').textContent=RUTA.notaTels||''; $('e-ext').value=ext.tel||''; $('e-ext-nom').value=ext.nom||'';
+  $('e-tels').innerHTML=h; $('e-acces').innerHTML=''; if(RUTA.acces){ $('e-acces').innerHTML='<b>Accés amb vehicle:</b> <span data-noi18n></span>'; $('e-acces').lastChild.textContent=RUTA.acces; } $('e-nota-tels').textContent=RUTA.notaTels||''; $('e-ext').value=ext.tel||''; $('e-ext-nom').value=ext.nom||'';
 }
 // WGS84 → UTM (fus 31N); ETRS89 i WGS84 coincideixen a efectes pràctics
 function utm(lat,lon,zona=31){
@@ -437,7 +437,7 @@ pintaTels();
 
 // ---------- Serveis a prop (OpenStreetMap) i Viquipèdia, si la ruta no té guió de Claude ----------
 const fT=async(u,ms,opt={})=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(u,{...opt,signal:c.signal});}finally{clearTimeout(t);}};
-const SERV_KEY='petjada-ruta-serveis2-'+RUTA.id, WIKI_KEY='petjada-ruta-wiki-'+RUTA.id;
+const SERV_KEY='petjada-ruta-serveis2-'+RUTA.id, WIKI_KEY='petjada-ruta-wiki-'+(window.LANG||'ca')+'-'+RUTA.id;
 const SERV_TIPUS=[['hosp','Hospitals',3],['cap','CAP i centres de salut',3],['farm','Farmàcies',2],['pol','Policia',2],['taxi','Taxis',3],['info','Oficines de turisme',2],['ref','Refugis guardats',2]];
 function tipusServei(t){ const a=t.amenity, hc=t.healthcare;
   if(a==='hospital'||hc==='hospital') return 'hosp'; if(a==='clinic'||a==='doctors'||hc==='centre'||hc==='clinic'||hc==='doctor') return /\bCAP\b|consultori|centre (de )?salut|atenci[óo] prim|ambulatori|centro de salud|urg[eè]nci/i.test(t.name||'')?'cap':null;
@@ -466,7 +466,7 @@ async function carregaServeis(){
   try{ const lat=P.map(p=>p[0]), lon=P.map(p=>p[1]), L=[], vist=new Set();
     const vb=m=>`${Math.min(...lon)-m},${Math.max(...lat)+m*.75},${Math.max(...lon)+m},${Math.min(...lat)-m*.75}`;
     const Q=[['amenity=hospital',.45],['amenity=clinic',.22],['amenity=doctors',.22],['amenity=pharmacy',.15],['amenity=police',.2],['amenity=taxi',.2],['q=tourist+information',.15],['q=alpine+hut',.12]];
-    for(const [q,m] of Q){ try{ const r=await fT(`https://nominatim.openstreetmap.org/search?${q}&viewbox=${vb(m)}&bounded=1&format=jsonv2&extratags=1&addressdetails=1&limit=40&accept-language=ca`,15000); if(r.ok){
+    for(const [q,m] of Q){ try{ const r=await fT(`https://nominatim.openstreetmap.org/search?${q}&viewbox=${vb(m)}&bounded=1&format=jsonv2&extratags=1&addressdetails=1&limit=40&accept-language=${window.LANG||'ca'}`,15000); if(r.ok){
         for(const e of await r.json()){ const t={...(e.extratags||{}),name:e.name,[e.category]:e.type}; const k=tipusServei(t); if(!k||!e.name) continue;
           const id=k+'|'+e.name.toLowerCase(); if(vist.has(id)) continue; vist.add(id); const ll=[+e.lat,+e.lon];
           const ad=e.address||{}; L.push({k,nom:e.name,tel:(t.phone||t['contact:phone']||'').split(';')[0].trim(),lloc:ad.town||ad.village||ad.city||ad.municipality||'',urg:t.emergency==='yes',lat:ll[0],lon:ll[1],d:Math.round(Math.min(...P.map(p=>hav(p,ll))))}); } } }catch(e){}
@@ -479,7 +479,7 @@ function pintaServeis(c){
   let h='<table class="tels">';
   SERV_TIPUS.forEach(([k,nom,n])=>{ let L=c.L.filter(x=>x.k===k).sort((a,b)=>(k==='hosp'?(b.urg-a.urg):0)||a.d-b.d).slice(0,n); if(!L.length) return;
     h+=`<tr class="grup"><td colspan="2">${nom}</td></tr>`+L.map(x=>`<tr><td>${esc(x.nom)}${x.urg?' · <b>urgències</b>':''}<br><small class="nota">${x.lloc?esc(x.lloc)+' · ':''}a ${km(x.d)} km de la ruta · <a href="https://www.google.com/maps/dir/?api=1&destination=${x.lat},${x.lon}" target="_blank" rel="noopener" style="background:none;border:0;padding:0;color:inherit;text-decoration:underline;font-weight:400">com arribar-hi</a></small></td><td>${x.tel?`<a href="tel:${esc(x.tel.replace(/[^0-9+]/g,''))}">${esc(fmtTel(x.tel.replace(/[^0-9+]/g,'').replace(/^\+34/,'')))}</a>`:'<small class="nota">sense tel.</small>'}</td></tr>`).join(''); });
-  h+='</table><p class="nota" style="margin-top:6px">Dades d\'OpenStreetMap (© col·laboradors d\'OSM), consultades el '+new Date(c.ts).toLocaleDateString('ca-ES')+'. Poden faltar serveis o telèfons: verifica-ho abans de la sortida, sobretot l\'horari d\'urgències dels CAP el dia de la ruta. Distància en línia recta.</p>';
+  h+='</table><p class="nota" style="margin-top:6px">Dades d\'OpenStreetMap (© col·laboradors d\'OSM), consultades el '+new Date(c.ts).toLocaleDateString((window.LOC||'ca-ES'))+'. Poden faltar serveis o telèfons: verifica-ho abans de la sortida, sobretot l\'horari d\'urgències dels CAP el dia de la ruta. Distància en línia recta.</p>';
   set('e-serveis',h);
 }
 async function carregaWiki(){
@@ -490,10 +490,10 @@ async function carregaWiki(){
   if(!navigator.onLine) return;
   const pts=[]; RUTA.dies.forEach((d,di)=>d.wp.forEach(w=>pts.push({dia:di,k:w.k,n:w.n,ll:d.pts[w.i]})));
   const per={}, ids=new Set();
-  for(const p of pts.slice(0,30)){ try{ const r=await fT(`https://ca.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${p.ll[0]}|${p.ll[1]}&gsradius=2500&gslimit=4&format=json&origin=*`,12000);
+  for(const p of pts.slice(0,30)){ try{ const r=await fT(`https://${window.LANG||'ca'}.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${p.ll[0]}|${p.ll[1]}&gsradius=2500&gslimit=4&format=json&origin=*`,12000);
       const j=await r.json(); per[p.dia+'|'+p.k]=(j.query&&j.query.geosearch||[]).map(g=>{ids.add(g.pageid);return {id:g.pageid,t:g.title,d:g.dist};}); }catch(e){} }
   const ex={}, L=[...ids];
-  for(let i=0;i<L.length;i+=20){ try{ const r=await fT(`https://ca.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&exsentences=2&exlimit=20&pageids=${L.slice(i,i+20).join('|')}&format=json&origin=*`,15000);
+  for(let i=0;i<L.length;i+=20){ try{ const r=await fT(`https://${window.LANG||'ca'}.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&exsentences=2&exlimit=20&pageids=${L.slice(i,i+20).join('|')}&format=json&origin=*`,15000);
       const j=await r.json(); Object.values(j.query&&j.query.pages||{}).forEach(p=>ex[p.pageid]=(p.extract||'').trim()); }catch(e){} }
   c={ts:Date.now(),punts:pts.map(p=>({dia:p.dia,k:p.k,n:p.n,art:(per[p.dia+'|'+p.k]||[]).map(a=>({...a,x:ex[a.id]||''}))}))};
   try{localStorage.setItem(WIKI_KEY,JSON.stringify(c))}catch(e){} pintaWiki(c);
@@ -506,7 +506,7 @@ function wikiPerPunt(c){ // cada article, al punt més proper
 function pintaWiki(c){
   WIKI=wikiPerPunt(c); pintaGuioAra();
   set('wiki-punts', WIKI.map(p=>{ const A=p.art;
-    return `<details class="det"><summary>${RUTA.dies.length>1?'Dia '+(p.dia+1)+' · ':''}${esc(p.n||p.k)}</summary>${A.length?'<ul>'+A.map(a=>`<li><b>${esc(a.t)}</b> <small class="nota">(${km(a.d)} km)</small>: ${esc(a.x)} <a href="https://ca.wikipedia.org/?curid=${a.id}" target="_blank" rel="noopener">Viquipèdia</a></li>`).join('')+'</ul>':'<p class="nota">No hi ha articles de la Viquipèdia a menys de 2,5 km.</p>'}</details>`; }).join('')+
+    return `<details class="det"><summary>${RUTA.dies.length>1?'Dia '+(p.dia+1)+' · ':''}${esc(p.n||p.k)}</summary>${A.length?'<ul>'+A.map(a=>`<li><b>${esc(a.t)}</b> <small class="nota">(${km(a.d)} km)</small>: ${esc(a.x)} <a href="https://${window.LANG||'ca'}.wikipedia.org/?curid=${a.id}" target="_blank" rel="noopener">Viquipèdia</a></li>`).join('')+'</ul>':'<p class="nota">No hi ha articles de la Viquipèdia a menys de 2,5 km.</p>'}</details>`; }).join('')+
     '<p class="nota" style="margin-top:6px">Fet sol per l\'app amb la Viquipèdia en català (CC BY-SA): llocs a menys de 2,5 km de cada punt. Contrasta-ho abans d\'explicar-ho. Si a «Rutes» poses una clau d\'API de Claude, l\'app hi afegeix sola el guió complet (fils conductors, zona i telèfons verificats) en crear cada ruta.</p>');
 }
 carregaServeis(); carregaWiki();
@@ -713,7 +713,7 @@ function meteoEn(date,alt){
 function diesMeteo(){
   if(!MET) return [];
   const d0=MET.pts[0].d.time, avui=new Date(), kd=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
-  const DS=['dg','dl','dt','dc','dj','dv','ds'];
+  const DS=window.DS_L||['dg','dl','dt','dc','dj','dv','ds'];
   return d0.filter(k=>k>=kd(avui)&&k<=DATA_FI).map(k=>{const x=new Date(k+'T12:00:00');
     return {k,n:(k===kd(avui)?'Avui':DS[x.getDay()]+' '+x.getDate())+(DIES.filter(d=>DATES[d]===k).map(d=>' · '+RUTES[d].curt).join(''))};});
 }
@@ -769,7 +769,7 @@ function radarPinta(){
   if(lastFix&&!prova){ const [x,y]=wpx(lastFix.lat,lastFix.lon,z); g+=`<circle cx="${x-x0}" cy="${y-y0}" r="7" fill="#1f6fb2" stroke="#fff" stroke-width="3"/>`; }
   const bar=W/2-60;
   h+=`<svg width="${W}" height="${H}" style="position:absolute;left:0;top:0">${g}</svg>`+
-    `<div style="position:absolute;left:8px;top:8px;background:#fffd;border-radius:8px;padding:4px 8px;font-weight:700;font-size:13px">${f?new Date(f.t).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})+(!navigator.onLine?' · fa '+fmtFa(Date.now()-f.t)+' · sense cobertura':RV.i===RV.fr.length-1?' · ara':' · fa '+Math.round((RV.fr[RV.fr.length-1].t-f.t)/60000)+' min'):'carregant radar…'}</div>`+
+    `<div style="position:absolute;left:8px;top:8px;background:#fffd;border-radius:8px;padding:4px 8px;font-weight:700;font-size:13px">${f?new Date(f.t).toLocaleTimeString((window.LOC||'ca-ES'),{hour:'2-digit',minute:'2-digit'})+(!navigator.onLine?' · fa '+fmtFa(Date.now()-f.t)+' · sense cobertura':RV.i===RV.fr.length-1?' · ara':' · fa '+Math.round((RV.fr[RV.fr.length-1].t-f.t)/60000)+' min'):'carregant radar…'}</div>`+
     `<div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px"><button class="btn s" data-rz="1" style="width:36px;flex:0 0 auto;padding:4px">+</button><button class="btn s" data-rz="-1" style="width:36px;flex:0 0 auto;padding:4px">−</button></div>`+
     `<div style="position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:8px;align-items:center;background:#fffd;border-radius:10px;padding:4px 8px"><button class="btn s" id="rv-play" style="padding:4px 10px;width:auto;flex:0 0 auto">${RV.play?'❚❚':'▶'}</button><input type="range" id="rv-sl" min="0" max="${RV.fr?RV.fr.length-1:0}" value="${RV.i}" style="flex:1"></div>`+
     `<div style="position:absolute;right:4px;bottom:52px;font-size:10px;background:#fffc;padding:1px 4px;border-radius:4px">© RainViewer · © Esri, HERE, Garmin, © OSM</div>`;
@@ -806,7 +806,7 @@ async function frontsIndex(){
   return idx; }
 function frontsAtura(){ if(FR.play){ clearInterval(FR.play); FR.play=null; } }
 function frontsTxt(t,base){ const d=new Date(t), h=Math.round((t-base)/3600e3);
-  return d.toLocaleDateString('ca-ES',{weekday:'short',day:'numeric',month:'short'})+' '+d.toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})+(h<=0?' · anàlisi':' · previsió +'+h+' h'); }
+  return d.toLocaleDateString((window.LOC||'ca-ES'),{weekday:'short',day:'numeric',month:'short'})+' '+d.toLocaleTimeString((window.LOC||'ca-ES'),{hour:'2-digit',minute:'2-digit'})+(h<=0?' · anàlisi':' · previsió +'+h+' h'); }
 async function frontsMostra(){
   const el=$('av-map'); el.dataset.k='fronts'+FR.vista; radarAtura();
   const sub=`<div style="position:absolute;left:8px;top:8px;z-index:2;display:flex;gap:6px"><button class="btn s ${FR.vista==='mo'?'on':''}" data-fv="mo" style="padding:4px 10px">Fronts</button><button class="btn s ${FR.vista==='wi'?'on':''}" data-fv="wi" style="padding:4px 10px">Pressió i vent</button></div>`;
@@ -822,7 +822,7 @@ async function frontsMostra(){
   const pinta=()=>{ const f=P[FR.i];
     el.innerHTML=sub+`<div style="padding-top:44px;background:#fff"><img src="${f.u}" alt="Mapa de fronts ${frontsTxt(f.t,base)}" style="width:100%;display:block" onerror="this.replaceWith(Object.assign(document.createElement('p'),{className:'nota',style:'padding:20px 14px',textContent:'Aquest mapa no s\\'ha pogut carregar (sense cobertura i no desat).'}))"></div>`+
       `<div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:#f4f1ea"><button class="btn s" id="fr-play" style="padding:4px 10px">${FR.play?'❚❚':'▶'}</button><input type="range" id="fr-sl" min="0" max="${P.length-1}" value="${FR.i}" style="flex:1"><b style="font-size:13px;white-space:nowrap">${frontsTxt(f.t,base)}</b></div>`+
-      `<div style="font-size:10px;text-align:right;padding:2px 6px;color:#6b7478">© Crown Copyright, Met Office · passada de les ${new Date(idx.issued).toLocaleString('ca-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`;
+      `<div style="font-size:10px;text-align:right;padding:2px 6px;color:#6b7478">© Crown Copyright, Met Office · passada de les ${new Date(idx.issued).toLocaleString((window.LOC||'ca-ES'),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`;
     lliga();
     $('fr-sl').oninput=e=>{ FR.i=+e.target.value; frontsAtura(); pinta(); };
     $('fr-play').onclick=()=>{ if(FR.play) frontsAtura(); else FR.play=setInterval(()=>{ if(avZ!=='fronts'||$('vmet').hidden||FR.vista!=='mo'){frontsAtura();return;} FR.i=(FR.i+1)%P.length; pinta(); },1200); pinta(); }; };
@@ -858,8 +858,8 @@ async function carregaAvisosTxt(forca){
 function pintaAvTxt(){
   const el=$('av-txt'); if(!el) return; const z=zonaAvisos(); if(!z){ el.innerHTML=''; return; }
   if(!AVT||AVT.zona!==z.id){ el.innerHTML=`<p class="nota">⚠ Avisos de l'AEMET · ${esc(z.n)}: ${navigator.onLine?(AVTERR&&!AVTBUSY?'no s\'ha pogut consultar ara; es torna a provar sol.':'consultant…'):'encara no n\'hi ha cap resum desat (cal obrir-ho una vegada amb cobertura).'}</p>`; return; }
-  const dh=t=>new Date(t).toLocaleString('ca-ES',{weekday:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  const cap=`<b>⚠ Avisos de l'AEMET · ${esc(AVT.nom)}</b> <small>(dades de les ${new Date(AVT.ts).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})}${Date.now()-AVT.ts>36e5?', fa '+fmtFa(Date.now()-AVT.ts):''}${navigator.onLine?'':' · sense cobertura'})</small>`;
+  const dh=t=>new Date(t).toLocaleString((window.LOC||'ca-ES'),{weekday:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const cap=`<b>⚠ Avisos de l'AEMET · ${esc(AVT.nom)}</b> <small>(dades de les ${new Date(AVT.ts).toLocaleTimeString((window.LOC||'ca-ES'),{hour:'2-digit',minute:'2-digit'})}${Date.now()-AVT.ts>36e5?', fa '+fmtFa(Date.now()-AVT.ts):''}${navigator.onLine?'':' · sense cobertura'})</small>`;
   const vius=AVT.it.filter(a=>a.ex>Date.now());
   const ll=vius.length?'<ul style="margin:4px 0 0 18px;padding:0">'+vius.map(a=>{ const n=AV_NIV[a.lv]||AV_NIV[4]; return `<li><b style="color:${n[1]}">${n[0]}</b> per ${AV_TIPUS[a.tp]||'fenomen '+a.tp}: ${dh(a.on)} → ${dh(a.ex)}${a.d?'<br><small>'+esc(a.d)+'</small>':''}</li>`; }).join('')+'</ul>'
     :'<div>Cap avís groc, taronja ni vermell vigent ni previst per a aquesta zona (l\'AEMET publica avisos fins a 2-3 dies vista; font: AEMET via Meteoalarm).</div>';
@@ -935,7 +935,7 @@ function pintaPas(id,d){
   if(!MPAS){ set(id+'-t','<p class="nota">Encara no hi ha previsió per punts: obre la pestanya Meteo amb cobertura.</p>'); set(id+'-st',''); set(id+'-n',''); return; }
   const {rows,viu}=horesPas(d); let n=0;
   let h='<table class="tpas"><thead><tr><th>Punt</th><th>Pas</th><th>Cel</th><th>T (sens.)</th><th>Vent / ratxa</th><th>Pluja</th></tr></thead><tbody>';
-  rows.forEach(r=>{ const m=metPunt(d,r.w.k,r.t); const hh=new Date(r.t).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'});
+  rows.forEach(r=>{ const m=metPunt(d,r.w.k,r.t); const hh=new Date(r.t).toLocaleTimeString((window.LOC||'ca-ES'),{hour:'2-digit',minute:'2-digit'});
     if(!m){ h+=`<tr class="${r.estat==='fet'?'fet':r.estat==='ara'?'ara':''}"><td><b>${esc(nomCurt(r.w))}</b><br><small>${mts(r.alt)}</small></td><td>${hh}</td><td colspan="4"><small>sense previsió per a aquesta hora</small></td></tr>`; return; }
     n++; const c=(v,a,b)=>v>=b?'al':v>=a?'av':'', ct=(v)=>v<=-5?'al':v<=0?'av':'';
     const dir=ventDir(m.wd);
@@ -947,7 +947,7 @@ function pintaPas(id,d){
   const fa=Math.round((Date.now()-MPAS.ts)/60000);
   set(id+'-st',(DIES.length>1?'dia '+(DIES.indexOf(d)+1)+' · ':'')+(viu?'hores recalculades en ruta':'hores planificades'));
   set(id+'-n',(viu?'Hores de pas recalculades amb el vostre ritme i posició: la previsió es mou amb vosaltres. ':'Hores de pas planificades (taula de trams, amb les parades). Quan toqueu «Iniciar ruta», es recalculen amb el ritme real. ')+
-    `Previsió a la coordenada i l'alçada de cada punt, per a l'hora de pas (Open-Meteo, actualitzada ${fa<60?'fa '+fa+' min':fa<1440?'fa '+Math.round(fa/60)+' h':new Date(MPAS.ts).toLocaleDateString('ca-ES')}). Vent: fletxa = cap on bufa, lletra = d'on ve. En taronja i vermell: ratxes de més de 40/60 km/h, sensació sota 0/−5 °C, pluja de més del 30/60 %.`+(n?'':' Encara massa lluny: la previsió per hores arriba a uns 15 dies.'));
+    `Previsió a la coordenada i l'alçada de cada punt, per a l'hora de pas (Open-Meteo, actualitzada ${fa<60?'fa '+fa+' min':fa<1440?'fa '+Math.round(fa/60)+' h':new Date(MPAS.ts).toLocaleDateString((window.LOC||'ca-ES'))}). Vent: fletxa = cap on bufa, lletra = d'on ve. En taronja i vermell: ratxes de més de 40/60 km/h, sensació sota 0/−5 °C, pluja de més del 30/60 %.`+(n?'':' Encara massa lluny: la previsió per hores arriba a uns 15 dies.'));
 }
 function pintaPasTots(){ try{ if(!pasDia) pasDia=dia; const bd=$('mpas-d'); if(bd&&!bd.children.length&&DIES.length>1) bd.innerHTML=DIES.map((d,j)=>`<button data-d="${d}">Dia ${j+1}</button>`).join(''); document.querySelectorAll('#mpas-d button').forEach(b=>{ b.classList.toggle('on',b.dataset.d===pasDia); b.onclick=()=>{pasDia=b.dataset.d; pintaPasTots();}; }); pintaPas('mpas',pasDia); }catch(e){} }
 // columnes de la taula per hores segons el dia: punt més baix, Xalet i punt més alt d'aquell dia
@@ -971,7 +971,7 @@ function pintaMeteo(){
   set('met-nota',`Previsió per hores d'Open-Meteo a tres alçades de la ruta (${MET_PTS.map(p=>esc(p.n)+' '+Math.round(p.e)+' m').join(', ')}), desada per consultar-la sense cobertura. S\'actualitza sola quan hi ha cobertura: cada 20 min els dies de la sortida i cada hora la resta (i sempre que obres aquesta pestanya). Contrasta-la amb el servei meteorològic oficial; els llindars de decisió són els de la fitxa. Cota de neu ≈ isoterma de 0 °C − 300 m.`);
   if(!MET){ set('met-act','sense dades'); set('met-dies',''); set('met-resum','<p class="nota">Toca «Actualitzar previsió» amb connexió.</p>'); set('met-hores',''); set('met-avisos',''); return; }
   const fa=Math.round((Date.now()-MET.ts)/60000);
-  set('met-act', 'actualitzada '+(fa<1440?'a les '+new Date(MET.ts).toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'})+(fa<60?` (fa ${fa} min)`:` (fa ${Math.round(fa/60)} h)`):new Date(MET.ts).toLocaleDateString('ca-ES')));
+  set('met-act', 'actualitzada '+(fa<1440?'a les '+new Date(MET.ts).toLocaleTimeString((window.LOC||'ca-ES'),{hour:'2-digit',minute:'2-digit'})+(fa<60?` (fa ${fa} min)`:` (fa ${Math.round(fa/60)} h)`):new Date(MET.ts).toLocaleDateString((window.LOC||'ca-ES'))));
   const dies=diesMeteo(); if(!dies.length){ set('met-resum','<p class="nota">La previsió desada ja no cobreix els propers dies: actualitza-la.</p>'); return; }
   if(!metDia||!dies.find(x=>x.k===metDia)) metDia=(dies.find(x=>x.k===DATES[dia])||dies[0]).k;
   set('met-dies',dies.map(x=>`<button data-k="${x.k}" class="${x.k===metDia?'on':''}">${x.n}</button>`).join(''));
@@ -1294,7 +1294,7 @@ async function carregaOSM(forcar){
     if(!d.ways){ await c.delete(OSM_KEY); return carregaOSM(true); } // format antic
     OSM.ways=preparaWays(d);
     const n={}; OSM.ways.forEach(w=>n[w.t]=(n[w.t]||0)+1);
-    $('osm-estat').textContent=`Camins OSM desats: ${n[3]||0} corriols, ${n[2]||0} pistes, ${(n[0]||0)+(n[1]||0)} carreteres i camins asfaltats`+(d.desat?` (${new Date(d.desat).toLocaleDateString('ca-ES')}, ${d.font})`:'')+'.';
+    $('osm-estat').textContent=`Camins OSM desats: ${n[3]||0} corriols, ${n[2]||0} pistes, ${(n[0]||0)+(n[1]||0)} carreteres i camins asfaltats`+(d.desat?` (${new Date(d.desat).toLocaleDateString((window.LOC||'ca-ES'))}, ${d.font})`:'')+'.';
     dibuixaMapa();
   }catch(e){ $('osm-estat').textContent='Error llegint els camins OSM.'; }
 }

@@ -201,6 +201,7 @@ img,svg,iframe,video{max-width:100%}
 #sec-zona:has(#guio-zona:empty){display:none}
 #sec-tots:has(#guio-tots:empty):has(#flora:empty){display:none}
 </style>
+<script src="i18n.js"></script>
 </head>
 <body>
 <header>
@@ -342,30 +343,34 @@ img,svg,iframe,video{max-width:100%}
 <main id="vguio" hidden>
   <section class="card guio" id="guio-ara">
     <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
-    <div class="nom2" id="guio-nom"></div>
+    <div class="nom2" id="guio-nom" data-noi18n></div>
     <div id="guio-fil"></div>
-    <ul id="guio-punts"></ul>
+    <ul id="guio-punts" data-noi18n></ul>
     <p class="preg" id="guio-preg"></p>
   </section>
 
   <section class="card" id="sec-sense-guio" hidden>
     <h2>Què hi ha a prop de cada punt <b>automàtic</b></h2>
-    <div id="wiki-punts"><p class="nota">Cal cobertura la primera vegada; després queda desat.</p></div>
+    <div id="wiki-punts" data-noi18n><p class="nota">Cal cobertura la primera vegada; després queda desat.</p></div>
   </section>
 
   <section class="card" id="sec-zona">
     <h2>La zona <b>informació d'interès</b></h2>
-    <div id="guio-zona"></div>
+    <div id="guio-zona" data-noi18n></div>
   </section>
 
   <section class="card" id="sec-tots">
     <h2>Guió de tots els punts <b>toca per obrir</b></h2>
-    <div id="guio-tots"></div>
+    <div id="guio-tots" data-noi18n></div>
     <div id="flora"></div>
   </section>
 </main>
 
 <main id="vlib" hidden>
+  <section class="card">
+    <h2>Idioma <b>Language</b></h2>
+    <select id="sel-lang" style="width:100%;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:inherit" data-noi18n></select>
+  </section>
   <section class="card">
     <h2>Les meves rutes</h2>
     <div id="lib-llista"></div>
@@ -460,7 +465,7 @@ img,svg,iframe,video{max-width:100%}
       <label class="nota" for="e-ext">Contacte extern (nom i telèfon; es desa al mòbil):</label>
       <div style="display:flex;gap:6px;margin-top:4px"><input id="e-ext-nom" placeholder="Nom" style="flex:1;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:inherit"><input id="e-ext" type="tel" placeholder="Telèfon" style="flex:1;padding:8px;border:1px solid #d9d3c6;border-radius:8px;font:inherit"></div>
     </div>
-    <p class="nota" style="margin-top:8px" id="e-nota-tels"></p>
+    <p class="nota" style="margin-top:8px" id="e-nota-tels" data-noi18n></p>
   </section>
 
   <section class="card">
@@ -475,6 +480,6 @@ img,svg,iframe,video{max-width:100%}
   </section>
 </main>
 <script src="core.js"></script>
-<script>arrencaApp();</script>
+<script>(()=>{const s=document.getElementById('sel-lang'); if(s&&window.LANGS){ s.innerHTML=Object.entries(LANGS).map(([k,v])=>`<option value="${k}"${k===LANG?' selected':''}>${v}</option>`).join(''); s.onchange=()=>setLang(s.value); }})(); arrencaApp();</script>
 </body>
 </html>

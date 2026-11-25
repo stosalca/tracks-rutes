@@ -10,7 +10,7 @@ const hores=(km,up,dn)=>km<=0?0:Math.max(km/3.5,up/300+dn/400)*1.2;
 const wpx=(lat,lon,z)=>{const s=256*2**z,x=(lon+180)/360*s,sn=Math.sin(rad(lat));return [x,(0.5-Math.log((1+sn)/(1-sn))/(4*Math.PI))*s];};
 const unwpx=(x,y,z)=>{const s=256*2**z,lon=x/s*360-180,n=Math.PI-2*Math.PI*y/s;return [180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))),lon];};
 const fetchT=async(u,ms,opt={})=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(u,{...opt,signal:c.signal});}finally{clearTimeout(t);}};
-const DS=['dg','dl','dt','dc','dj','dv','ds'];
+const DS=window.DS_L||['dg','dl','dt','dc','dj','dv','ds'];
 
 // ---------- emmagatzematge ----------
 const LIB='petjada-rutes-lib', ACT='petjada-ruta-activa', CONFK='petjada-rutes-conf';
@@ -486,7 +486,7 @@ function peticioClaude(r){
   const dades=r.dies.map(d=>{ const s=estat(d.pts); return {dia:d.key,titol:d.titol,data:d.data,sortida:d.sortida,objectiu:d.objectiu,
     punts:d.wp.map(w=>({codi:w.k,nom:w.n,lat:d.pts[w.i][0],lon:d.pts[w.i][1],alcada:Math.round(d.pts[w.i][2]),km:+(s.cd[w.i]/1000).toFixed(2)})),
     plansB:(d.plansb||[]).map(b=>({id:b.id,nom:b.nom,km:b.km,dPos:b.up,dNeg:b.dn,composicio:b.q,inici:[b.pts[0][0],b.pts[0][1]],final:[b.pts.at(-1)[0],b.pts.at(-1)[1]]}))}; });
-  const prompt=`Ets un guia de muntanya expert que prepara una sortida de senderisme amb clients. Escriu en català.
+  const prompt=`Ets un guia de muntanya expert que prepara una sortida de senderisme amb clients. Escriu en ${({ca:'català',es:'castellà',en:'anglès',fr:'francès',it:'italià'})[window.LANG||'ca']}.
 Ruta: ${r.nom}. Dades (JSON):
 ${JSON.stringify(dades)}
 
@@ -563,7 +563,7 @@ let pendents=null; // dies llegits del GPX abans de crear la ruta
 function pintaLib(){
   const act=llegeix(ACT,null), L=lib();
   $('lib-llista').innerHTML=L.length?L.slice().reverse().map(x=>`<div class="lr ${x.id===act?'on':''}"><h3>${esc(x.nom)}${(carregaRuta(x.id)||{}).publicada?' <small class="pub">preparada per Claude</small>':''}</h3>
-    <p class="nota">${x.dies.map(d=>esc(d.titol)+(d.data?' · '+new Date(d.data+'T12:00').toLocaleDateString('ca-ES',{weekday:'short',day:'numeric',month:'short'}):'')).join(' / ')}</p>
+    <p class="nota">${x.dies.map(d=>esc(d.titol)+(d.data?' · '+new Date(d.data+'T12:00').toLocaleDateString((window.LOC||'ca-ES'),{weekday:'short',day:'numeric',month:'short'}):'')).join(' / ')}</p>
     <div class="botons" style="margin-top:6px"><button class="btn s" data-obre="${x.id}">${x.id===act?'Obrir':'Fer servir aquesta ruta'}</button>
     <button class="btn s" data-xat="${x.id}">Guió amb Claude (xat)</button>${(CONF.key||'').trim()?`<button class="btn s" data-guio="${x.id}">Guió amb Claude (API)</button>`:''}<button class="btn s" data-hores="${x.id}">Dates i hores</button><button class="btn s" data-esb="${x.id}">Esborrar</button></div>
     <pre class="log" id="lg-${x.id}"></pre><div id="ed-${x.id}"></div></div>`).join(''):'<p class="nota">Encara no hi ha cap ruta. Crea\'n una a sota amb el GPX.</p>';

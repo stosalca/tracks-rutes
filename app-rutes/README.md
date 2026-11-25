@@ -29,3 +29,7 @@ Obrir: https://stosalca.github.io/tracks-rutes/app-rutes/
    - `plansB`: valoració de cada pla B.
 3. En fer push, la tasca de GitHub `rutes.yml` calcula trams, plans B, alçades i vessants i publica la ruta; l'app la baixa sola a «Rutes».
 4. La meteo (previsió punt per punt, avisos de l'AEMET, radar i fronts) la calcula l'app a partir de les coordenades: no cal preparar-la.
+
+## Idiomes
+
+Català, castellà, anglès, francès i italià (pestanya «Rutes» → Idioma; per defecte, l'idioma del mòbil). La interfície es tradueix amb `i18n.js` i els diccionaris `i18n/*.json`, que es generen amb `eines/i18n_font.py`. Per afegir o corregir una traducció, edita aquest fitxer i torna'l a executar. El contingut de cada ruta (guió, zona, telèfons) és en l'idioma en què es va preparar. La Viquipèdia i les cerques de serveis es fan en l'idioma triat.
