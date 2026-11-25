@@ -188,6 +188,14 @@ details.det.act summary{color:var(--ter)}
 .tpas{width:100%;border-collapse:collapse;font-size:13px}.tpas th{font-size:11px;color:#5c6266;text-align:right;padding:3px 4px;border-bottom:1px solid #e2dccf;font-weight:700}.tpas th:first-child,.tpas td:first-child{text-align:left}.tpas td{text-align:right;padding:4px;border-bottom:1px solid #eee7da;white-space:nowrap}.tpas tr.fet td{opacity:.45}.tpas tr.ara td{background:#fbf3e3}.tpas .al{color:#c0392b;font-weight:800}.tpas .av{color:#b86e00;font-weight:800}.tpas small{color:#6b7478}
 
 .calc{margin-top:8px}.calc summary{font-size:13px;font-weight:700;cursor:pointer;color:var(--pis)}.calc p{margin-top:6px}
+/* mòbil: res no ha de fer moure la pàgina de costat */
+html,body{max-width:100%;overflow-x:clip}
+nav.vistes{gap:4px}nav.vistes button{flex:1 1 auto;min-width:0;flex-direction:column;gap:2px;font-size:11.5px;padding:6px 3px;overflow-wrap:normal;word-break:normal}
+@media (max-width:370px){nav.vistes button{font-size:10.5px;padding:6px 2px}}
+input,select,textarea{min-width:0;max-width:100%}
+.tels td:first-child{overflow-wrap:anywhere}.tels .grup td{white-space:normal;text-align:left}
+img,svg,iframe,video{max-width:100%}
+#tiles img{max-width:none}
 </style>
 </head>
 <body>

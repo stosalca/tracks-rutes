@@ -182,6 +182,14 @@ body.printmap{overflow:hidden}body.printmap #tmap{position:fixed;inset:0;height:
 .pbchip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#C55A11;border:1.5px solid #C55A11;border-radius:99px;padding:2px 9px}
 .pbchip input{margin:0}.pbchip.off{color:#9a948a;border-color:#cfc8bb}.pbtots{font:inherit;font-size:12px;border:0;background:#e7e1d4;border-radius:99px;padding:3px 10px}
 .calc{margin-top:8px}.calc summary{font-size:13px;font-weight:700;cursor:pointer;color:var(--pis)}.calc p{margin-top:6px}
+/* mòbil: res no ha de fer moure la pàgina de costat */
+html,body{max-width:100%;overflow-x:clip}
+nav.vistes{gap:4px}nav.vistes button{flex:1 1 auto;min-width:0;flex-direction:column;gap:2px;font-size:11.5px;padding:6px 3px;overflow-wrap:normal;word-break:normal}
+@media (max-width:370px){nav.vistes button{font-size:10.5px;padding:6px 2px}}
+input,select,textarea{min-width:0;max-width:100%}
+.tels td:first-child{overflow-wrap:anywhere}.tels .grup td{white-space:normal;text-align:left}
+img,svg,iframe,video{max-width:100%}
+#tiles img{max-width:none}
 </style>
 </head>
 <body>
