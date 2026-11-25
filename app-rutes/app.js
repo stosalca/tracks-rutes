@@ -435,6 +435,67 @@ const desaExt=()=>{ try{localStorage.setItem('petjada-rutes-ext',JSON.stringify(
 $('e-ext').onchange=desaExt; $('e-ext-nom').onchange=desaExt;
 pintaTels();
 
+// ---------- Serveis a prop (OpenStreetMap) i Viquipèdia, si la ruta no té guió de Claude ----------
+const fT=async(u,ms,opt={})=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(u,{...opt,signal:c.signal});}finally{clearTimeout(t);}};
+const SERV_KEY='petjada-ruta-serveis-'+RUTA.id, WIKI_KEY='petjada-ruta-wiki-'+RUTA.id;
+const SERV_TIPUS=[['hosp','Hospitals',3],['cap','CAP i centres de salut',3],['farm','Farmàcies',2],['pol','Policia',2],['taxi','Taxis',3],['info','Oficines de turisme',2],['ref','Refugis guardats',2]];
+function tipusServei(t){ const a=t.amenity, hc=t.healthcare;
+  if(a==='hospital'||hc==='hospital') return 'hosp'; if(a==='clinic'||a==='doctors'||hc==='centre'||hc==='clinic'||hc==='doctor') return 'cap';
+  if(a==='pharmacy') return 'farm'; if(a==='police') return 'pol'; if(a==='taxi'||t.taxi==='yes'||/taxi/i.test(t.name||'')) return 'taxi';
+  if(t.tourism==='information') return 'info'; if(t.tourism==='alpine_hut') return 'ref'; return null; }
+function puntsRuta(){ const P=[]; RUTA.dies.forEach(d=>{ const p=d.pts; [p[0],p[Math.floor(p.length/2)],p[p.length-1]].forEach(q=>P.push([q[0],q[1]])); }); return P; }
+async function carregaServeis(){
+  let c=null; try{c=JSON.parse(localStorage.getItem(SERV_KEY)||'null')}catch(e){}
+  if(c) pintaServeis(c);
+  if(!navigator.onLine||(c&&Date.now()-c.ts<30*864e5)) return;
+  const P=puntsRuta(), a=P[0], around=(r)=>P.map(q=>`(around:${r},${q[0].toFixed(5)},${q[1].toFixed(5)})`);
+  const sel=(f,r)=>around(r).map(x=>`nwr${f}${x};`).join('');
+  const q=`[out:json][timeout:40];(${sel('["amenity"="hospital"]',45000)}${sel('["healthcare"="hospital"]',45000)}${sel('["amenity"~"^(clinic|doctors)$"]',20000)}${sel('["healthcare"~"^(centre|clinic)$"]',20000)}${sel('["amenity"~"^(pharmacy|police|taxi)$"]',15000)}${sel('["tourism"="information"]["information"="office"]',15000)}${sel('["tourism"="alpine_hut"]',10000)});out center tags;`;
+  for(const ep of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+    try{ const r=await fT(ep,45000,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}}); if(!r.ok) continue;
+      const j=await r.json(), vist=new Set(), L=[];
+      for(const e of j.elements||[]){ const t=e.tags||{}, k=tipusServei(t); if(!k||!t.name) continue;
+        const lat=e.lat??(e.center&&e.center.lat), lon=e.lon??(e.center&&e.center.lon); if(lat==null) continue;
+        const id=k+'|'+t.name.toLowerCase(); if(vist.has(id)) continue; vist.add(id);
+        const d=Math.min(...P.map(p=>hav(p,[lat,lon])));
+        L.push({k,nom:t.name,tel:(t.phone||t['contact:phone']||'').split(';')[0].trim(),lloc:t['addr:city']||t['addr:place']||'',urg:t.emergency==='yes',lat,lon,d:Math.round(d)}); }
+      c={ts:Date.now(),L}; try{localStorage.setItem(SERV_KEY,JSON.stringify(c))}catch(e){} pintaServeis(c); return;
+    }catch(e){}
+  }
+  if(!c) set('e-serveis','<p class="nota">No s\'han pogut carregar ara (cal cobertura). Es tornarà a provar en obrir l\'app.</p>');
+}
+function pintaServeis(c){
+  let h='<table class="tels">';
+  SERV_TIPUS.forEach(([k,nom,n])=>{ let L=c.L.filter(x=>x.k===k).sort((a,b)=>(k==='hosp'?(b.urg-a.urg):0)||a.d-b.d).slice(0,n); if(!L.length) return;
+    h+=`<tr class="grup"><td colspan="2">${nom}</td></tr>`+L.map(x=>`<tr><td>${esc(x.nom)}${x.urg?' · <b>urgències</b>':''}<br><small class="nota">${x.lloc?esc(x.lloc)+' · ':''}a ${km(x.d)} km de la ruta · <a href="https://www.google.com/maps/dir/?api=1&destination=${x.lat},${x.lon}" target="_blank" rel="noopener" style="background:none;border:0;padding:0;color:inherit;text-decoration:underline;font-weight:400">com arribar-hi</a></small></td><td>${x.tel?`<a href="tel:${esc(x.tel.replace(/[^0-9+]/g,''))}">${esc(fmtTel(x.tel.replace(/[^0-9+]/g,'').replace(/^\+34/,'')))}</a>`:'<small class="nota">sense tel.</small>'}</td></tr>`).join(''); });
+  h+='</table><p class="nota" style="margin-top:6px">Dades d\'OpenStreetMap (© col·laboradors d\'OSM), consultades el '+new Date(c.ts).toLocaleDateString('ca-ES')+'. Poden faltar serveis o telèfons: verifica-ho abans de la sortida, sobretot l\'horari d\'urgències dels CAP el dia de la ruta. Distància en línia recta.</p>';
+  set('e-serveis',h);
+}
+async function carregaWiki(){
+  const te=Object.values(RUTA.info||{}).some(o=>o&&Object.keys(o).length);
+  $('sec-sense-guio').hidden=te; if(te) return;
+  let c=null; try{c=JSON.parse(localStorage.getItem(WIKI_KEY)||'null')}catch(e){}
+  if(c){ pintaWiki(c); return; }
+  if(!navigator.onLine) return;
+  const pts=[]; RUTA.dies.forEach((d,di)=>d.wp.forEach(w=>pts.push({dia:di,k:w.k,n:w.n,ll:d.pts[w.i]})));
+  const per={}, ids=new Set();
+  for(const p of pts.slice(0,30)){ try{ const r=await fT(`https://ca.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${p.ll[0]}|${p.ll[1]}&gsradius=2500&gslimit=4&format=json&origin=*`,12000);
+      const j=await r.json(); per[p.dia+'|'+p.k]=(j.query&&j.query.geosearch||[]).map(g=>{ids.add(g.pageid);return {id:g.pageid,t:g.title,d:g.dist};}); }catch(e){} }
+  const ex={}, L=[...ids];
+  for(let i=0;i<L.length;i+=20){ try{ const r=await fT(`https://ca.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&exsentences=2&exlimit=20&pageids=${L.slice(i,i+20).join('|')}&format=json&origin=*`,15000);
+      const j=await r.json(); Object.values(j.query&&j.query.pages||{}).forEach(p=>ex[p.pageid]=(p.extract||'').trim()); }catch(e){} }
+  c={ts:Date.now(),punts:pts.map(p=>({dia:p.dia,k:p.k,n:p.n,art:(per[p.dia+'|'+p.k]||[]).map(a=>({...a,x:ex[a.id]||''}))}))};
+  try{localStorage.setItem(WIKI_KEY,JSON.stringify(c))}catch(e){} pintaWiki(c);
+}
+function pintaWiki(c){
+  const vist=new Set();
+  set('wiki-punts', c.punts.map(p=>{ const A=p.art.filter(a=>a.x&&!vist.has(a.id)); A.forEach(a=>vist.add(a.id));
+    return `<details class="det"><summary>${RUTA.dies.length>1?'Dia '+(p.dia+1)+' · ':''}${esc(p.n||p.k)}</summary>${A.length?'<ul>'+A.map(a=>`<li><b>${esc(a.t)}</b> <small class="nota">(${km(a.d)} km)</small>: ${esc(a.x)} <a href="https://ca.wikipedia.org/?curid=${a.id}" target="_blank" rel="noopener">Viquipèdia</a></li>`).join('')+'</ul>':'<p class="nota">No hi ha articles de la Viquipèdia a menys de 2,5 km.</p>'}</details>`; }).join('')+
+    '<p class="nota" style="margin-top:6px">Fet sol per l\'app amb la Viquipèdia en català (CC BY-SA): llocs a menys de 2,5 km de cada punt. Contrasta-ho abans d\'explicar-ho. Si a «Rutes» poses una clau d\'API de Claude, l\'app hi afegeix sola el guió complet (fils conductors, zona i telèfons verificats) en crear cada ruta.</p>');
+}
+carregaServeis(); carregaWiki();
+window.addEventListener('online',()=>{ carregaServeis(); carregaWiki(); });
+
 // ---------- Briefing (guió per a l'inici, a partir de les dades de la ruta) ----------
 const BRI_KEY='petjada-ruta-bri-'+RUTA.id;
 function briDades(){ try{return JSON.parse(localStorage.getItem(BRI_KEY))||{}}catch(e){return {}} }

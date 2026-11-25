@@ -25,7 +25,7 @@ function desaRuta(r){
 // rutes publicades (preparades per Claude) que l'usuari ha esborrat del mòbil: no es tornen a baixar soles
 const AMAG='petjada-rutes-amagades', amagades=()=>llegeix(AMAG,[]);
 function esborraRuta(id){ const r0=carregaRuta(id); if(r0&&r0.publicada&&!amagades().some(x=>x.id===id)) escriu(AMAG,amagades().concat([{id,nom:r0.nom}]));
-  localStorage.removeItem('petjada-ruta-'+id); ['st','meteo'].forEach(k=>localStorage.removeItem('petjada-ruta-'+k+'-'+id)); escriu(LIB,lib().filter(x=>x.id!==id)); if(localStorage.getItem(ACT)===JSON.stringify(id)) localStorage.removeItem(ACT); }
+  localStorage.removeItem('petjada-ruta-'+id); ['st','meteo','serveis','wiki'].forEach(k=>localStorage.removeItem('petjada-ruta-'+k+'-'+id)); escriu(LIB,lib().filter(x=>x.id!==id)); if(localStorage.getItem(ACT)===JSON.stringify(id)) localStorage.removeItem(ACT); }
 window.CONF=llegeix(CONFK,{});
 
 // ---------- GPX ----------
@@ -562,7 +562,9 @@ function iniciaLib(){
     if(!pendents) return; $('n-fes').disabled=true;
     pendents.forEach((d,i)=>llegeixFormDia(d,i,'n'));
     try{ const r=await creaRuta($('n-nom').value.trim()||pendents[0].titol,pendents,{dem:$('n-dem').checked,pb:$('n-pb').checked},m=>$('n-log').textContent=m);
-      escriu(ACT,r.id); $('n-log').textContent+='\nObrint la ruta…'; setTimeout(()=>location.reload(),800); }
+      escriu(ACT,r.id);
+      if((CONF.key||'').trim()&&navigator.onLine){ try{ await generaGuio(r,m=>$('n-log').textContent+='\n'+m); $('n-log').textContent+='\nGuió fet.'; }catch(e){ $('n-log').textContent+='\nEl guió amb Claude no s\'ha pogut fer ara ('+e.message+'); ho pots repetir a la ruta.'; } }
+      $('n-log').textContent+='\nObrint la ruta…'; setTimeout(()=>location.reload(),800); }
     catch(e){ $('n-log').textContent+='\nError: '+e.message; $('n-fes').disabled=false; } };
   pintaLib();
 }
