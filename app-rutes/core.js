@@ -266,6 +266,16 @@ function estat(pts){ const cd=[0],cu=[0],cn=[0]; let ref=pts[0][2];
   return {cd,cu,cn}; }
 function hA(st,i0,i1){ return hores((st.cd[i1]-st.cd[i0])/1000,st.cu[i1]-st.cu[i0],st.cn[i1]-st.cn[i0]); }
 
+// Criteris dels plans B, apresos amb les valoracions d'en Sergi (vegeu CRITERIS-PLANS-B.md)
+const CRIT_PB={
+  maxPerDia:3,           // menys plans B i més bons
+  accesProper:1/3,       // si pel mateix pla A hi ha un poble o carretera a ≤ 20 min, en aquesta cruïlla no cal pla B
+  dreceraMinH:0.5,       // una drecera ha d'estalviar ≥ 30 min…
+  dreceraMinFrac:0.2,    // …i ≥ 20 % del que queda
+  dreceraMaxPlaA:50,     // si més de la meitat és desfer el pla A («tornar per on hem pujat»), no és un pla B
+  refugiSiAccesH:1,      // refugi només si l'accés amb vehicle (pel pla A o per un pla B) és a més d'1 h
+  vehicleMinGuany:0.5    // sortida a vehicle: ha de ser ≥ 30 min més ràpida que arribar a un accés pel pla A
+};
 function plansBDia(G,dia,trackNodes,extra={}){
   const pts=dia.pts, n=pts.length, st=estat(pts), fi=trackNodes[n-1], ini=trackNodes[0];
   // per cada punt de la ruta: el node del graf més proper (els nodes del track hi són sempre)
@@ -273,6 +283,12 @@ function plansBDia(G,dia,trackNodes,extra={}){
   const GC=0.0006, grid=new Map(); pts.forEach((p,i)=>{ const k=Math.floor(p[0]/GC)+','+Math.floor(p[1]/GC); (grid.get(k)||grid.set(k,[]).get(k)).push(i); });
   const aprop=(ll,maxD,minI=-1)=>{ let b=-1,bd=maxD; const ci=Math.floor(ll[0]/GC), cj=Math.floor(ll[1]/GC);
     for(let a=-1;a<=1;a++) for(let c=-1;c<=1;c++) for(const i of grid.get((ci+a)+','+(cj+c))||[]){ if(i<minI) continue; const d=hav(ll,pts[i]); if(d<bd){bd=d;b=i;} } return b; };
+  // punts del pla A a tocar d'una carretera o camí asfaltat (pobles, accessos): inici i final inclosos
+  const AC=0.0006, acg=new Map(); G.ll.forEach((p,u)=>{ if(!G.adj[u].some(([,,t])=>t<=1)) return; const k=Math.floor(p[0]/AC)+','+Math.floor(p[1]/AC); (acg.get(k)||acg.set(k,[]).get(k)).push(p); });
+  const acces=[]; for(let i=0;i<n;i+=3){ const p=pts[i], ci=Math.floor(p[0]/AC), cj=Math.floor(p[1]/AC); let ok=false;
+    for(let a=-1;a<=1&&!ok;a++) for(let c2=-1;c2<=1&&!ok;c2++) for(const q of acg.get((ci+a)+','+(cj+c2))||[]) if(hav(p,q)<80){ok=true;break;} if(ok) acces.push(i); }
+  if(!acces.includes(0)) acces.unshift(0); if(!acces.includes(n-1)) acces.push(n-1);
+  const accesPlaA=i0=>Math.min(...acces.map(j=>j>=i0?hA(st,i0,j):hores((st.cd[i0]-st.cd[j])/1000,st.cn[i0]-st.cn[j],st.cu[i0]-st.cu[j])));
   const cands=[];
   const decisions=dia.wp.filter(w=>w.i>0&&w.i<n-1).map(w=>w.i);
   for(const i of extra.cruilles||[]) if(!decisions.some(j=>Math.abs(st.cd[j]-st.cd[i])<150)) decisions.push(i);
@@ -286,6 +302,8 @@ function plansBDia(G,dia,trackNodes,extra={}){
       if(b>=0&&!refs.some(r=>hav([r.q.lat,r.q.lon],[q.lat,q.lon])<300)) refs.push({q,node:b}); } }
   for(const i0 of decisions){
     const hRest=hA(st,i0,n-1); if(hRest<0.75) continue; // a menys de ~45 min del final no cal pla B
+    const hAcc=accesPlaA(i0); if(hAcc<=CRIT_PB.accesProper) continue; // al costat d'un poble o carretera: no cal pla B
+    let hVehAqui=Infinity;
     // 1) cap al final de la ruta pel camí més ràpid · 2) cap a la carretera/pista asfaltada més propera (accés amb vehicle)
     const R1=dijkstra(G,prop(i0));
 
@@ -298,10 +316,10 @@ function plansBDia(G,dia,trackNodes,extra={}){
       const pen=new Set(); if(fora.length) G.adj.forEach((ed,u)=>{ if(!aProp(G.ll[u])) return; for(const [v] of ed) if(aProp(G.ll[v])) pen.add(u<v?u+','+v:v+','+u); });
       const R1b=dijkstra(G,prop(i0),null,pen); if(R1b.D[fi]<Infinity) opcions.push({tipus:'final',nodes:cami(R1b,fi)}); }
     if(hav(pts[0],pts[n-1])>300&&R1.D[ini]<Infinity) opcions.push({tipus:'inici',nodes:cami(R1,ini)});
-    { const rr=refs.filter(r=>R1.D[r.node]<Infinity).sort((a,b)=>R1.D[a.node]-R1.D[b.node])[0];
-      if(rr) opcions.push({tipus:'refugi',nodes:cami(R1,rr.node),ref:rr.q.nom?(/refug|cabana|cabaña|xalet|abric/i.test(rr.q.nom)?rr.q.nom:'Refugi '+rr.q.nom):'refugi o cabana (sense nom a OpenStreetMap)'}); }
     const R2=dijkstra(G,prop(i0),u=>G.adj[u].some(([,,t])=>t<=1)&&aprop(G.ll[u],150)<0);
     if(R2.fi>=0) opcions.push({tipus:'vehicle',nodes:cami(R2,R2.fi)});
+    { const rr=refs.filter(r=>R1.D[r.node]<Infinity).sort((a,b)=>R1.D[a.node]-R1.D[b.node])[0];
+      if(rr) opcions.push({tipus:'refugi',nodes:cami(R1,rr.node),ref:rr.q.nom?(/refug|cabana|cabaña|xalet|abric/i.test(rr.q.nom)?rr.q.nom:'Refugi '+rr.q.nom):'refugi o cabana (sense nom a OpenStreetMap)'}); }
     for(const o of opcions){
       const ll=o.nodes.map(v=>[G.ll[v][0],G.ll[v][1],Math.round(G.z[v])]);
       // on es separa del pla A i, si hi torna, on hi torna
@@ -319,17 +337,20 @@ function plansBDia(G,dia,trackNodes,extra={}){
       const hB=hores(km,up,dn)+(ib!=null?hA(st,ib,n-1):0), hAr=hA(st,ia,n-1);
       DBG(`hB=${hB.toFixed(2)} hAr=${hAr.toFixed(2)} km=${km.toFixed(2)}`);
       if(o.tipus==='final'&&(ib==null||ib<=ia+3)) continue;
-      if(o.tipus==='final'&&!(hAr-hB>=1/3||(hAr-hB>=0.2&&hB<hAr*0.88))) continue; // ha d'estalviar temps de veritat: ≥ 20 min, o ≥ 12 min i ≥ 12 %
-      if(o.tipus==='refugi'&&!(hores(km,up,dn)<hAr*0.9&&hores(km,up,dn)<3)) continue;
-      if(o.tipus!=='final'&&o.tipus!=='refugi'&&!(hores(km,up,dn)<hAr*0.8)) continue;
+      if(o.tipus==='final'&&!(hAr-hB>=CRIT_PB.dreceraMinH&&hAr-hB>=CRIT_PB.dreceraMinFrac*hAr)) continue; // ha d'estalviar temps de veritat
+      const hO=hores(km,up,dn);
+      if(o.tipus==='vehicle'){ if(!(hO<hAr*0.8&&hAcc-hO>=CRIT_PB.vehicleMinGuany)) continue; hVehAqui=hO; }
+      if(o.tipus==='refugi'&&!(hO<hAr*0.9&&hO<3&&Math.min(hAcc,hVehAqui)>CRIT_PB.refugiSiAccesH)) continue;
+      if(o.tipus==='inici'&&!(hO<hAr*0.8&&hAcc-hO>=CRIT_PB.vehicleMinGuany)) continue;
       if(o.tipus==='inici'&&onA.slice(s,e+1).filter(j=>j>=0).length/(e-s+1)>0.7) {DBG('tornada pel mateix camí');continue;}
       // composició del camí i pendent màxima
       const mix=[0,0,0,0,0,0]; let pmax=0;
       for(let k=s+1;k<=e;k++){ const a=o.nodes[k-1], b=o.nodes[k], ed=G.adj[a].find(x=>x[0]===b); const d=hav(G.ll[a],G.ll[b]); if(ed) mix[ed[2]]+=d; }
       for(let k=0,j=0;k<tram.length;k++){ while(j<tram.length-1&&S.cd[j]-S.cd[k]<60) j++; const d=S.cd[j]-S.cd[k]; if(d>40) pmax=Math.max(pmax,Math.abs(tram[j][2]-tram[k][2])/d*100); }
       const tot=mix.reduce((a,b)=>a+b,0)||1, mid=tram[Math.floor(tram.length/2)];
+      if(o.tipus==='final'&&mix[5]/tot*100>CRIT_PB.dreceraMaxPlaA) continue; // desfer el pla A no és una drecera
       cands.push({tipus:o.tipus,ref:o.ref,ia,ib:o.tipus==='final'?ib:null,pts:tram.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),p[2]]),km:+km.toFixed(3),up:Math.round(up),dn:Math.round(dn),
-        estalvi:hAr-hB,q:{pista:Math.round((mix[1]+mix[2])/tot*100),corriol:Math.round((mix[3]+mix[4])/tot*100),carretera:Math.round(mix[0]/tot*100),plaA:Math.round(mix[5]/tot*100),pmax:Math.round(pmax),
+        estalvi:hAr-hB,valor:o.tipus==='final'?hAr-hB:o.tipus==='vehicle'?hAcc-hO:o.tipus==='refugi'?Math.min(hAr-hO,2):hAcc-hO,q:{pista:Math.round((mix[1]+mix[2])/tot*100),corriol:Math.round((mix[3]+mix[4])/tot*100),carretera:Math.round(mix[0]/tot*100),plaA:Math.round(mix[5]/tot*100),pmax:Math.round(pmax),
         strava:`https://www.strava.com/maps/global-heatmap?sport=Run&style=standard#15/${mid[0].toFixed(5)}/${mid[1].toFixed(5)}`}});
     }
   }
@@ -337,9 +358,11 @@ function plansBDia(G,dia,trackNodes,extra={}){
   const sem=(a,b)=>{ if(a.tipus!==b.tipus||a.ref!==b.ref) return false; let c=0; for(const p of a.pts){ if(b.pts.some(q=>hav(p,q)<30)) c++; } return c/a.pts.length>0.6; };
   cands.sort((a,b)=>b.ia-a.ia);
   const tri=[]; for(const c of cands) if(!tri.some(t=>sem(c,t)||sem(t,c))) tri.push(c);
+  // els més bons: més temps guanyat, i com a molt un de cada tipus a la mateixa cruïlla
+  tri.sort((a,b)=>b.valor-a.valor); const sel=[]; for(const t of tri){ if(sel.length>=CRIT_PB.maxPerDia) break; if(sel.some(s=>s.ia===t.ia&&s.tipus===t.tipus)) continue; sel.push(t); } tri.length=0; tri.push(...sel);
   tri.sort((a,b)=>a.ia-b.ia);
   const nomP=i=>{ const w=[...dia.wp].reverse().find(x=>x.i<=i); const d=st.cd[i]-st.cd[w.i]; return d<80?w.k:`${w.k} + ${(d/1000).toFixed(1).replace('.',',')} km`; };
-  return nomenaPB(tri.slice(0,7).map((c,j)=>({id:'B'+(j+1),tipus:c.tipus,ia:c.ia,ib:c.ib,pts:c.pts,km:c.km,up:c.up,dn:c.dn,q:c.q,ref:c.ref})),dia);
+  return nomenaPB(tri.slice(0,CRIT_PB.maxPerDia).map((c,j)=>({id:'B'+(j+1),tipus:c.tipus,ia:c.ia,ib:c.ib,pts:c.pts,km:c.km,up:c.up,dn:c.dn,q:c.q,ref:c.ref})),dia);
 }
 function nomenaPB(L,dia){ const st=estat(dia.pts);
   const nomP=i=>{ const w=[...dia.wp].reverse().find(x=>x.i<=i); const d=st.cd[i]-st.cd[w.i]; return d<80?w.k:`${w.k} + ${(d/1000).toFixed(1).replace('.',',')} km`; };
