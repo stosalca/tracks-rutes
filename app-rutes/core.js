@@ -25,7 +25,7 @@ function desaRuta(r){
 // rutes publicades (preparades per Claude) que l'usuari ha esborrat del mòbil: no es tornen a baixar soles
 const AMAG='petjada-rutes-amagades', amagades=()=>llegeix(AMAG,[]);
 function esborraRuta(id){ const r0=carregaRuta(id); if(r0&&r0.publicada&&!amagades().some(x=>x.id===id)) escriu(AMAG,amagades().concat([{id,nom:r0.nom}]));
-  localStorage.removeItem('petjada-ruta-'+id); ['st','meteo','serveis','wiki'].forEach(k=>localStorage.removeItem('petjada-ruta-'+k+'-'+id)); escriu(LIB,lib().filter(x=>x.id!==id)); if(localStorage.getItem(ACT)===JSON.stringify(id)) localStorage.removeItem(ACT); }
+  localStorage.removeItem('petjada-ruta-'+id); ['st','meteo','serveis','serveis2','wiki'].forEach(k=>localStorage.removeItem('petjada-ruta-'+k+'-'+id)); escriu(LIB,lib().filter(x=>x.id!==id)); if(localStorage.getItem(ACT)===JSON.stringify(id)) localStorage.removeItem(ACT); }
 window.CONF=llegeix(CONFK,{});
 
 // ---------- GPX ----------

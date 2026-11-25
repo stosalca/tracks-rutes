@@ -437,11 +437,11 @@ pintaTels();
 
 // ---------- Serveis a prop (OpenStreetMap) i Viquipèdia, si la ruta no té guió de Claude ----------
 const fT=async(u,ms,opt={})=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(u,{...opt,signal:c.signal});}finally{clearTimeout(t);}};
-const SERV_KEY='petjada-ruta-serveis-'+RUTA.id, WIKI_KEY='petjada-ruta-wiki-'+RUTA.id;
+const SERV_KEY='petjada-ruta-serveis2-'+RUTA.id, WIKI_KEY='petjada-ruta-wiki-'+RUTA.id;
 const SERV_TIPUS=[['hosp','Hospitals',3],['cap','CAP i centres de salut',3],['farm','Farmàcies',2],['pol','Policia',2],['taxi','Taxis',3],['info','Oficines de turisme',2],['ref','Refugis guardats',2]];
 function tipusServei(t){ const a=t.amenity, hc=t.healthcare;
-  if(a==='hospital'||hc==='hospital') return 'hosp'; if(a==='clinic'||a==='doctors'||hc==='centre'||hc==='clinic'||hc==='doctor') return 'cap';
-  if(a==='pharmacy') return 'farm'; if(a==='police') return 'pol'; if(a==='taxi'||t.taxi==='yes'||/taxi/i.test(t.name||'')) return 'taxi';
+  if(a==='hospital'||hc==='hospital') return 'hosp'; if(a==='clinic'||a==='doctors'||hc==='centre'||hc==='clinic'||hc==='doctor') return /\bCAP\b|consultori|centre (de )?salut|atenci[óo] prim|ambulatori|centro de salud|urg[eè]nci/i.test(t.name||'')?'cap':null;
+  if(a==='pharmacy') return 'farm'; if(a==='police') return 'pol'; if(a==='taxi'||t.taxi==='yes'||/taxi/i.test(t.name||'')) return (/taxi/i.test(t.name||'')||t.phone||t['contact:phone'])?'taxi':null;
   if(t.tourism==='information') return 'info'; if(t.tourism==='alpine_hut') return 'ref'; return null; }
 function puntsRuta(){ const P=[]; RUTA.dies.forEach(d=>{ const p=d.pts; [p[0],p[Math.floor(p.length/2)],p[p.length-1]].forEach(q=>P.push([q[0],q[1]])); }); return P; }
 async function carregaServeis(){
@@ -466,10 +466,10 @@ async function carregaServeis(){
   try{ const lat=P.map(p=>p[0]), lon=P.map(p=>p[1]), L=[], vist=new Set();
     const vb=m=>`${Math.min(...lon)-m},${Math.max(...lat)+m*.75},${Math.max(...lon)+m},${Math.min(...lat)-m*.75}`;
     const Q=[['amenity=hospital',.45],['amenity=clinic',.22],['amenity=doctors',.22],['amenity=pharmacy',.15],['amenity=police',.2],['amenity=taxi',.2],['q=tourist+information',.15],['q=alpine+hut',.12]];
-    for(const [q,m] of Q){ try{ const r=await fT(`https://nominatim.openstreetmap.org/search?${q}&viewbox=${vb(m)}&bounded=1&format=jsonv2&extratags=1&limit=40&accept-language=ca`,15000); if(r.ok){
+    for(const [q,m] of Q){ try{ const r=await fT(`https://nominatim.openstreetmap.org/search?${q}&viewbox=${vb(m)}&bounded=1&format=jsonv2&extratags=1&addressdetails=1&limit=40&accept-language=ca`,15000); if(r.ok){
         for(const e of await r.json()){ const t={...(e.extratags||{}),name:e.name,[e.category]:e.type}; const k=tipusServei(t); if(!k||!e.name) continue;
           const id=k+'|'+e.name.toLowerCase(); if(vist.has(id)) continue; vist.add(id); const ll=[+e.lat,+e.lon];
-          const ad=(e.display_name||'').split(', '); L.push({k,nom:e.name,tel:(t.phone||t['contact:phone']||'').split(';')[0].trim(),lloc:ad[ad.length-5]||'',urg:t.emergency==='yes',lat:ll[0],lon:ll[1],d:Math.round(Math.min(...P.map(p=>hav(p,ll))))}); } } }catch(e){}
+          const ad=e.address||{}; L.push({k,nom:e.name,tel:(t.phone||t['contact:phone']||'').split(';')[0].trim(),lloc:ad.town||ad.village||ad.city||ad.municipality||'',urg:t.emergency==='yes',lat:ll[0],lon:ll[1],d:Math.round(Math.min(...P.map(p=>hav(p,ll))))}); } } }catch(e){}
       await new Promise(ok=>setTimeout(ok,1100)); }
     if(L.length){ c={ts:Date.now(),L}; try{localStorage.setItem(SERV_KEY,JSON.stringify(c))}catch(e){} pintaServeis(c); return; }
   }catch(e){}
