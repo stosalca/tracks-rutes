@@ -432,18 +432,22 @@ Ruta: ${r.nom}. Dades (JSON):
 ${JSON.stringify(dades)}
 
 Busca informació fiable a la web i torna NOMÉS un objecte JSON (sense text abans ni després) amb aquesta forma:
-{"punts":{"<dia>":{"<codi>":{"titol":"nom del lloc","punts":["3 a 5 frases curtes d'interpretació per explicar als clients: història, patrimoni, geologia, flora i fauna, paisatge; i si escau una pregunta per fer al grup"]}}},
+{"zona":{"titol":"nom de la zona o de l'espai natural","punts":["4 a 6 frases d'informació d'interès de la zona: espai protegit i normativa d'ús, geografia i geologia, història, patrimoni, flora i fauna, restriccions d'accés vigents"]},
+ "fils":{"<id curt>":{"nom":"títol del fil conductor (pot ser una pregunta)","col":"color hex fosc","intro":"2 o 3 frases que presenten el fil i com el seguirem al llarg de la ruta"}},
+ "filDia":{"<dia>":"<id del fil principal d'aquell dia>"},
+ "punts":{"<dia>":{"<codi>":{"titol":"nom del lloc","fil":["<id del fil o fils que es treballen en aquest punt>"],"punts":["3 a 5 frases curtes d'interpretació per explicar als clients: història, patrimoni, geologia, flora i fauna, paisatge; lligades al fil conductor quan escaigui"],"pregunta":"una pregunta per fer al grup en aquest punt (opcional)"}}},
  "tels":[{"nom":"servei (hospital, CAP amb horari d'urgències del cap de setmana, taxi, policia local, refugi, oficina de turisme…)","tel":"número","nota":"horari o detall curt"}],
  "acces":"una frase: punts on pot arribar un vehicle o ambulància",
  "notaTels":"una frase sobre on anar en cas d'urgència segons el dia de la setmana de la sortida",
  "plansB":{"<dia>":{"<id>":"una frase de valoració del pla B (estat del camí, perills, si és una bona alternativa)"}}}
-Regles: no t'inventis res; si no trobes un nom o un fet, posa-ho com a «a confirmar». Només telèfons trobats en fonts fiables (webs oficials). Fes servir els noms de lloc reals propers a les coordenades.`;
+Fils conductors: tria 1 o 2 temes que travessin tota la ruta (per exemple el paisatge i com l'ha transformat l'aigua, o la vida a la muntanya abans i ara) i fes que cada punt hi aporti una peça; si hi ha 2 dies, pot haver-hi un fil per dia. Regles: no t'inventis res; si no trobes un nom o un fet, posa-ho com a «a confirmar». Només telèfons trobats en fonts fiables (webs oficials). Fes servir els noms de lloc reals propers a les coordenades.`;
   return prompt;
 }
 function aplicaResposta(r,text,extra){
   const a=text.indexOf('{'), b=text.lastIndexOf('}'); if(a<0||b<a) throw new Error('La resposta no conté el JSON esperat.');
   let o; try{ o=JSON.parse(text.slice(a,b+1)); }catch(e){ throw new Error('El JSON de la resposta no és vàlid (copia-la sencera).'); }
   r.info=o.punts||{}; r.tels=Array.isArray(o.tels)?o.tels.filter(t=>t&&t.tel):[]; r.acces=o.acces||''; r.notaTels=o.notaTels||'';
+  r.fils=(o.fils&&typeof o.fils==='object')?o.fils:{}; r.filDia=o.filDia||{}; r.zona=(o.zona&&Array.isArray(o.zona.punts))?o.zona:null;
   for(const d of r.dies) for(const pb of d.plansb||[]){ const c=((o.plansB||{})[d.key]||{})[pb.id]; if(c) pb.coment=c; }
   r.claude={...(extra||{}),data:new Date().toISOString()};
   desaRuta(r);

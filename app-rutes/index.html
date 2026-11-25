@@ -196,6 +196,9 @@ input,select,textarea{min-width:0;max-width:100%}
 .tels td:first-child{overflow-wrap:anywhere}.tels .grup td{white-space:normal;text-align:left}
 img,svg,iframe,video{max-width:100%}
 #tiles img{max-width:none}
+.fil{display:inline-block;color:#fff;font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;margin:2px 4px 4px 0}
+.filintro{font-size:13px;line-height:1.45;border-left:4px solid;padding:4px 0 4px 8px;margin:6px 0}
+#sec-zona:has(#guio-zona:empty){display:none}
 </style>
 </head>
 <body>
@@ -339,8 +342,14 @@ img,svg,iframe,video{max-width:100%}
   <section class="card guio" id="guio-ara">
     <h2><span id="guio-tag">Per explicar</span> <b id="guio-dist"></b></h2>
     <div class="nom2" id="guio-nom"></div>
+    <div id="guio-fil"></div>
     <ul id="guio-punts"></ul>
     <p class="preg" id="guio-preg"></p>
+  </section>
+
+  <section class="card" id="sec-zona">
+    <h2>La zona <b>informació d'interès</b></h2>
+    <div id="guio-zona"></div>
   </section>
 
   <section class="card">

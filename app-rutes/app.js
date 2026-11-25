@@ -939,6 +939,9 @@ function pintaMeteo(){
 }
 
 // ---------- Guió per als clients ----------
+const FILS=(typeof RUTA!=='undefined'&&RUTA.fils)||{};
+const filsDe=inf=>(inf&&Array.isArray(inf.fil))?inf.fil.map(f=>FILS[f]?`<span class="fil" style="background:${esc(FILS[f].col||'#556')}">${esc(FILS[f].nom)}</span>`:'').join(''):'';
+function filDelDia(){ const k=(RUTA.filDia||{})[dia]; return FILS[k]||(Object.keys(FILS).length===1?Object.values(FILS)[0]:null); }
 function pintaGuio(E,w){
   // si acabes de passar un punt (< 250 m), mostra'n el guió; si no, el del punt següent
   const prev=R.wp[w-1], nx=R.wp[w];
@@ -947,13 +950,18 @@ function pintaGuio(E,w){
   if(R.cd[nx.i]-E.d<150){ p=nx; tag='Ets aquí'; dist=''; }
   const inf=p.info;
   set('guio-tag',tag); set('guio-dist',dist); set('guio-nom',esc(p.n));
+  set('guio-fil', filsDe(inf));
   set('guio-punts', inf? inf.punts.map(x=>`<li>${esc(x)}</li>`).join('') : '<li>Sense notes per a aquest punt.</li>');
   set('guio-preg', inf&&inf.pregunta? '❓ '+esc(inf.pregunta):'');
   document.querySelectorAll('#guio-tots details').forEach(d=>d.classList.toggle('act',d.dataset.k===p.k));
 }
 function pintaGuioTots(){
-  set('guio-tots', R.wp.filter(x=>x.info).map(x=>
-    `<details class="det" data-k="${x.k}"><summary>${esc(x.n)} · ${mts(R.p[x.i][2])}</summary><ul>${x.info.punts.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>${x.info.pregunta?`<p class="preg">❓ ${esc(x.info.pregunta)}</p>`:''}</details>`).join('')+
+  const fd=filDelDia(), z=RUTA.zona, altres=Object.values(FILS).filter(f=>f!==fd);
+  set('guio-zona', z?`<details class="det" open><summary>${esc(z.titol||'La zona')}</summary><ul>${z.punts.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></details>`:'');
+  set('guio-tots', (fd?`<p class="filintro" style="border-color:${esc(fd.col||'#556')}"><b style="color:${esc(fd.col||'#556')}">${esc(fd.nom)}${/[?.!]$/.test(fd.nom)?'':'.'}</b> ${esc(fd.intro||'')}</p>`:'')+
+    altres.map(f=>`<p class="filintro" style="border-color:${esc(f.col||'#556')}"><b style="color:${esc(f.col||'#556')}">${esc(f.nom)}${/[?.!]$/.test(f.nom)?'':'.'}</b> ${esc(f.intro||'')}</p>`).join('')+
+    R.wp.filter(x=>x.info).map(x=>
+    `<details class="det" data-k="${x.k}"><summary>${esc(x.n)} · ${mts(R.p[x.i][2])}</summary>${filsDe(x.info)}<ul>${x.info.punts.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>${x.info.pregunta?`<p class="preg">❓ ${esc(x.info.pregunta)}</p>`:''}</details>`).join('')+
     '<p class="nota" style="margin-top:8px">(≈) Topònim situat sobre el mapa per coordenades: confirma\'l al reconeixement.</p>');
 }
 function pintaFlora(){

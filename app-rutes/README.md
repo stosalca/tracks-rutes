@@ -17,3 +17,15 @@ App web per guiar rutes de senderisme amb clients. Carregues el GPX de la ruta (
 Amb una clau d'API d'Anthropic (de cada usuari, desada només al seu mòbil), Claude redacta el guió interpretatiu de cada punt, busca els telèfons de la zona i valora els plans B.
 
 Obrir: https://stosalca.github.io/tracks-rutes/app-rutes/
+
+## Ruta nova des del xat amb Claude (sense clau d'API)
+
+1. Passes el GPX (track + waypoints) a Claude al xat, amb el nom de la ruta, les dates, l'hora de sortida i l'hora objectiu d'arribada de cada dia.
+2. Claude crea `rutes/entrada/<carpeta>/` amb el GPX, `ruta.json` (nom, dies, dates, hores) i `guio.json`, on hi ha, buscat a fonts fiables:
+   - `zona`: informació d'interès de la zona (espai protegit i normativa, geologia, història, restriccions d'accés);
+   - `fils` i `filDia`: 1 o 2 fils conductors que travessen la ruta, amb color i introducció;
+   - `punts`: guió de cada punt (frases curtes, `fil` que treballa, `pregunta` per al grup);
+   - `tels`, `acces`, `notaTels`: telèfons de la zona i accés de vehicles i ambulàncies;
+   - `plansB`: valoració de cada pla B.
+3. En fer push, la tasca de GitHub `rutes.yml` calcula trams, plans B, alçades i vessants i publica la ruta; l'app la baixa sola a «Rutes».
+4. La meteo (previsió punt per punt, avisos de l'AEMET, radar i fronts) la calcula l'app a partir de les coordenades: no cal preparar-la.
