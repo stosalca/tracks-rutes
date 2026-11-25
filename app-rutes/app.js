@@ -498,9 +498,14 @@ async function carregaWiki(){
   c={ts:Date.now(),punts:pts.map(p=>({dia:p.dia,k:p.k,n:p.n,art:(per[p.dia+'|'+p.k]||[]).map(a=>({...a,x:ex[a.id]||''}))}))};
   try{localStorage.setItem(WIKI_KEY,JSON.stringify(c))}catch(e){} pintaWiki(c);
 }
+let WIKI=null;
+function wikiPerPunt(c){ // cada article, al punt més proper
+  const best={}; c.punts.forEach((p,i)=>p.art.forEach(a=>{ if(a.x&&(!best[a.id]||a.d<best[a.id].d)) best[a.id]={i,d:a.d}; }));
+  return c.punts.map((p,i)=>({...p,art:p.art.filter(a=>a.x&&best[a.id]&&best[a.id].i===i)}));
+}
 function pintaWiki(c){
-  const vist=new Set();
-  set('wiki-punts', c.punts.map(p=>{ const A=p.art.filter(a=>a.x&&!vist.has(a.id)); A.forEach(a=>vist.add(a.id));
+  WIKI=wikiPerPunt(c); pintaGuioAra();
+  set('wiki-punts', WIKI.map(p=>{ const A=p.art;
     return `<details class="det"><summary>${RUTA.dies.length>1?'Dia '+(p.dia+1)+' · ':''}${esc(p.n||p.k)}</summary>${A.length?'<ul>'+A.map(a=>`<li><b>${esc(a.t)}</b> <small class="nota">(${km(a.d)} km)</small>: ${esc(a.x)} <a href="https://ca.wikipedia.org/?curid=${a.id}" target="_blank" rel="noopener">Viquipèdia</a></li>`).join('')+'</ul>':'<p class="nota">No hi ha articles de la Viquipèdia a menys de 2,5 km.</p>'}</details>`; }).join('')+
     '<p class="nota" style="margin-top:6px">Fet sol per l\'app amb la Viquipèdia en català (CC BY-SA): llocs a menys de 2,5 km de cada punt. Contrasta-ho abans d\'explicar-ho. Si a «Rutes» poses una clau d\'API de Claude, l\'app hi afegeix sola el guió complet (fils conductors, zona i telèfons verificats) en crear cada ruta.</p>');
 }
@@ -1014,6 +1019,7 @@ function pintaMeteo(){
 const FILS=(typeof RUTA!=='undefined'&&RUTA.fils)||{};
 const filsDe=inf=>(inf&&Array.isArray(inf.fil))?inf.fil.map(f=>FILS[f]?`<span class="fil" style="background:${esc(FILS[f].col||'#556')}">${esc(FILS[f].nom)}</span>`:'').join(''):'';
 function filDelDia(){ const k=(RUTA.filDia||{})[dia]; return FILS[k]||(Object.keys(FILS).length===1?Object.values(FILS)[0]:null); }
+var ULTIM_GUIO=null; function pintaGuioAra(){ if(ULTIM_GUIO) pintaGuio(...ULTIM_GUIO); }
 function pintaGuio(E,w){
   // si acabes de passar un punt (< 250 m), mostra'n el guió; si no, el del punt següent
   const prev=R.wp[w-1], nx=R.wp[w];
@@ -1023,13 +1029,16 @@ function pintaGuio(E,w){
   const inf=p.info;
   set('guio-tag',tag); set('guio-dist',dist); set('guio-nom',esc(p.n));
   set('guio-fil', filsDe(inf));
-  set('guio-punts', inf? inf.punts.map(x=>`<li>${esc(x)}</li>`).join('') : '<li>Sense notes per a aquest punt.</li>');
+  const wk=!inf&&WIKI?(WIKI.find(q=>q.dia===DIES.indexOf(dia)&&q.k===p.k)||{}).art:null;
+  set('guio-punts', inf? inf.punts.map(x=>`<li>${esc(x)}</li>`).join('') : (wk&&wk.length? wk.map(a=>`<li><b>${esc(a.t)}</b>: ${esc(a.x)}</li>`).join('') : '<li>Sense notes per a aquest punt.</li>'));
+  ULTIM_GUIO=[E,w];
   set('guio-preg', inf&&inf.pregunta? '❓ '+esc(inf.pregunta):'');
   document.querySelectorAll('#guio-tots details').forEach(d=>d.classList.toggle('act',d.dataset.k===p.k));
 }
 function pintaGuioTots(){
   const fd=filDelDia(), z=RUTA.zona, altres=Object.values(FILS).filter(f=>f!==fd);
   set('guio-zona', z?`<details class="det" open><summary>${esc(z.titol||'La zona')}</summary><ul>${z.punts.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></details>`:'');
+  if(!R.wp.some(x=>x.info)&&!fd){ set('guio-tots',''); return; }
   set('guio-tots', (fd?`<p class="filintro" style="border-color:${esc(fd.col||'#556')}"><b style="color:${esc(fd.col||'#556')}">${esc(fd.nom)}${/[?.!]$/.test(fd.nom)?'':'.'}</b> ${esc(fd.intro||'')}</p>`:'')+
     altres.map(f=>`<p class="filintro" style="border-color:${esc(f.col||'#556')}"><b style="color:${esc(f.col||'#556')}">${esc(f.nom)}${/[?.!]$/.test(f.nom)?'':'.'}</b> ${esc(f.intro||'')}</p>`).join('')+
     R.wp.filter(x=>x.info).map(x=>
