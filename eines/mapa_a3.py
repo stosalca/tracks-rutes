@@ -22,7 +22,7 @@ def utm2ll(x, y):
   return math.degrees(lat), math.degrees(lon)
 
 MAPES = {
-  'ICGC': ('Topogràfic ICGC', 'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png', '© Institut Cartogràfic i Geològic de Catalunya (ICGC), CC BY 4.0'),
+  'ICGC': ('Topogràfic ICGC', 'WMS:https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=topografic&STYLES=&SRS=EPSG:3857&FORMAT=image/png', '© Institut Cartogràfic i Geològic de Catalunya (ICGC), CC BY 4.0'),
   'IGN_MTN': ('Mapa Topográfico Nacional IGN (MTN25)', 'https://www.ign.es/wmts/mapa-raster?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MTN&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg', '© Instituto Geográfico Nacional (IGN), CC BY 4.0'),
   'IGN_BASE': ('Mapa base IGN', 'https://www.ign.es/wmts/ign-base?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=IGNBaseTodo&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png', '© Instituto Geográfico Nacional (IGN), CC BY 4.0'),
 }
@@ -32,12 +32,23 @@ def unmerc(x, y): return (math.degrees(2*math.atan(math.exp(y/R))-math.pi/2), ma
 
 def tile(url, z, x, y):
   u = url.format(z=z, x=x, y=y)
-  for _ in range(4):
+  import time
+  for i in range(8):
     try:
       req = urllib.request.Request(u, headers={'User-Agent': 'Petjada-mapa-A3 (stosalca)'})
       with urllib.request.urlopen(req, timeout=40) as r: return Image.open(io.BytesIO(r.read())).convert('RGB')
-    except Exception as e: err = e
+    except Exception as e: err = e; time.sleep(2+3*i)
   print('  tessel·la fallida', z, x, y, err); return Image.new('RGB', (256, 256), (235, 235, 235))
+
+def wms(url, bbox, w, h):
+  import time
+  u = f'{url}&BBOX={bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}&WIDTH={w}&HEIGHT={h}'
+  for i in range(8):
+    try:
+      req = urllib.request.Request(u, headers={'User-Agent': 'Petjada-mapa-A3 (stosalca)'})
+      with urllib.request.urlopen(req, timeout=90) as r: return Image.open(io.BytesIO(r.read())).convert('RGB')
+    except Exception as e: err = e; time.sleep(2+3*i)
+  raise RuntimeError(f'WMS fallit: {err}')
 
 def font(sz, bold=False):
   for f in (['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'] if bold else []) + ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']:
@@ -72,14 +83,28 @@ def main():
   for clau in a.mapes.split(','):
     nom, url, credit = MAPES[clau]
     print('mapa', clau)
-    with cf.ThreadPoolExecutor(8) as ex:
-      fut = {(x, y): ex.submit(tile, url, a.z, x, y) for x in range(tx0, tx1+1) for y in range(ty0, ty1+1)}
-    mos = Image.new('RGB', ((tx1-tx0+1)*256, (ty1-ty0+1)*256))
-    for (x, y), f in fut.items(): mos.paste(f.result(), ((x-tx0)*256, (y-ty0)*256))
-    ox, oy = tx0*256*res-math.pi*R, math.pi*R-ty0*256*res
-    cl = round((x0-ox)/res); ct = round((oy-y1)/res)
     fw, fh = round(FW*pxmm), round(FH*pxmm)
-    mapa = mos.crop((cl, ct, cl+round((x1-x0)/res), ct+round((y1-y0)/res))).resize((fw, fh), Image.LANCZOS)
+    if url.startswith('WMS:'):
+      # mapa vectorial: es demana a ~200 ppp perquè els rètols quedin d'una mida llegible en paper, i s'escala a la resolució del full
+      wd = 200/25.4; ww, wh = round(FW*wd), round(FH*wd); NX, NY = 4, 3
+      mos = Image.new('RGB', (ww, wh))
+      jobs = {}
+      with cf.ThreadPoolExecutor(4) as ex:
+        for i in range(NX):
+          for j in range(NY):
+            px0, px1 = round(ww*i/NX), round(ww*(i+1)/NX); py0, py1 = round(wh*j/NY), round(wh*(j+1)/NY)
+            bb = (x0+(x1-x0)*px0/ww, y1-(y1-y0)*py1/wh, x0+(x1-x0)*px1/ww, y1-(y1-y0)*py0/wh)
+            jobs[(px0, py0)] = ex.submit(wms, url[4:], bb, px1-px0, py1-py0)
+      for (px, py), f in jobs.items(): mos.paste(f.result(), (px, py))
+      mapa = mos.resize((fw, fh), Image.LANCZOS)
+    else:
+      with cf.ThreadPoolExecutor(8) as ex:
+        fut = {(x, y): ex.submit(tile, url, a.z, x, y) for x in range(tx0, tx1+1) for y in range(ty0, ty1+1)}
+      mos = Image.new('RGB', ((tx1-tx0+1)*256, (ty1-ty0+1)*256))
+      for (x, y), f in fut.items(): mos.paste(f.result(), ((x-tx0)*256, (y-ty0)*256))
+      ox, oy = tx0*256*res-math.pi*R, math.pi*R-ty0*256*res
+      cl = round((x0-ox)/res); ct = round((oy-y1)/res)
+      mapa = mos.crop((cl, ct, cl+round((x1-x0)/res), ct+round((y1-y0)/res))).resize((fw, fh), Image.LANCZOS)
     d = ImageDraw.Draw(mapa)
     # quadrícula UTM 31N cada 1 km
     def topx(e, nn):
