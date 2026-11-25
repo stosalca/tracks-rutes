@@ -339,7 +339,7 @@ function plansBDia(G,dia,trackNodes,extra={}){
       if(o.tipus==='final'&&(ib==null||ib<=ia+3)) continue;
       if(o.tipus==='final'&&!(hAr-hB>=CRIT_PB.dreceraMinH&&hAr-hB>=CRIT_PB.dreceraMinFrac*hAr)) continue; // ha d'estalviar temps de veritat
       const hO=hores(km,up,dn);
-      if(o.tipus==='vehicle'){ if(!(hO<hAr*0.8&&hAcc-hO>=CRIT_PB.vehicleMinGuany)) continue; hVehAqui=hO; }
+      if(o.tipus==='vehicle'){ hVehAqui=Math.min(hVehAqui,hO); if(!(hO<hAr*0.8&&hAcc-hO>=CRIT_PB.vehicleMinGuany)) continue; }
       if(o.tipus==='refugi'&&!(hO<hAr*0.9&&hO<3&&Math.min(hAcc,hVehAqui)>CRIT_PB.refugiSiAccesH)) continue;
       if(o.tipus==='inici'&&!(hO<hAr*0.8&&hAcc-hO>=CRIT_PB.vehicleMinGuany)) continue;
       if(o.tipus==='inici'&&onA.slice(s,e+1).filter(j=>j>=0).length/(e-s+1)>0.7) {DBG('tornada pel mateix camí');continue;}
