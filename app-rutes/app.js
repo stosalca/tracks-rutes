@@ -451,8 +451,8 @@ async function carregaServeis(){
   const P=puntsRuta(), a=P[0], around=(r)=>P.map(q=>`(around:${r},${q[0].toFixed(5)},${q[1].toFixed(5)})`);
   const sel=(f,r)=>around(r).map(x=>`nwr${f}${x};`).join('');
   const q=`[out:json][timeout:40];(${sel('["amenity"="hospital"]',45000)}${sel('["healthcare"="hospital"]',45000)}${sel('["amenity"~"^(clinic|doctors)$"]',20000)}${sel('["healthcare"~"^(centre|clinic)$"]',20000)}${sel('["amenity"~"^(pharmacy|police|taxi)$"]',15000)}${sel('["tourism"="information"]["information"="office"]',15000)}${sel('["tourism"="alpine_hut"]',10000)});out center tags;`;
-  for(const ep of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
-    try{ const r=await fT(ep,45000,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}}); if(!r.ok) continue;
+  for(const ep of ['https://overpass-api.de/api/interpreter']){
+    try{ const r=await fT(ep,25000,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}}); if(!r.ok) continue;
       const j=await r.json(), vist=new Set(), L=[];
       for(const e of j.elements||[]){ const t=e.tags||{}, k=tipusServei(t); if(!k||!t.name) continue;
         const lat=e.lat??(e.center&&e.center.lat), lon=e.lon??(e.center&&e.center.lon); if(lat==null) continue;
@@ -462,6 +462,17 @@ async function carregaServeis(){
       c={ts:Date.now(),L}; try{localStorage.setItem(SERV_KEY,JSON.stringify(c))}catch(e){} pintaServeis(c); return;
     }catch(e){}
   }
+  // alternativa: Nominatim (cerques petites, una per segon)
+  try{ const lat=P.map(p=>p[0]), lon=P.map(p=>p[1]), L=[], vist=new Set();
+    const vb=m=>`${Math.min(...lon)-m},${Math.max(...lat)+m*.75},${Math.max(...lon)+m},${Math.min(...lat)-m*.75}`;
+    const Q=[['amenity=hospital',.45],['amenity=clinic',.22],['amenity=doctors',.22],['amenity=pharmacy',.15],['amenity=police',.2],['amenity=taxi',.2],['q=tourist+information',.15],['q=alpine+hut',.12]];
+    for(const [q,m] of Q){ try{ const r=await fT(`https://nominatim.openstreetmap.org/search?${q}&viewbox=${vb(m)}&bounded=1&format=jsonv2&extratags=1&limit=40&accept-language=ca`,15000); if(r.ok){
+        for(const e of await r.json()){ const t={...(e.extratags||{}),name:e.name,[e.category]:e.type}; const k=tipusServei(t); if(!k||!e.name) continue;
+          const id=k+'|'+e.name.toLowerCase(); if(vist.has(id)) continue; vist.add(id); const ll=[+e.lat,+e.lon];
+          const ad=(e.display_name||'').split(', '); L.push({k,nom:e.name,tel:(t.phone||t['contact:phone']||'').split(';')[0].trim(),lloc:ad[ad.length-5]||'',urg:t.emergency==='yes',lat:ll[0],lon:ll[1],d:Math.round(Math.min(...P.map(p=>hav(p,ll))))}); } } }catch(e){}
+      await new Promise(ok=>setTimeout(ok,1100)); }
+    if(L.length){ c={ts:Date.now(),L}; try{localStorage.setItem(SERV_KEY,JSON.stringify(c))}catch(e){} pintaServeis(c); return; }
+  }catch(e){}
   if(!c) set('e-serveis','<p class="nota">No s\'han pogut carregar ara (cal cobertura). Es tornarà a provar en obrir l\'app.</p>');
 }
 function pintaServeis(c){
