@@ -31,6 +31,7 @@ export async function processa({ chromium, preparaCtx, forca=false, log=console.
       if(prev&&prev.hash===hash&&!forca&&fs.existsSync(path.join(SORTIDA,prev.fitxer))){ log(`${c}: sense canvis.`); continue; }
       log(`${c}: processant ${gpx.join(', ')}…`);
       const ctx=await br.newContext(); if(preparaCtx) await preparaCtx(ctx);
+      await ctx.route('**/rutes/index.json*',r=>r.abort()); // que l'app no es posi a baixar rutes publicades i recarregui la pàgina
       const pg=await ctx.newPage(); pg.on('console',m=>{ if(m.type()==='error'&&!/Failed to load resource/.test(m.text())) log('  [consola] '+m.text()); });
       await pg.goto(`http://127.0.0.1:${port}/index.html`); await pg.waitForFunction(()=>window.__core);
       const fitxers=gpx.map(f=>({name:f,text:fs.readFileSync(path.join(dir,f),'utf8')}));
