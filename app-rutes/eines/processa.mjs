@@ -33,7 +33,9 @@ export async function processa({ chromium, preparaCtx, forca=false, log=console.
       const ctx=await br.newContext(); if(preparaCtx) await preparaCtx(ctx);
       await ctx.route('**/rutes/index.json*',r=>r.abort()); // que l'app no es posi a baixar rutes publicades i recarregui la pàgina
       // heatmap de Strava des del servidor (al navegador no se'n poden llegir els píxels)
-      await ctx.exposeFunction('__stravaTile',async(z,x,y)=>{ try{ const r=await fetch(`https://heatmap-external-a.strava.com/tiles/all/hot/${z}/${x}/${y}.png?px=256`,{headers:{'User-Agent':'Mozilla/5.0 petjada'}}); if(!r.ok){ log(`  [strava] ${z}/${x}/${y}: ${r.status}`); return null; } return Buffer.from(await r.arrayBuffer()).toString('base64'); }catch(e){ log('  [strava] '+e.message); return null; } });
+      const SK=process.env.STRAVA_KEY_PAIR_ID, SP=process.env.STRAVA_POLICY, SS=process.env.STRAVA_SIGNATURE, SA=!!(SK&&SP&&SS);
+      await ctx.exposeFunction('__stravaAuth',async()=>SA);
+      await ctx.exposeFunction('__stravaTile',async(z,x,y)=>{ try{ const r=await fetch(SA?`https://heatmap-external-a.strava.com/tiles-auth/all/hot/${z}/${x}/${y}.png?px=256&Key-Pair-Id=${SK}&Policy=${SP}&Signature=${SS}`:`https://heatmap-external-a.strava.com/tiles/all/hot/${z}/${x}/${y}.png?px=256`,{headers:{'User-Agent':'Mozilla/5.0 petjada'}}); if(!r.ok){ log(`  [strava] ${z}/${x}/${y}: ${r.status}`); return null; } return Buffer.from(await r.arrayBuffer()).toString('base64'); }catch(e){ log('  [strava] '+e.message); return null; } });
       const pg=await ctx.newPage(); pg.on('console',m=>{ if(m.text().startsWith('PB:')) log('  '+m.text()); if(m.type()==='error'&&!/Failed to load resource/.test(m.text())) log('  [consola] '+m.text()); });
       await pg.goto(`http://127.0.0.1:${port}/index.html`); await pg.waitForFunction(()=>window.__core);
       const fitxers=gpx.map(f=>({name:f,text:fs.readFileSync(path.join(dir,f),'utf8')}));

@@ -269,6 +269,7 @@ function hA(st,i0,i1){ return hores((st.cd[i1]-st.cd[i0])/1000,st.cu[i1]-st.cu[i
 // Criteris dels plans B, apresos amb les valoracions d'en Sergi (vegeu CRITERIS-PLANS-B.md)
 const CRIT_PB={
   maxPerDia:4, minPerDia:2, // entre 2 i 4 plans B per dia, els millors
+  pendentMax:45,         // un pla B no pot tenir trams de més del 45 % de pendent (camí dret o perillós)
   stravaMin:0.5,         // el tram fora del pla A ha de ser almenys la meitat de transitat que el pla A (intensitat mitjana del heatmap de Strava)
   accesProper:1/3,       // si pel mateix pla A hi ha un poble o carretera a ≤ 20 min, en aquesta cruïlla no cal pla B
   dreceraMinH:0.5,       // una drecera ha d'estalviar ≥ 30 min…
@@ -279,17 +280,21 @@ const CRIT_PB={
 // ---------- Strava: és un camí transitat? ----------
 // teselles públiques del heatmap (fins al zoom 12, ~30 m per píxel). Al mòbil el navegador no deixa llegir-ne els píxels (CORS);
 // la tasca de GitHub les baixa des del servidor (window.__stravaTile) i al mòbil es prova directament i, si no es pot, no es comprova.
-const STV={}; const STZ=12;
+const STV={}; let STZ=12;
 async function stravaTile(x,y){ const k=x+'/'+y; if(k in STV) return STV[k];
   STV[k]=(async()=>{ try{ let blob;
       if(window.__stravaTile){ const b64=await window.__stravaTile(STZ,x,y); if(!b64) return null; blob=await (await fetch('data:image/png;base64,'+b64)).blob(); }
-      else { const r=await fetchT(`https://heatmap-external-a.strava.com/tiles/all/hot/${STZ}/${x}/${y}.png?px=256`,15000,{mode:'cors'}); if(!r.ok) return null; blob=await r.blob(); }
+      else { const a=stravaClaus(); const u=a?`https://heatmap-external-a.strava.com/tiles-auth/all/hot/${STZ}/${x}/${y}.png?px=256&Key-Pair-Id=${a.k}&Policy=${a.p}&Signature=${a.s}`:`https://heatmap-external-a.strava.com/tiles/all/hot/${STZ}/${x}/${y}.png?px=256`;
+        const r=await fetchT(u,15000,{mode:'cors'}); if(!r.ok) return null; blob=await r.blob(); }
       const bm=await createImageBitmap(blob), cv=new OffscreenCanvas(256,256), cx=cv.getContext('2d'); cx.drawImage(bm,0,0,256,256);
       return cx.getImageData(0,0,256,256).data; }catch(e){ return null; } })();
   return STV[k]; }
+function stravaClaus(){ try{ const o=JSON.parse(localStorage.getItem('petjada-strava')); return o&&o.k&&o.p&&o.s?o:null; }catch(e){ return null; } }
+async function stravaZoom(){ // amb claus de Strava (mòbil o tasca de GitHub) es mira de prop (zoom 15, ~4 m per píxel)
+  if(window.__stravaAuth? await window.__stravaAuth() : stravaClaus()) STZ=15; else STZ=12; }
 async function stravaPunt(lat,lon){ const n=2**STZ, X=(lon+180)/360*n, s=Math.sin(lat*Math.PI/180), Y=(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n;
   const tx=Math.floor(X), ty=Math.floor(Y), px=Math.floor((X-tx)*256), py=Math.floor((Y-ty)*256); const d=await stravaTile(tx,ty); if(!d) return null;
-  let m=0; for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ const xx=Math.min(255,Math.max(0,px+a)), yy=Math.min(255,Math.max(0,py+b)); m=Math.max(m,d[(yy*256+xx)*4+3]); } return m/255; }
+  let m=0; const R=STZ>=15?2:0; for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ const xx=Math.min(255,Math.max(0,px+a)), yy=Math.min(255,Math.max(0,py+b)); m=Math.max(m,d[(yy*256+xx)*4+3]); } return m/255; }
 // fracció del tram (cada ~60 m) amb passades a Strava; null si no es pot comprovar
 async function stravaTram(pts){ let n=0,ok=0,acc=0; for(let i=0;i<pts.length;i++){ if(i&&i<pts.length-1&&hav(pts[i],pts[Math.max(0,i-1)])<60&&i%3) continue;
     const v=await stravaPunt(pts[i][0],pts[i][1]); if(v==null) return null; n++; if(v>0.05) ok++; acc+=v; } return n?{f:ok/n,m:acc/n}:null; }
@@ -368,6 +373,7 @@ async function plansBDia(G,dia,trackNodes,extra={}){
       for(let k=s+1;k<=e;k++){ const a=o.nodes[k-1], b=o.nodes[k], ed=G.adj[a].find(x=>x[0]===b); const d=hav(G.ll[a],G.ll[b]); if(ed) mix[ed[2]]+=d; }
       for(let k=0,j=0;k<tram.length;k++){ while(j<tram.length-1&&S.cd[j]-S.cd[k]<60) j++; const d=S.cd[j]-S.cd[k]; if(d>40) pmax=Math.max(pmax,Math.abs(tram[j][2]-tram[k][2])/d*100); }
       const tot=mix.reduce((a,b)=>a+b,0)||1, mid=tram[Math.floor(tram.length/2)];
+      if(pmax>CRIT_PB.pendentMax&&o.tipus!=='refugi') {DBG('massa dret');continue;}
       cands.push({tipus:o.tipus,ref:o.ref,ia,ib:o.tipus==='final'?ib:null,pts:tram.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),p[2]]),km:+km.toFixed(3),up:Math.round(up),dn:Math.round(dn),
         estalvi:hAr-hB,valor:(o.tipus==='final'?hAr-hB:o.tipus==='vehicle'?hAcc-hO:o.tipus==='refugi'?Math.min(hAr-hO,2):hAr-hO)*(aProp?0.3:1),fora:tram.filter(p=>aprop(p,30)<0),q:{pista:Math.round((mix[1]+mix[2])/tot*100),corriol:Math.round((mix[3]+mix[4])/tot*100),carretera:Math.round(mix[0]/tot*100),plaA:Math.round(mix[5]/tot*100),pmax:Math.round(pmax),
         strava:`https://www.strava.com/maps/global-heatmap?sport=Run&style=standard#15/${mid[0].toFixed(5)}/${mid[1].toFixed(5)}`}});
@@ -378,9 +384,10 @@ async function plansBDia(G,dia,trackNodes,extra={}){
   cands.sort((a,b)=>b.ia-a.ia);
   const tri=[]; for(const c of cands) if(!tri.some(t=>sem(c,t)||sem(t,c))) tri.push(c);
   // camí transitat (Strava): el tram fora del pla A ha de tenir passades
+  await stravaZoom();
   const svA=await stravaTram(pts.filter((p,i)=>i%2===0));
   for(const t of tri){ const sv=t.fora.length>=2?await stravaTram(t.fora):null; t.sv=sv; t.transit=sv&&svA?Math.min(1,sv.m/(svA.m||1)):null; t.q.strava_pct=t.transit==null?null:Math.round(t.transit*100); }
-  console.log(`PB: ${dia.key} pla A strava f=${svA&&svA.f.toFixed(2)} m=${svA&&svA.m.toFixed(3)}`);
+  console.log(`PB: ${dia.key} strava z${STZ} pla A f=${svA&&svA.f.toFixed(2)} m=${svA&&svA.m.toFixed(3)}`);
   tri.forEach(t=>console.log(`PB: ${dia.key} ${t.tipus} ia=${t.ia} valor=${t.valor.toFixed(2)} km=${t.km} transitat=${t.transit==null?'?':Math.round(t.transit*100)+'%'} f=${t.sv&&t.sv.f.toFixed(2)} m=${t.sv&&t.sv.m.toFixed(3)}`));
   const bo=tri.filter(t=>t.transit==null||t.transit>=CRIT_PB.stravaMin);
   // els més bons: més temps guanyat; com a molt un de cada tipus a la mateixa cruïlla; entre 2 i 4

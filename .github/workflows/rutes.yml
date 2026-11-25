@@ -25,6 +25,10 @@ jobs:
           npm i playwright@1.49 >/dev/null
           npx playwright install --with-deps chromium
       - name: Processar les rutes noves o canviades
+        env:
+          STRAVA_KEY_PAIR_ID: ${{ secrets.STRAVA_KEY_PAIR_ID }}
+          STRAVA_POLICY: ${{ secrets.STRAVA_POLICY }}
+          STRAVA_SIGNATURE: ${{ secrets.STRAVA_SIGNATURE }}
         run: node app-rutes/eines/processa.mjs ${{ inputs.forca && '--forca' || '' }}
       - name: Publicar
         run: |
