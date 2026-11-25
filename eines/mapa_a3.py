@@ -38,6 +38,10 @@ def tile(url, z, x, y):
       req = urllib.request.Request(u, headers={'User-Agent': 'Petjada-mapa-A3 (stosalca)'})
       with urllib.request.urlopen(req, timeout=40) as r: return Image.open(io.BytesIO(r.read())).convert('RGB')
     except Exception as e: err = e; time.sleep(2+3*i)
+  if z > 12:  # tessel·la que el servidor no dona: s'agafa la del nivell de sobre i se n'amplia el quart
+    print('  tessel·la fallida', z, x, y, err, '-> nivell', z-1)
+    p = tile(url, z-1, x//2, y//2); q = (x % 2)*128, (y % 2)*128
+    return p.crop((q[0], q[1], q[0]+128, q[1]+128)).resize((256, 256), Image.LANCZOS)
   print('  tessel·la fallida', z, x, y, err); return Image.new('RGB', (256, 256), (235, 235, 235))
 
 def wms(url, bbox, w, h):
