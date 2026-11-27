@@ -1,4 +1,4 @@
-const CACHE='catllaras-v69';
+const CACHE='catllaras-v70';
 const RADAR='catllaras-radar-v1';
 const TILES='catllaras-mapes-v1';
 const FILES=['./','index.html','rutes.js','info.js','vessants.js','plansb.js','aplus.js','mapa-aplus.jpg','mapa-c1.jpg','mapa-cable.jpg','mapa-cobertura.jpg','manifest.webmanifest','icon-192.png','icon-512.png'];
